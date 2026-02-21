@@ -57,13 +57,20 @@
   </head>
   <body>
     <div class="sidenavi">
-        <a href="../" class="sidelink">home</a>
-        <a href="../music.html" class="sidelink">music</a>
+        <a href="javascript:void(0);" onclick="goToPage('/')" class="sidelink">home</a>
+        <a href="javascript:void(0);" onclick="goToPage('/music.html')" class="sidelink">music</a>
         <button class="sidelink random-btn" onclick="goToRandomSong()">random</button>
-        <a href="../about.html" class="sidelink">about</a>
-        <a href="../contact.html" class="sidelink">contact</a>
+        <a href="javascript:void(0);" onclick="goToPage('/about.html')" class="sidelink">about</a>
+        <a href="javascript:void(0);" onclick="goToPage('/contact.html')" class="sidelink">contact</a>
     </div>
     <script>
+      function goToPage(page) {
+        // Determine base path for GitHub Pages compatibility
+        const pathname = window.location.pathname;
+        const basePath = pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
+        window.location.href = basePath + page;
+      }
+      
       function goToRandomSong() {
         // Determine base path for GitHub Pages compatibility
         const pathname = window.location.pathname;
