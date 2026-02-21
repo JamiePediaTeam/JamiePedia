@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>JamiePedia! - Music</title>
+    <meta name="title" content="JamiePedia! - Music">
+    <meta name="description" content="JamiePedia is an Encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jamiepediateam.github.io/JamiePedia/music.html">
+    <meta property="og:title" content="JamiePedia! - Music">
+    <meta property="og:description" content="JamiePedia is an Encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception.">
+    <meta property="og:image" content="https://jamies.page/images/jamie.jpg">
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://jamiepediateam.github.io/JamiePedia/music.html">
+    <meta property="twitter:title" content="JamiePedia! - Music">
+    <meta property="twitter:description" content="JamiePedia is an Encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception.">
+    <meta property="twitter:image" content="https://jamies.page/images/jamie.jpg">
+    <meta name="theme-color" content="#F05E55">
+    <link rel="icon" type="image/x-icon" href="public/images/favicon.ico">
+    <link href="styles.css" rel="stylesheet" type="text/css" media="all">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="assets/static/load.js"></script>
+  <style>
+      html {
+        overflow-y: scroll;
+      }
+      .albumview {
+        margin-top:20px
+      }
+      .leftview {
+        height:auto;
+        width: 200px;
+      }
+      a {
+        cursor: pointer;
+      }
+      .bodybar {
+        height:auto;
+      }
+      .album-item a {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .dropdown {
+        display: none;
+        background-color: #f9f9f9;
+        min-width: 160px;
+        padding: 4px 4px;
+        z-index: 1;
+        margin-top: 5px;
+        border-radius: 4px;
+      }
+      .dropdown.show {
+        display: block;
+      }
+      .dropdown a {
+        padding: 4px 4px;
+        text-decoration: none;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .dropdown a:hover {
+        background-color: #f1f1f1;
+      }
+      .album-item {
+        position: relative;
+        margin-top:4px;
+        margin-left:20px;
+        margin-right:20px;
+      }
+    </style>
+    <script>
+      function show(param_div_id) {
+        document.getElementById('rightview').innerHTML = document.getElementById(param_div_id).innerHTML;
+      }
+      
+      function toggleDropdown(albumName) {
+        const dropdown = document.getElementById('dropdown-' + albumName);
+        dropdown.classList.toggle('show');
+      }
+    </script>
+  </head>
+  <body>
+  <a href="/"><div class="head"></div></a>
+  <div class="navi">
+  <span ID="navi"></span>
+  </div>
+  <table class="table">
+    <tr>
+      <td>
+        <div class="sidebar1">
+          <span ID="sidebar"></span>
+        </div>
+      </td>
+      <td>
+        <div class="bodybar">
+        <table class="albumview">
+        <tr>
+        <td class="leftview">
+          <strong>Albums:</strong><br>
+          <div class="album-item">
+            <a onclick="toggleDropdown('anewagain')">Anew Again</a><br>
+            <div id="dropdown-anewagain" class="dropdown">
+              <a href="music/aa/decree.html">Decree</a>
+              <a href="music/aa/space-center.html">Space Center</a>
+              <a href="music/aa/skygirl.html">Skygirl</a>
+              <a href="music/aa/imaginary-effervescent.html">Imaginary, Effervescent</a>
+              <a href="music/aa/adelaide-delays.html">Adelaide Delays</a>
+              <a href="music/aa/song-for-jijo.html">Song for Jijo</a>
+              <a href="music/aa/grand-restore.html">Grand Restore</a>
+              <a href="music/aa/space-center-pt-2.html">Space Center [pt. 2]</a>
+              <a href="music/aa/good-time-lead-line.html">Good Time, Lead Line</a>
+            </div>
+            <a onclick="toggleDropdown('autumn-every-day')">Autumn Every Day</a><br>
+            <div id="dropdown-autumn-every-day" class="dropdown">
+              <a href="music/aed/automated-answering-service.html">Automated Answering Service</a>
+              <a href="music/aed/a-repetition.html">A Repetition</a>
+              <a href="music/aed/to-atlantis.html">To Atlantis</a>
+              <a href="music/aed/its-2013-again.html">It's 2013 Again</a>
+              <a href="music/aed/too-much-autotune.html">Too Much Autotune</a>
+              <a href="music/aed/special-days.html">Special Days</a>
+              <a href="music/aed/amelie.html">Amélie</a>
+              <a href="music/aed/secret-girlfriend.html">Secret Girlfriend</a>
+              <a href="music/aed/bizarre-love-triangle.html">Bizarre Love Triangle</a>
+              <a href="music/aed/pass.html">Pass</a>
+              <a href="music/aed/honor-majesty.html">Honor Majesty</a>
+              <a href="music/aed/autumn-every-day.html">Autumn Every Day</a>
+              <a href="music/aed/hold-me-tightly.html">Hold Me Tightly</a>
+            </div>
+            <a onclick="toggleDropdown('bittersweet')">Bittersweet</a><br>
+            <div id="dropdown-bittersweet" class="dropdown">
+              <a href="music/bs/second-hello.html">Second Hello</a>
+              <a href="music/bs/gentle-heart.html">Gentle Heart</a>
+              <a href="music/bs/asemic-speech.html">Asemic Speech</a>
+              <a href="music/bs/nothing-with-you.html">Nothing (with you)</a>
+              <a href="music/bs/paisley-patterns.html">Paisley Patterns</a>
+              <a href="music/bs/gummyworm.html">Gummyworm</a>
+              <a href="music/bs/greatsword-love-as-fire.html">Greatsword / Love as Fire</a>
+              <a href="music/bs/ally.html">Ally</a>
+              <a href="music/bs/ballroom.html">Ballroom</a>
+              <a href="music/bs/bittersweet.html">Bittersweet</a>
+              <a href="music/bs/close.html">Close</a>
+              <a href="music/bs/fiction.html">Fiction</a>
+            </div>
+            <a onclick="toggleDropdown('constant')">Constant Companions</a><br>
+            <div id="dropdown-constant" class="dropdown">
+              <a href="music/cc/dyad.html">Dyad</a>
+              <a href="music/cc/not-quite-there.html">Not Quite There</a>
+              <a href="music/cc/rot-for-clout.html">ROT FOR CLOUT</a>
+              <a href="music/cc/i-wish-that-i-could-fall.html">I Wish That I Could Fall</a>
+              <a href="music/cc/cadmium-colors.html">Cadmium Colors</a>
+              <a href="music/cc/breeze-blows.html">Breeze Blows</a>
+              <a href="music/cc/aggrandicize.html">Aggrandicize</a>
+              <a href="music/cc/liaison.html">Liaison</a>
+              <a href="music/cc/object-of-affection.html">Object of Affection</a>
+              <a href="music/cc/clouddrop.html">Clouddrop</a>
+              <a href="music/cc/my-darling-my-companion.html">My Darling, My Companion</a>
+              <a href="music/cc/machine-love.html">Machine Love</a>
+              <a href="music/cc/birdbrain.html">BIRDBRAIN</a>
+              <a href="music/cc/shiny-chariot.html">Shiny Chariot</a>
+              <a href="music/cc/strawberry.html">Strawberry</a>
+              <a href="music/cc/manifesto.html">Manifesto</a>
+              <a href="music/cc/dance-delightful.html">Dance Delightful</a>
+            </div>
+            <a onclick="toggleDropdown('c-sides')">c-sides</a>
+            <div id="dropdown-c-sides" class="dropdown">
+              <a href="music/cs/papergirl.html">papergirl</a>
+              <a href="music/cs/little-anger.html">little anger</a>
+              <a href="music/cs/ringtone.html">ringtone</a>
+              <a href="music/cs/one-small-moment-of-silence.html">one small moment of silence</a>
+              <a href="music/cs/some-more-of-that-song.html">some more of that song</a>
+            </div>
+          </div>
+
+        </td>
+        </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+  </body>
+</html>

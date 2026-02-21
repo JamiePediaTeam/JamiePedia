@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>JamiePedia! - some more of that song</title>
+    <meta name="title" content="JamiePedia! - some more of that song">
+    <meta name="description" content="JamiePedia is an Encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jamiepediateam.github.io/JamiePedia/music/cs/some-more-of-that-song.html">
+    <meta property="og:title" content="JamiePedia! - some more of that song">
+    <meta property="og:description" content="JamiePedia is an Encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception.">
+    <meta property="og:image" content="/public/images/cover-art/cs.png">
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://jamiepediateam.github.io/JamiePedia/music/cs/some-more-of-that-song.html">
+    <meta property="twitter:title" content="JamiePedia! - some more of that song">
+    <meta property="twitter:description" content="JamiePedia is an Encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception.">
+    <meta property="twitter:image" content="/public/images/cover-art/cs.png">
+    <meta name="theme-color" content="#F05E55">
+    <link rel="icon" type="image/x-icon" href="public/images/favicon.ico">
+    <link href="/styles.css" rel="stylesheet" type="text/css" media="all">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="/assets/static/load.js"></script>
+    <link href="/css/song.css" rel="stylesheet" type="text/css" media="all">
+    <script src="/assets/static/song.js"></script>
+  </head>
+  <body>
+  <a href="/"><div class="head"></div></a>
+  <div class="navi">
+  <span id="navi"></span>
+  </div>
+  <div class="song-page-wrapper">
+    <div class="song-sidebar-col">
+      <div class="sidebar1">
+        <span id="sidebar"></span>
+      </div>
+    </div>
+    
+    <div class="song-main-col">
+      <div class="song-tabs-container">
+        <div class="song-tabs">
+          <button class="song-tab active" onclick="switchTab('lyrics')">Lyrics</button>
+          <button class="song-tab" onclick="switchTab('motifs')">Motifs</button>
+          <button class="song-tab" onclick="switchTab('summary')">Summary</button>
+          <button class="song-tab" onclick="switchTab('extended')">Extended Info</button>
+        </div>
+      </div>
+      
+      <div class="bodybar">
+        <div class="song-container">
+          <!-- Left View -->
+          <div class="song-leftview">
+            <h1 class="song-title">some more of that song</h1>
+            <p class="song-subtitle">Track 5 of c-sides</p>
+            <p class="song-length">Length: X:XX</p>
+            
+            <!-- Tab Content -->
+            <div id="content-lyrics" class="song-content active">
+              <p>Lyrics content goes here...</p>
+            </div>
+            
+            <div id="content-motifs" class="song-content">
+              <p>Motifs content goes here...</p>
+            </div>
+            
+            <div id="content-summary" class="song-content">
+              <p>Summary content goes here...</p>
+            </div>
+            
+            <div id="content-extended" class="song-content">
+              <p>Extended info content goes here...</p>
+            </div>
+          </div>
+          
+          <!-- Right View -->
+          <div class="song-rightview">
+            <!-- Cover Art -->
+            <div class="song-cover">
+              <img src="/public/images/cover-art/cs.png" alt="c-sides Album Cover" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
+            </div>
+            
+            <!-- Navigation Buttons -->
+<div class="song-nav-buttons">
+  <a href="/music/cs/one-small-moment-of-silence.html" class="song-nav-link">← Previous</a>
+  <a href="/music/aa/decree.html" class="song-nav-link">Next →</a>
+</div>
+            
+            <!-- Album & Date -->
+            <div class="song-info-block">
+              <div class="song-info-label">Album</div>
+              <div class="song-info-content">c-sides</div>
+            </div>
+            
+            <div class="song-info-block">
+              <div class="song-info-label">Release Date</div>
+              <div class="song-info-content">20XX</div>
+            </div>
+            
+            <!-- Credits & Contributors -->
+            <div class="song-info-block">
+              <div class="song-info-label">Artist</div>
+              <div class="song-info-content">Jamie Paige</div>
+            </div>
+            <!-- Close-up Link (remove this block if there is no equivelant for this song) -->
+             <div class="song-info-block">
+              <div class="song-info-label">Close-up</div>
+              <div class="song-info-content"><a href="">View Close-up</a></div>
+            </div>
+            
+            <!-- Links -->
+            <div class="song-info-block">
+              <div class="song-info-label">Listen</div>
+              <div class="song-links">
+                <a href="#">Music Links Here</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </body>
+</html>

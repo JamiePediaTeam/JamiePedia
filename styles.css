@@ -13,6 +13,8 @@ body {
   position: relative;
   margin-left: auto;
   margin-right: auto;
+  padding-left: 0;
+  padding-right: 0;
 }
 a {
   text-decoration: none;
@@ -32,7 +34,7 @@ h1 {
   display: block;
   border-spacing: 0px;
   border-collapse: collapse;
-  width: 826px;
+  width: 800px;
 }
 .table td {
   vertical-align: top;
@@ -100,12 +102,20 @@ h1 {
   border: 3px solid #351854;
   border-radius: 5px;
   padding: 10px;
-  width: 640px;
+  width: 800px;
   min-height: 222px;
-  margin-left: 14px;
+  margin-left: -13px;
   margin-top: 20px;
   margin-bottom: 20px;
   position: relative;
+}
+.table td:nth-child(2) {
+  width: 100%;
+}
+
+.table td:nth-child(1) {
+  width: 0;
+  padding: 0;
 }
 .footer {
   margin-top: 20px;
@@ -127,11 +137,11 @@ h1 {
   padding: 10px;
   width: 120px;
   height: auto;
-  margin-top: 20px;
-  position: sticky;
+  position: absolute;
+  left: -180px;
   top: 20px;
   z-index: 9;
- }
+}
 .headimg {
   margin-left: auto;
   margin-right: auto;

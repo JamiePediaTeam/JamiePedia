@@ -39,15 +39,93 @@
         margin-left: 3px;
         margin-right: 3px;
       }
+      .random-btn {
+        background: none;
+        border: none;
+        color: #ef8a85;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 1em;
+        padding: 0;
+        font-family: inherit;
+        transition: color 0.3s ease;
+      }
+      .random-btn:hover {
+        color: #68BDE7;
+      }
     </style>
   </head>
   <body>
     <div class="sidenavi">
-        <a href="index.html" class="sidelink">home</a>
-        <a href="" class="sidelink">wip</a>
-        <a href="" class="sidelink">wip</a>
-        <a href="" class="sidelink">wip</a>
-        <a href="" class="sidelink">wip</a>
+        <a href="/" class="sidelink">home</a>
+        <a href="/music.html" class="sidelink">music</a>
+        <button class="sidelink random-btn" onclick="goToRandomSong()">random</button>
+        <a href="/about.html" class="sidelink">about</a>
+        <a href="/contact.html" class="sidelink">contact</a>
     </div>
+    <script>
+      function goToRandomSong() {
+        const songs = [
+          '/music/aa/decree.html',
+          '/music/aa/space-center.html',
+          '/music/aa/skygirl.html',
+          '/music/aa/imaginary-effervescent.html',
+          '/music/aa/adelaide-delays.html',
+          '/music/aa/song-for-jijo.html',
+          '/music/aa/grand-restore.html',
+          '/music/aa/space-center-pt-2.html',
+          '/music/aa/good-time-lead-line.html',
+          '/music/aed/automated-answering-service.html',
+          '/music/aed/a-repetition.html',
+          '/music/aed/to-atlantis.html',
+          '/music/aed/its-2013-again.html',
+          '/music/aed/too-much-autotune.html',
+          '/music/aed/special-days.html',
+          '/music/aed/amelie.html',
+          '/music/aed/secret-girlfriend.html',
+          '/music/aed/bizarre-love-triangle.html',
+          '/music/aed/pass.html',
+          '/music/aed/honor-majesty.html',
+          '/music/aed/autumn-every-day.html',
+          '/music/aed/hold-me-tightly.html',
+          '/music/bs/second-hello.html',
+          '/music/bs/gentle-heart.html',
+          '/music/bs/asemic-speech.html',
+          '/music/bs/nothing-with-you.html',
+          '/music/bs/paisley-patterns.html',
+          '/music/bs/gummyworm.html',
+          '/music/bs/greatsword-love-as-fire.html',
+          '/music/bs/ally.html',
+          '/music/bs/ballroom.html',
+          '/music/bs/bittersweet.html',
+          '/music/bs/close.html',
+          '/music/bs/fiction.html',
+          '/music/cc/dyad.html',
+          '/music/cc/not-quite-there.html',
+          '/music/cc/rot-for-clout.html',
+          '/music/cc/i-wish-that-i-could-fall.html',
+          '/music/cc/cadmium-colors.html',
+          '/music/cc/breeze-blows.html',
+          '/music/cc/aggrandicize.html',
+          '/music/cc/liaison.html',
+          '/music/cc/object-of-affection.html',
+          '/music/cc/clouddrop.html',
+          '/music/cc/my-darling-my-companion.html',
+          '/music/cc/machine-love.html',
+          '/music/cc/birdbrain.html',
+          '/music/cc/shiny-chariot.html',
+          '/music/cc/strawberry.html',
+          '/music/cc/manifesto.html',
+          '/music/cc/dance-delightful.html',
+          '/music/cs/papergirl.html',
+          '/music/cs/little-anger.html',
+          '/music/cs/ringtone.html',
+          '/music/cs/one-small-moment-of-silence.html',
+          '/music/cs/some-more-of-that-song.html'
+        ];
+        const randomSong = songs[Math.floor(Math.random() * songs.length)];
+        window.location.href = randomSong;
+      }
+    </script>
   </body>
 </html>

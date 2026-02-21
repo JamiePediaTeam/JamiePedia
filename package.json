@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "A website dedicated to tracking information on the musician Jamie Paige",
   "scripts": {
-    "start": "http-server -p 3000 -o",
-    "serve": "http-server -p 3000"
+    "start": "node server.js",
+    "serve": "node server.js"
   },
   "keywords": [
     "jamie paige",
