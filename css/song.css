@@ -19,7 +19,6 @@
   margin-top: 0;
   margin-bottom: 20px;
   width: 800px;
-  box-sizing: border-box;
 }
 
 .song-leftview {
@@ -55,45 +54,46 @@
 
 .song-tabs-container {
   margin: 0;
-  margin-bottom: 20px;
-  background-color: #FFFFFF;
-  border: 3px solid #351854;
-  border-radius: 5px;
   width: 800px;
   margin-left: auto;
   margin-right: auto;
   position: relative;
-  padding: 10px;
-  box-sizing: border-box;
+  padding-left: 4px;
 }
 
 .song-tabs {
   display: flex;
-  gap: 15px;
+  gap: 8px;
   margin: 0;
   padding: 0;
-  border-bottom: none;
+  align-items: end;
 }
 
 .song-tab {
-  padding: 10px 15px;
+  font-family: "Nunito", sans-serif;
+  padding: 2px 16px;
+  height: 100%;
   cursor: pointer;
   background: none;
   border: none;
   font-size: 1em;
-  color: #666;
+  color: #000;
+  background-color: #FFFFFF;
   font-weight: 500;
-  transition: all 0.3s ease;
-  border-bottom: 3px solid transparent;
+  border: 3px solid #000;
+  border-bottom: 0px solid transparent;
+  border-radius: 4px 4px 0px 0px;
 }
 
 .song-tab:hover {
-  color: #333;
+  color: #68BDE7;
 }
 
 .song-tab.active {
-  color: #F05E55;
-  border-bottom-color: #F05E55;
+  padding: 4px 16px;
+  color: #ef8a85;
+  border: 3px solid #ef8a85;
+  border-bottom: 0px solid transparent;
 }
 
 .song-content {
