@@ -125,7 +125,6 @@
 
 .cover-art-footer {
   width: 100%;
-  margin-bottom: 20px;
   padding: 0px 4px;
   box-sizing: border-box;
   display: flex;
@@ -134,21 +133,19 @@
 
 .cover-art-credit {
   font-family: "Nunito", sans-serif;
-  padding: 0px 2px;
-  background-color: #FFFFFF;
+  padding-top: 4px;
   font-size: 0.75em;
   color: #000;
   font-weight: 500;
-  border: 2px solid #000;
   border-top: none;
-  border-radius: 0px 0px 4px 4px;
   display: inline-block;
+  margin: auto;
 }
 
 .song-nav-buttons {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
+  margin: 20px 0 20px 0;
 }
 
 .song-nav-buttons button {
