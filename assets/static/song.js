@@ -209,6 +209,31 @@ function switchLyricsTab(lyricsType) {
 }
 
 // Initialize lyrics subtabs visibility on page load
+function loadScriptOnce(src) {
+  return new Promise((resolve) => {
+    const existing = document.querySelector('script[src="' + src + '"]');
+    if (existing) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve();
+    script.onerror = () => resolve();
+    document.head.appendChild(script);
+  });
+}
+
+function initializeSongConnectionsFeature() {
+  const prefix = '../../';
+
+  loadScriptOnce('https://www.youtube.com/iframe_api')
+    .then(() => loadScriptOnce(prefix + 'assets/static/motif-data.js'))
+    .then(() => loadScriptOnce(prefix + 'assets/static/song-data.js'))
+    .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js'));
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   loadVersionConfig();
   
@@ -226,6 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   initializeReferences();
+  initializeSongConnectionsFeature();
 });
 
 function switchAlbumArt(filename) {

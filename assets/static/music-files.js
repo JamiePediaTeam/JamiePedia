@@ -1,5 +1,11 @@
 // Music file paths for search indexing
 const musicFilePaths = [
+  // Motif Pages
+  { album: 'Motifs', path: '/motifs.html' },
+  { album: 'Motifs', path: '/motifs/bittersweet-kalia-vibte.html' },
+  { album: 'Motifs', path: '/motifs/gummyworm.html' },
+  { album: 'Motifs', path: '/motifs/constant-companions.html' },
+
   // Album Pages
   { album: 'Album', path: '/music/aa.html' },
   { album: 'Album', path: '/music/aed.html' },

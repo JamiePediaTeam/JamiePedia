@@ -1,0 +1,195 @@
+.motif-layout {
+  display: flex;
+  gap: 24px;
+}
+
+.motif-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.motif-main h1 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 2em;
+  line-height: 1.1;
+}
+
+.motif-image-wrap {
+  width: min(220px, 100%);
+  margin: 0 auto 18px;
+}
+
+.motif-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 2px solid #351854;
+  border-radius: 6px;
+  background: #f9f7f5;
+}
+
+.motif-section-title {
+  margin-top: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #bdbdbd;
+  font-size: 1.2em;
+}
+
+.motif-song-list {
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.motif-player-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: start;
+  gap: 12px;
+}
+
+.motif-song-pill {
+  background: #ffffff;
+  border: 2px solid #351854;
+  border-radius: 6px;
+  min-height: 74px;
+  padding: 8px;
+  color: #111111;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.9em;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.motif-song-pill:hover {
+  color: #68BDE7;
+  border-color: #68BDE7;
+}
+
+.motif-player-main {
+  padding-top: 2px;
+}
+
+.motif-controls {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.motif-play-btn {
+  border: none;
+  border-radius: 4px;
+  background: #f0f0f0;
+  color: #111;
+  width: 44px;
+  height: 32px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.motif-track-area {
+  width: 100%;
+}
+
+.motif-time-labels {
+  display: flex;
+  justify-content: space-between;
+  color: #222222;
+  font-size: 0.72em;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.motif-main-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #e3e3e3;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+
+.motif-main-progress {
+  height: 100%;
+  width: 0;
+  background: #351854;
+}
+
+.motif-segment-track {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #e3e3e3;
+  margin-top: 8px;
+}
+
+.motif-segment {
+  position: absolute;
+  top: 0;
+  height: 10px;
+  border: none;
+  border-radius: 999px;
+  background: #351854;
+  cursor: pointer;
+  padding: 0;
+}
+
+.motif-segment.variation {
+  background: repeating-linear-gradient(
+    90deg,
+    #351854,
+    #351854 4px,
+    #ffffff 4px,
+    #ffffff 8px
+  );
+}
+
+.motif-label {
+  margin-top: 6px;
+  color: #222222;
+  font-size: 0.74em;
+  font-weight: 700;
+}
+
+.motif-youtube-host {
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.motif-empty {
+  border: 2px dashed #a09aa7;
+  border-radius: 6px;
+  padding: 10px;
+  color: #666;
+  background: #fafafa;
+}
+
+@media (max-width: 900px) {
+  .motif-layout {
+    flex-direction: column;
+  }
+
+  .motif-image-wrap {
+    width: min(420px, 100%);
+  }
+
+  .motif-player-row {
+    grid-template-columns: 1fr;
+  }
+
+  .motif-song-pill {
+    min-height: 46px;
+  }
+}
