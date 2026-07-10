@@ -1,11 +1,13 @@
 const allSongs = [];
 
 class MotifReference {
-  constructor(motifId, startTime = '', endTime = '', isVariation = false) {
+  constructor(motifId, startTime = '', endTime = '', isVariation = false, isDefinition = false, variationId = '') {
     this.motifId = motifId;
     this.startTime = startTime;
     this.endTime = endTime;
     this.isVariation = isVariation;
+    this.isDefinition = isDefinition;
+    this.variationId = variationId;
   }
 }
 
@@ -41,6 +43,19 @@ const Songs = {
 
   DANCE_DELIGHTFUL: new Song('Dance Delightful', '../music/cc/dance-delightful.html', 'sxO1RG9q30I', '#DE7F46', [
     new MotifReference('gummyworm', '3:33', '3:38')
+  ]),
+
+  SPACE_CENTER: new Song('Space Center', '../music/aa/space-center.html', '3QtK39spo7A', '#9EC7CD', [
+    new MotifReference('space-center', '0:18', '0:32', false, true, 'A'),
+    new MotifReference('space-center', '0:33', '0:49', false, true, 'B'),
+    new MotifReference('space-center', '1:10', '1:24', false, false, 'A'),
+    new MotifReference('space-center', '1:25', '1:42', false, false, 'B')
+  ]),
+
+  SPACE_CENTER_PT2: new Song('Space Center [pt. 2]', '../music/aa/space-center-pt-2.html', 'cw41RXs2vJ4', '#A2E9CF', [
+    new MotifReference('space-center', '0:40', '0:42', false, false, 'B'),
+    new MotifReference('space-center', '1:02', '1:20', false, false, 'A'),
+    new MotifReference('space-center', '1:18', '1:42', false, false, 'B')
   ])
 };
 

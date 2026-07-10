@@ -31,6 +31,94 @@ function formatTime(seconds) {
   return mins + ':' + String(secs).padStart(2, '0');
 }
 
+function buildVariationIcon(motif, badges = [], extraClass = '') {
+  const icon = document.createElement('div');
+  icon.className = 'motif-variation-icon ' + extraClass;
+  icon.style.setProperty('--motif-icon-color', motif.iconColor || motif.color || '#ef8a85');
+
+  const baseText = document.createElement('span');
+  baseText.className = 'motif-variation-base';
+  baseText.textContent = motif.iconText || motif.name;
+  icon.appendChild(baseText);
+
+  const allBadges = badges.length > 0
+    ? badges
+    : (motif.variationLabel ? [motif.variationLabel] : []);
+
+  if (allBadges.length > 0) {
+    const badgeList = document.createElement('span');
+    badgeList.className = 'motif-variation-badge-list';
+
+    allBadges.forEach((label) => {
+      const badge = document.createElement('span');
+      badge.className = 'motif-variation-badge';
+      badge.textContent = label;
+      badgeList.appendChild(badge);
+    });
+
+    icon.appendChild(badgeList);
+  }
+
+  return icon;
+}
+
+function buildVariationImagePanel(motif, extraClass = '') {
+  const panel = document.createElement('div');
+  panel.className = 'motif-variation-image-panel ' + extraClass;
+
+  const artWrap = document.createElement('div');
+  artWrap.className = 'motif-variation-art-wrap';
+  panel.appendChild(artWrap);
+
+  const art = document.createElement('img');
+  art.className = 'motif-variation-art';
+  art.src = motif.image || '../public/images/cover-art/bs.png';
+  art.alt = motif.name + ' motif image';
+  artWrap.appendChild(art);
+
+  const side = document.createElement('div');
+  side.className = 'motif-variation-side';
+  panel.appendChild(side);
+
+  const variations = Array.isArray(motif.variations) ? motif.variations : [];
+  variations.forEach((variation) => {
+    const badge = document.createElement('div');
+    badge.className = 'motif-variation-side-badge';
+    badge.textContent = variation.label || variation.id || '?';
+    badge.style.setProperty('--variation-color', variation.color || motif.color || '#351854');
+    side.appendChild(badge);
+  });
+
+  return panel;
+}
+
+function getVariationForRef(motif, ref) {
+  if (!motif || !Array.isArray(motif.variations) || motif.variations.length === 0) {
+    return null;
+  }
+
+  if (!ref.variationId) {
+    return null;
+  }
+
+  return motif.variations.find((variation) => variation.id === ref.variationId || variation.label === ref.variationId) || null;
+}
+
+function getSongRefsForMotif(song, motif, variationId = '') {
+  return song.motifRefs
+    .filter((ref) => ref.motifId === motif.id || motif.aliases.includes(ref.motifId))
+    .map((ref) => ({
+      startTime: timeToSeconds(ref.startTime),
+      endTime: timeToSeconds(ref.endTime),
+      isVariation: ref.isVariation,
+      isDefinition: ref.isDefinition,
+      variationId: ref.variationId || ''
+    }))
+    .filter((ref) => ref.endTime > ref.startTime)
+    .filter((ref) => !variationId || ref.variationId === variationId)
+    .sort((a, b) => a.startTime - b.startTime);
+}
+
 const PlayerStore = {
   rows: [],
   activeRow: null,
@@ -74,18 +162,9 @@ function seekToPercent(row, percent) {
   pauseOthers(row);
 }
 
-function buildTimelineRow(song, motif, index) {
+function buildTimelineRow(song, motif, index, refs, options = {}) {
   const row = document.createElement('article');
   row.className = 'motif-player-row';
-
-  const refs = song.motifRefs
-    .filter((ref) => ref.motifId === motif.id)
-    .map((ref) => ({
-      startTime: timeToSeconds(ref.startTime),
-      endTime: timeToSeconds(ref.endTime),
-      isVariation: ref.isVariation
-    }))
-    .filter((ref) => ref.endTime > ref.startTime);
 
   const left = document.createElement(song.path ? 'a' : 'div');
   left.className = 'motif-song-pill';
@@ -140,7 +219,7 @@ function buildTimelineRow(song, motif, index) {
 
   const motifLabel = document.createElement('div');
   motifLabel.className = 'motif-label';
-  motifLabel.textContent = motif.name;
+  motifLabel.textContent = options.labelText || motif.name;
   trackArea.appendChild(motifLabel);
 
   const ytHost = document.createElement('div');
@@ -162,7 +241,8 @@ function buildTimelineRow(song, motif, index) {
     ytHostId,
     player: null,
     duration: refs.reduce((max, ref) => Math.max(max, ref.endTime), 0),
-    timer: null
+    timer: null,
+    showVariationBadges: !!options.showVariationBadges
   };
 
   rowState.durationLabel.textContent = formatTime(rowState.duration);
@@ -202,21 +282,34 @@ function renderSegments(rowState) {
   rowState.refs.forEach((ref) => {
     const segment = document.createElement('button');
     segment.type = 'button';
-    segment.className = 'motif-segment' + (ref.isVariation ? ' variation' : '');
+    const variation = getVariationForRef(rowState.motif, ref);
+    segment.className = 'motif-segment'
+      + (ref.isVariation ? ' variation' : '')
+      + (ref.isDefinition ? ' definition' : '')
+      + (variation ? ' has-variation' : '');
 
     const left = (ref.startTime / rowState.duration) * 100;
     const width = ((ref.endTime - ref.startTime) / rowState.duration) * 100;
 
     segment.style.left = Math.max(0, left) + '%';
     segment.style.width = Math.max(0.6, width) + '%';
-    const motifColor = rowState.motif.color || '#351854';
+    const motifColor = (variation && variation.color) || rowState.motif.color || '#351854';
     segment.style.background = motifColor;
 
     if (ref.isVariation) {
       segment.style.background = 'repeating-linear-gradient(90deg, ' + motifColor + ', ' + motifColor + ' 4px, #ffffff 4px, #ffffff 8px)';
     }
 
-    segment.title = formatTime(ref.startTime) + ' - ' + formatTime(ref.endTime);
+    if (variation && variation.label) {
+      if (rowState.showVariationBadges) {
+        const badge = document.createElement('span');
+        badge.className = 'motif-segment-badge';
+        badge.textContent = variation.label;
+        segment.appendChild(badge);
+      }
+    }
+
+    segment.title = formatTime(ref.startTime) + ' - ' + formatTime(ref.endTime) + (ref.isDefinition ? ' (definition)' : '');
 
     segment.addEventListener('click', () => {
       if (!rowState.player || typeof rowState.player.seekTo !== 'function') {
@@ -304,6 +397,7 @@ function renderMotifPage() {
 
   const motifName = document.getElementById('motifName');
   const motifImage = document.getElementById('motifImage');
+  const motifImageWrap = document.querySelector('.motif-image-wrap');
   const songList = document.getElementById('motifSongList');
   const songsHeading = document.getElementById('motifSongsHeading');
 
@@ -313,13 +407,51 @@ function renderMotifPage() {
 
   document.title = 'JamiePedia! - Motif - ' + motif.name;
   motifName.textContent = motif.name;
-  motifImage.src = motif.image || '../public/images/cover-art/bs.png';
-  motifImage.alt = motif.name + ' motif image';
+  if (motifImageWrap) {
+    const existingVariationIcon = motifImageWrap.querySelector('.motif-variation-icon');
+    if (existingVariationIcon) {
+      existingVariationIcon.remove();
+    }
+
+    const existingVariationPanel = motifImageWrap.querySelector('.motif-variation-image-panel');
+    if (existingVariationPanel) {
+      existingVariationPanel.remove();
+    }
+  }
+
+  if (motif.variationGroup && motif.iconText && motifImageWrap) {
+    const badges = Array.isArray(motif.variations)
+      ? motif.variations.map((variation) => variation.label || variation.id).filter(Boolean)
+      : [];
+
+    if (motif.image && badges.length > 0) {
+      motifImage.style.display = 'none';
+      const panel = buildVariationImagePanel(motif, 'motif-image');
+      panel.setAttribute('aria-label', motif.name + ' motif image with variation panels');
+      motifImageWrap.appendChild(panel);
+    } else if (motif.image) {
+      motifImage.style.display = '';
+      motifImage.src = motif.image;
+      motifImage.alt = motif.name + ' motif image';
+    } else {
+      motifImage.style.display = 'none';
+      const icon = buildVariationIcon(motif, badges, 'motif-image');
+      icon.setAttribute('aria-label', motif.name + ' motif icon');
+      motifImageWrap.appendChild(icon);
+    }
+  } else {
+    motifImage.style.display = '';
+    motifImage.src = motif.image || '../public/images/cover-art/bs.png';
+    motifImage.alt = motif.name + ' motif image';
+  }
   if (songsHeading) {
     songsHeading.textContent = 'Songs with ' + motif.name;
   }
 
-  const songs = window.SongData.getSongsWithMotifId(motif.id);
+  const motifIds = [motif.id].concat(motif.aliases || []);
+  const songs = window.SongData.allSongs.filter((song) =>
+    song.motifRefs.some((ref) => motifIds.includes(ref.motifId))
+  );
   songList.innerHTML = '';
   PlayerStore.rows = [];
 
@@ -331,11 +463,66 @@ function renderMotifPage() {
     return;
   }
 
-  songs.forEach((song, index) => {
-    const built = buildTimelineRow(song, motif, index);
-    PlayerStore.rows.push(built.state);
-    songList.appendChild(built.element);
-  });
+  let rowIndex = 0;
+  const hasVariations = Array.isArray(motif.variations) && motif.variations.length > 0;
+
+  if (hasVariations) {
+    if (songsHeading) {
+      songsHeading.textContent = 'Motif Variations';
+    }
+
+    motif.variations.forEach((variation) => {
+      const variationId = variation.id || variation.label || '';
+      const variationLabel = variation.label || variation.id || '?';
+
+      const section = document.createElement('section');
+      section.className = 'motif-variation-section';
+
+      const heading = document.createElement('h3');
+      heading.className = 'motif-variation-heading';
+      heading.textContent = 'Songs with ' + motif.name + ' (' + variationLabel + ')';
+      section.appendChild(heading);
+
+      const sectionList = document.createElement('div');
+      sectionList.className = 'motif-song-list';
+      section.appendChild(sectionList);
+
+      songs.forEach((song) => {
+        const refs = getSongRefsForMotif(song, motif, variationId);
+        if (refs.length === 0) {
+          return;
+        }
+
+        const built = buildTimelineRow(song, motif, rowIndex, refs, {
+          labelText: motif.name + ' (' + variationLabel + ')',
+          showVariationBadges: false
+        });
+        rowIndex += 1;
+
+        PlayerStore.rows.push(built.state);
+        sectionList.appendChild(built.element);
+      });
+
+      if (sectionList.children.length > 0) {
+        songList.appendChild(section);
+      }
+    });
+  } else {
+    songs.forEach((song) => {
+      const refs = getSongRefsForMotif(song, motif);
+      if (refs.length === 0) {
+        return;
+      }
+
+      const built = buildTimelineRow(song, motif, rowIndex, refs, {
+        labelText: motif.name,
+        showVariationBadges: true
+      });
+      rowIndex += 1;
+      PlayerStore.rows.push(built.state);
+      songList.appendChild(built.element);
+    });
+  }
 
   if (PlayerStore.apiReady || (window.YT && window.YT.Player)) {
     createYouTubePlayers();

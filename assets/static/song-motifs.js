@@ -25,6 +25,35 @@ function songMotifFormatTime(seconds) {
   return mins + ':' + String(secs).padStart(2, '0');
 }
 
+function songMotifsReadDeclaredDuration() {
+  const findTimeInText = (text) => {
+    const match = String(text || '').match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
+    return match ? songMotifTimeToSeconds(match[1]) : 0;
+  };
+
+  const songLengthNodes = Array.from(document.querySelectorAll('.song-length'));
+
+  for (const node of songLengthNodes) {
+    if (!node || node.offsetParent === null) {
+      continue;
+    }
+
+    const visibleDuration = findTimeInText(node.textContent);
+    if (visibleDuration > 0) {
+      return visibleDuration;
+    }
+  }
+
+  for (const node of songLengthNodes) {
+    const fallbackDuration = findTimeInText(node.textContent);
+    if (fallbackDuration > 0) {
+      return fallbackDuration;
+    }
+  }
+
+  return 0;
+}
+
 function getSongMotifsMount() {
   let mount = document.getElementById('songMotifsContent');
   if (mount) {
@@ -56,7 +85,8 @@ function getSongMotifsState() {
       currentLabel: null,
       durationLabel: null,
       mainTrack: null,
-      playButton: null
+      playButton: null,
+      declaredDuration: 0
     };
   }
   return window.__songMotifsState;
@@ -84,11 +114,23 @@ function songMotifsGroupRefs(song) {
       return;
     }
 
-    if (!map.has(ref.motifId)) {
-      map.set(ref.motifId, []);
+    const motif = window.MotifData.getMotifById(ref.motifId);
+    const isVariationMotif = motif && Array.isArray(motif.variations) && motif.variations.length > 0;
+    const variationId = isVariationMotif ? (ref.variationId || '') : '';
+    const canonicalMotifId = motif ? motif.id : ref.motifId;
+    const key = canonicalMotifId + '::' + variationId;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        motif,
+        motifId: canonicalMotifId,
+        variationId,
+        ranges: []
+      });
     }
 
-    map.get(ref.motifId).push({
+    map.get(key).ranges.push({
       start,
       end,
       isVariation: !!ref.isVariation
@@ -96,10 +138,28 @@ function songMotifsGroupRefs(song) {
   });
 
   const grouped = [];
-  map.forEach((ranges, motifId) => {
-    ranges.sort((a, b) => a.start - b.start);
-    const motif = window.MotifData.getMotifById(motifId);
-    grouped.push({ motifId, motif, ranges });
+  map.forEach((entry) => {
+    entry.ranges.sort((a, b) => a.start - b.start);
+
+    const variation = entry.motif && entry.variationId
+      ? entry.motif.variations.find((item) => item.id === entry.variationId || item.label === entry.variationId)
+      : null;
+
+    const baseName = entry.motif ? entry.motif.name : entry.motifId;
+    const variationLabel = variation ? (variation.label || variation.id) : '';
+    const displayName = variationLabel ? (baseName + ' (' + variationLabel + ')') : baseName;
+    const displayColor = (variation && variation.color) || (entry.motif && entry.motif.color) || '#999999';
+
+    grouped.push({
+      key: entry.key,
+      motifId: entry.motifId,
+      motif: entry.motif,
+      variationId: entry.variationId,
+      variation,
+      ranges: entry.ranges,
+      displayName,
+      displayColor
+    });
   });
 
   grouped.sort((a, b) => a.ranges[0].start - b.ranges[0].start);
@@ -110,7 +170,7 @@ function songMotifsUpdateLegend(currentTime) {
   const state = getSongMotifsState();
   state.refsByMotif.forEach((entry) => {
     const active = entry.ranges.some((range) => currentTime >= range.start && currentTime <= range.end);
-    const node = state.legendNodes.get(entry.motifId);
+    const node = state.legendNodes.get(entry.key);
     if (!node) return;
     node.classList.toggle('active', active);
   });
@@ -156,7 +216,8 @@ function songMotifsRender(song, groupedRefs) {
     return Math.max(max, entry.ranges[entry.ranges.length - 1].end);
   }, 0);
 
-  state.duration = Math.max(refsDuration, songMotifTimeToSeconds('5:13'));
+  state.declaredDuration = songMotifsReadDeclaredDuration();
+  state.duration = state.declaredDuration > 0 ? state.declaredDuration : refsDuration;
 
   mount.innerHTML = '';
 
@@ -219,8 +280,8 @@ function songMotifsRender(song, groupedRefs) {
     const row = document.createElement('article');
     row.className = 'song-motif-row';
 
-    const motifName = entry.motif ? entry.motif.name : entry.motifId;
-    const motifColor = entry.motif && entry.motif.color ? entry.motif.color : '#999999';
+    const motifName = entry.displayName;
+    const motifColor = entry.displayColor;
 
     const track = document.createElement('div');
     track.className = 'song-motif-track';
@@ -249,7 +310,7 @@ function songMotifsRender(song, groupedRefs) {
 
     const link = document.createElement('a');
     link.className = 'song-motif-label-link';
-    link.href = '../../motifs/' + entry.motifId + '.html';
+    link.href = '../../motifs/' + (entry.motif ? entry.motif.id : entry.motifId) + '.html';
     link.textContent = motifName;
     row.appendChild(link);
 
@@ -267,8 +328,8 @@ function songMotifsRender(song, groupedRefs) {
 
   state.legendNodes.clear();
   groupedRefs.forEach((entry) => {
-    const motifName = entry.motif ? entry.motif.name : entry.motifId;
-    const motifColor = entry.motif && entry.motif.color ? entry.motif.color : '#999999';
+    const motifName = entry.displayName;
+    const motifColor = entry.displayColor;
 
     const item = document.createElement('li');
     item.className = 'song-motif-legend-item';
@@ -283,7 +344,7 @@ function songMotifsRender(song, groupedRefs) {
     item.appendChild(label);
 
     legend.appendChild(item);
-    state.legendNodes.set(entry.motifId, item);
+    state.legendNodes.set(entry.key, item);
   });
 
   state.progressNode = progress;
@@ -344,7 +405,11 @@ function songMotifsAttachPlayer(song) {
         }
 
         const ytDuration = Number(event.target.getDuration()) || 0;
-        state.duration = Math.max(state.duration, ytDuration);
+        if (state.declaredDuration > 0) {
+          state.duration = state.declaredDuration;
+        } else {
+          state.duration = Math.max(state.duration, ytDuration);
+        }
         state.durationLabel.textContent = songMotifFormatTime(state.duration);
 
         const rows = document.querySelectorAll('.song-motif-track');
