@@ -1,3 +1,13 @@
+.bodybar {
+  height: auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.back-button {
+  display: none;
+}
+
 .album-header {
   display: flex;
   gap: 30px;
@@ -5,59 +15,131 @@
   margin-bottom: 30px;
 }
 
-.album-cover-container {
-  flex-shrink: 0;
-}
-
-.album-cover-container img {
-  width: 200px;
-  height: 200px;
-  border: 2px solid #351854;
-  border-radius: 4px;
-}
-
 .album-info {
   flex: 1;
+  order: 1;
 }
 
 .album-info h1 {
-  margin: 0 0 10px 0;
+  margin: 0 0 6px 0;
   color: #351854;
+  font-family: "Nunito", sans-serif;
+  font-size: 2.5em;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.album-meta {
+  margin-top: 0;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #999;
+  color: #000;
+  font-size: 1em;
+}
+
+.album-meta p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.album-meta a {
+  color: #ef8a85;
+  text-decoration: underline;
+}
+
+.album-cover-container {
+  order: 2;
+  flex-shrink: 0;
+  width: 280px;
+}
+
+.album-cover-container img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+  border: 2px solid #351854;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.album-cover-credit {
+  font-family: "Nunito", sans-serif;
+  padding-top: 4px;
+  font-size: 0.75em;
+  color: #000;
+  font-weight: 500;
+  text-align: center;
 }
 
 .song-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  counter-reset: album-song;
 }
 
 .song-item {
-  padding: 0;
+  position: relative;
+  margin: 3px 0;
+  padding-left: 30px;
+  line-height: 1.3;
+}
+
+.song-item::before {
+  counter-increment: album-song;
+  content: counter(album-song) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #111;
 }
 
 .song-item a {
   text-decoration: none;
   color: #ef8a85;
   font-weight: 500;
+  font-size: 1em;
 }
 
 .song-item a:hover {
   color: #68BDE7;
 }
 
-.back-button {
-  display: inline-block;
-  margin-bottom: 20px;
-  padding: 5px 16px;
-  background-color: #FFFFFF;
-  border: 3px solid #351854;
-  border-radius: 5px;
-  text-decoration: none;
-  color: #ef8a85;
-  font-weight: bold;
-  transition: all 0.3s ease;
+.album-nav-buttons {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0 0 0;
 }
 
-.back-button:hover {
+.album-nav-buttons a {
+  flex: 1;
+  padding: 5px;
+  background-color: #FFFFFF;
+  color: #ef8a85;
+  border: 3px solid #351854;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.album-nav-buttons a:hover {
   color: #68BDE7;
+}
+
+@media (max-width: 900px) {
+  .album-header {
+    flex-direction: column;
+  }
+
+  .album-cover-container {
+    order: 1;
+    width: min(260px, 100%);
+  }
+
+  .album-info {
+    order: 2;
+  }
 }

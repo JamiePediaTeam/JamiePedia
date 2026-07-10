@@ -23,7 +23,7 @@ const Motifs = {
   GUMMYWORM: new Motif(
     'gummyworm',
     'Gummyworm',
-    '../public/images/cover-art/bs.png',
+    '../public/images/motif-art/gummyworm.png',
     [],
     '#66BDE6'
   ),

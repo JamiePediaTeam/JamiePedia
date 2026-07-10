@@ -12,9 +12,32 @@ const musicFilePaths = [
   { album: 'Album', path: '/music/bs.html' },
   { album: 'Album', path: '/music/cc.html' },
   { album: 'Album', path: '/music/ccde.html' },
-  { album: 'Album', path: '/music/ccontrepoint.html' },
   { album: 'Album', path: '/music/cs.html' },
+  { album: 'Album', path: '/music/destiny.html' },
+  { album: 'Album', path: '/music/PPPP.html' },
+  { album: 'Album', path: '/music/dnh.html' },
+  { album: 'Album', path: '/music/video-hunting-specimen.html' },
+  { album: 'Album', path: '/music/aod.html' },
+  { album: 'Album', path: '/music/bc.html' },
   { album: 'Album', path: '/music/jpjp3.html' },
+  { album: 'Album', path: '/music/jpjp4.html' },
+  { album: 'Album', path: '/music/jpjp5.html' },
+  { album: 'Album', path: '/music/jpjp6.html' },
+  { album: 'Album', path: '/music/ccii.html' },
+  { album: 'Album', path: '/music/ccontrepoint.html' },
+  { album: 'Album', path: '/music/ff2.html' },
+  { album: 'Album', path: '/music/ds2021.html' },
+  { album: 'Album', path: '/music/ds2024.html' },
+  { album: 'Album', path: '/music/vvff.html' },
+  { album: 'Album', path: '/music/vvjp.html' },
+  { album: 'Album', path: '/music/bdkt26.html' },
+  { album: 'Album', path: '/music/meff.html' },
+  { album: 'Album', path: '/music/birdapp.html' },
+  { album: 'Album', path: '/music/butterfly.html' },
+  { album: 'Album', path: '/music/paisleyAcc.html' },
+  { album: 'Album', path: '/music/tumble.html' },
+  { album: 'Album', path: '/music/sound.html' },
+  { album: 'Album', path: '/music/pamiejaige.html' },
   
   // Anew Again
   { album: 'Anew Again', path: '/music/aa/decree.html' },
@@ -84,8 +107,139 @@ const musicFilePaths = [
   
   // Cardiac Contrepoint
   { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/butcher-vanity.html' },
-  
-  // Jamie Paige Jam Pack - March 2024
+  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/rawdog.html' },
+  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/weathergirl.html' },
+  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/weiward-romance.html' },
+  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/water-the-roses.html' },
+  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/queen-of-venus.html' },
+  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/paparazzi-murder-party-rr.html' },
+  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/snowflake-rr.html' },
+  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/when-spring-comes-rr.html' },
+
+  // Destiny
+  { album: 'Destiny', path: '/music/destiny/destiny.html' },
+  { album: 'Destiny', path: '/music/destiny/destiny-marcy-nabors-remix.html' },
+
+  // People Posture Play Pretend
+  { album: 'People Posture Play Pretend', path: '/music/PPPP/people-posture-play-pretend.html' },
+  { album: 'People Posture Play Pretend', path: '/music/PPPP/when-spring-comes.html' },
+
+  // Do No Harm
+  { album: 'Do No Harm', path: '/music/dnh/do-no-harm-atrial-mix.html' },
+  { album: 'Do No Harm', path: '/music/dnh/do-no-harm-ventricular-mix.html' },
+
+  // Video Hunting Specimen
+  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/vhs-get.html' },
+  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/dont-stop.html' },
+  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/buh-buh-buh-baby-vacant-heart-sounds.html' },
+  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/the-whole-place-has-to-workit.html' },
+  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/marcy-nabors-and-jamie-paige-take-your-bones-to-work-day.html' },
+
+  // Autumn's Other Days
+  { album: 'Autumn\'s Other Days', path: '/music/aod/behind-the-phone-line.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/secret-girlfriend-dream-logic-version.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/fenicsong-with-valerie-halla.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/abraxas.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/hey-jamie-lets-go-to-walmart.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/girl-heart-friend.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/for-u.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/to-atlantis-oddeeo-remix.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/too-much-autotune-drainpuppets-attention-deficitmix.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/autumn-every-day-lavande-remix.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/a-thousand-miles.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/lonely-singing-doll.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/peg.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/like-a-dream.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/closer.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/rather-be.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/pollyanna-i-believe-in-you.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/oddeeo-karma-wears-white-ties-chinatown-blues-jamie-paige-remix.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/nelward-apple-shampoo-jamie-paiges-mcintosh-mix.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/soundcloud-promo-with-cory-pangilinan-and-marcy-nabors.html' },
+  { album: 'Autumn\'s Other Days', path: '/music/aod/distinct-recollections-of-russian-nesting-dolls-in-a-moving-car.html' },
+
+  // Buttercream
+  { album: 'Buttercream', path: '/music/bc/on-fire-from-fourth-strike-song-jam-2021.html' },
+  { album: 'Buttercream', path: '/music/bc/breakup.html' },
+  { album: 'Buttercream', path: '/music/bc/winter.html' },
+  { album: 'Buttercream', path: '/music/bc/brush.html' },
+  { album: 'Buttercream', path: '/music/bc/feather.html' },
+  { album: 'Buttercream', path: '/music/bc/this-project-file-is-called-depression-shit-i-guess.html' },
+  { album: 'Buttercream', path: '/music/bc/that-aint-how-it-has-to-be.html' },
+  { album: 'Buttercream', path: '/music/bc/by-the-seashore.html' },
+  { album: 'Buttercream', path: '/music/bc/between-the-day-and-night-ally-beta.html' },
+  { album: 'Buttercream', path: '/music/bc/asemic-speech-demo.html' },
+  { album: 'Buttercream', path: '/music/bc/bittersweet-demo.html' },
+  { album: 'Buttercream', path: '/music/bc/where-hearts-thaw.html' },
+  { album: 'Buttercream', path: '/music/bc/the-patterns-of-clouds.html' },
+  { album: 'Buttercream', path: '/music/bc/escape-ffxiv-cover.html' },
+  { album: 'Buttercream', path: '/music/bc/spaceman-the-killers-cover.html' },
+  { album: 'Buttercream', path: '/music/bc/patchwork-eden-sasakure-uk-cover.html' },
+  { album: 'Buttercream', path: '/music/bc/vessel-of-stars-casket-of-star.html' },
+  { album: 'Buttercream', path: '/music/bc/grimoire-of-alice-x-locked-girl.html' },
+  { album: 'Buttercream', path: '/music/bc/grand-restore-2021-version.html' },
+  { album: 'Buttercream', path: '/music/bc/moe-shop-love-taste-jamie-paige-rmx.html' },
+  { album: 'Buttercream', path: '/music/bc/song-for-jijo-2021-version.html' },
+  { album: 'Buttercream', path: '/music/bc/swag-pt-3-its-2014-again.html' },
+
+    // Jamie Paige Jam Pack - March 2024
   { album: 'Jamie Paige Jam Pack - March 2024', path: '/music/jpjp3/funtown-usa.html' },
-  { album: 'Jamie Paige Jam Pack - March 2024', path: '/music/jpjp3/paisley-pudge-airship.html' }
+  { album: 'Jamie Paige Jam Pack - March 2024', path: '/music/jpjp3/paisley-pudge-airship.html' },
+
+  // Jamie P Jam Pack - April 2024
+  { album: 'Jamie P Jam Pack - April 2024', path: '/music/jpjp4/shrimp-miku-yelling-at-me.html' },
+  { album: 'Jamie P Jam Pack - April 2024', path: '/music/jpjp4/vane-ft-enid-and-hatsune-miku-pitter-patter-jamie-p-remix.html' },
+  { album: 'Jamie P Jam Pack - April 2024', path: '/music/jpjp4/get-down-b4-4-cover-i-guess.html' },
+  { album: 'Jamie P Jam Pack - April 2024', path: '/music/jpjp4/oddeeo-this-feeling-is-a-cliche-jamie-p-edit.html' },
+
+  // Jamie P Jam Pack - May 2024
+  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/poinsettia-demo.html' },
+  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/people-posture-play-pretend-arcane.html' },
+  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/lineage-of-legless-lizards-demo.html' },
+  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/march-of-the-quail-doves.html' },
+  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/standing-up-demo.html' },
+  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/machine-love-lo-fi-hip-hop-beat-to-daemon-doll-to-version.html' },
+  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/alabaster-demo.html' },
+  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/light-mode-lover-demo.html' },
+  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/frimomen-penis-blast.html' },
+
+  // Jamie P Jam Pack - June 2024
+  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/so-what-am-i-supposed-to-do-with-track-10.html' },
+  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/magnasanti-idea-1.html' },
+  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/magnasanti-but-different-idea-1-5.html' },
+  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/all-i-want-to-do-idea-2.html' },
+  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/all-i-want-to-do-gust-idea-3.html' },
+  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/manifesto-idea-4.html' },
+  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/international-sweet-trip-cover.html' },
+
+  // Singles
+  { album: 'Singles', path: '/music/singles/virtue.html' },
+  { album: 'Singles', path: '/music/singles/encore.html' },
+  { album: 'Singles', path: '/music/singles/women-wrestling.html' },
+  { album: 'Singles', path: '/music/singles/ebi.html' },
+  { album: 'Singles', path: '/music/singles/hope-cafe.html' },
+  { album: 'Singles', path: '/music/singles/fire.html' },
+  { album: 'Singles', path: '/music/singles/square-up.html' },
+
+  // Features and Collaborations
+  { album: 'Features and Collaborations', path: '/music/collabs/love-taste.html' },
+  { album: 'Features and Collaborations', path: '/music/collabs/matryoshka-club-mix.html' },
+  { album: 'Features and Collaborations', path: '/music/collabs/ghostride-my-bad-emotions.html' },
+  { album: 'Features and Collaborations', path: '/music/collabs/annihilation-waltz.html' },
+  { album: 'Features and Collaborations', path: '/music/collabs/ride.html' },
+  { album: 'Features and Collaborations', path: '/music/collabs/love-renewed.html' },
+  { album: 'Features and Collaborations', path: '/music/collabs/letterboxd.html' },
+  { album: 'Features and Collaborations', path: '/music/collabs/take-it-away.html' },
+  { album: 'Features and Collaborations', path: '/music/collabs/newly-human-feeling.html' },
+  { album: 'Features and Collaborations', path: '/music/collabs/on-the-wind.html' },
+
+  // FF Album 2
+  { album: 'FF Album 2', path: '/music/ff2/static.html' },
+  { album: 'FF Album 2', path: '/music/ff2/spoken-for.html' },
+  { album: 'FF Album 2', path: '/music/ff2/human.html' },
+  { album: 'FF Album 2', path: '/music/ff2/connect-commune.html' },
+  { album: 'FF Album 2', path: '/music/ff2/ego-renegade-boy.html' },
+
+  // FLAVOR FOLEY singles
+  { album: 'FLAVOR FOLEY', path: '/music/ewz.html' }
 ];
