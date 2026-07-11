@@ -38,7 +38,7 @@ const Songs = {
     new MotifReference('gummyworm', '3:15', '3:26'),
     new MotifReference('gummyworm', '3:26', '3:42'),
     new MotifReference('bittersweet-kalia-vibte', '2:11', '2:16'),
-    new MotifReference('constant-companions', '4:04', '4:16')
+    new MotifReference('constant-companions', '4:16', '4:23')
   ]),
 
   DANCE_DELIGHTFUL: new Song('Dance Delightful', '../music/cc/dance-delightful.html', 'sxO1RG9q30I', '#DE7F46', [
