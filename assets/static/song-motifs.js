@@ -86,10 +86,281 @@ function getSongMotifsState() {
       durationLabel: null,
       mainTrack: null,
       playButton: null,
-      declaredDuration: 0
+      declaredDuration: 0,
+      volume: 100,
+      volumeInput: null,
+      karaokeEntries: [],
+      karaokeCurrentIndex: -2,
+      karaokeWrap: null,
+      karaokeLayerHost: null,
+      karaokeActiveLayer: null,
+      karaokeTransitionTimer: null
     };
   }
   return window.__songMotifsState;
+}
+
+function songMotifsBuildKaraokePayload(currentIndex) {
+  const state = getSongMotifsState();
+  const previousText = currentIndex > 0 ? state.karaokeEntries[currentIndex - 1].text : '';
+  const currentText = currentIndex >= 0 ? state.karaokeEntries[currentIndex].text : '';
+  const nextText = currentIndex >= 0 && currentIndex + 1 < state.karaokeEntries.length
+    ? state.karaokeEntries[currentIndex + 1].text
+    : '';
+
+  return {
+    previousText: previousText || ' ',
+    currentText: currentText || ' ',
+    nextText: nextText || ' '
+  };
+}
+
+function songMotifsBuildKaraokeLayer(payload, layerClassName) {
+  const layer = document.createElement('div');
+  layer.className = 'song-karaoke-layer ' + layerClassName;
+
+  const previous = document.createElement('p');
+  previous.className = 'song-karaoke-line song-karaoke-line-prev';
+  previous.textContent = payload.previousText;
+  layer.appendChild(previous);
+
+  const current = document.createElement('p');
+  current.className = 'song-karaoke-line song-karaoke-line-current';
+  current.textContent = payload.currentText;
+  layer.appendChild(current);
+
+  const next = document.createElement('p');
+  next.className = 'song-karaoke-line song-karaoke-line-next';
+  next.textContent = payload.nextText;
+  layer.appendChild(next);
+
+  return layer;
+}
+
+const SONG_MOTIFS_KARAOKE_SYNC_LEAD_SECONDS = 0.9;
+
+function songMotifsUpdateKaraoke(currentTime) {
+  const state = getSongMotifsState();
+  if (!state.karaokeWrap || !state.karaokeLayerHost) {
+    return;
+  }
+
+  if (!Array.isArray(state.karaokeEntries) || state.karaokeEntries.length === 0) {
+    state.karaokeWrap.style.display = 'none';
+    return;
+  }
+
+  state.karaokeWrap.style.display = '';
+  const syncedTime = currentTime + SONG_MOTIFS_KARAOKE_SYNC_LEAD_SECONDS;
+
+  let currentIndex = -1;
+  for (let i = 0; i < state.karaokeEntries.length; i += 1) {
+    if (state.karaokeEntries[i].time <= syncedTime + 0.01) {
+      currentIndex = i;
+    } else {
+      break;
+    }
+  }
+
+  if (currentIndex === state.karaokeCurrentIndex) {
+    return;
+  }
+
+  const previousIndex = state.karaokeCurrentIndex;
+  state.karaokeCurrentIndex = currentIndex;
+  const payload = songMotifsBuildKaraokePayload(currentIndex);
+
+  if (state.karaokeTransitionTimer) {
+    clearTimeout(state.karaokeTransitionTimer);
+    state.karaokeTransitionTimer = null;
+  }
+
+  if (state.karaokeActiveLayer) {
+    state.karaokeActiveLayer.classList.remove('song-karaoke-layer-entering');
+    state.karaokeActiveLayer.classList.remove('song-karaoke-layer-entering-play');
+    state.karaokeActiveLayer.classList.remove('song-karaoke-layer-leaving');
+    state.karaokeActiveLayer.classList.add('song-karaoke-layer-active');
+  }
+
+  Array.from(state.karaokeLayerHost.children).forEach((child) => {
+    if (child !== state.karaokeActiveLayer) {
+      child.remove();
+    }
+  });
+
+  if (!state.karaokeActiveLayer) {
+    const initialLayer = songMotifsBuildKaraokeLayer(payload, 'song-karaoke-layer-active');
+    state.karaokeLayerHost.innerHTML = '';
+    state.karaokeLayerHost.appendChild(initialLayer);
+    state.karaokeActiveLayer = initialLayer;
+    return;
+  }
+
+  const shouldAnimate = Math.abs(currentIndex - previousIndex) === 1;
+  if (!shouldAnimate) {
+    const replacementLayer = songMotifsBuildKaraokeLayer(payload, 'song-karaoke-layer-active');
+    state.karaokeLayerHost.innerHTML = '';
+    state.karaokeLayerHost.appendChild(replacementLayer);
+    state.karaokeActiveLayer = replacementLayer;
+    return;
+  }
+
+  const leavingLayer = state.karaokeActiveLayer;
+  leavingLayer.classList.remove('song-karaoke-layer-active');
+  leavingLayer.classList.add('song-karaoke-layer-leaving');
+
+  const enteringLayer = songMotifsBuildKaraokeLayer(payload, 'song-karaoke-layer-entering');
+  state.karaokeLayerHost.appendChild(enteringLayer);
+  state.karaokeActiveLayer = enteringLayer;
+  void enteringLayer.offsetWidth;
+  enteringLayer.classList.add('song-karaoke-layer-entering-play');
+
+  state.karaokeTransitionTimer = setTimeout(() => {
+    if (leavingLayer.parentNode) {
+      leavingLayer.remove();
+    }
+    enteringLayer.classList.remove('song-karaoke-layer-entering');
+    enteringLayer.classList.remove('song-karaoke-layer-entering-play');
+    enteringLayer.classList.add('song-karaoke-layer-active');
+    state.karaokeTransitionTimer = null;
+  }, 500);
+}
+
+function songMotifsApplyKaraokeEntries(entries) {
+  const state = getSongMotifsState();
+  if (!Array.isArray(entries)) {
+    state.karaokeEntries = [];
+    songMotifsUpdateKaraoke(0);
+    return;
+  }
+
+  state.karaokeEntries = entries
+    .filter((entry) => entry && typeof entry.time === 'number' && typeof entry.text === 'string')
+    .sort((a, b) => a.time - b.time);
+
+  if (state.karaokeLayerHost) {
+    state.karaokeLayerHost.innerHTML = '';
+  }
+  state.karaokeActiveLayer = null;
+
+  state.karaokeCurrentIndex = -2;
+  songMotifsUpdateKaraoke(0);
+}
+
+function setSongMotifsVolume(value) {
+  const state = getSongMotifsState();
+  const nextVolume = Math.max(0, Math.min(100, Number(value) || 0));
+  state.volume = nextVolume;
+
+  if (state.volumeInput) {
+    state.volumeInput.value = String(nextVolume);
+  }
+
+  if (state.player && typeof state.player.setVolume === 'function') {
+    state.player.setVolume(nextVolume);
+  }
+}
+
+function songMotifsParseTimestamp(value) {
+  const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
+  if (!match) {
+    return 0;
+  }
+
+  const mins = Number(match[1]);
+  const secs = Number(match[2]);
+  const frac = Number('0.' + String(match[3] || '0').padEnd(3, '0'));
+  return mins * 60 + secs + frac;
+}
+
+function songMotifsParseLrcTimedEntries(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  const entries = [];
+
+  lines.forEach((line) => {
+    const timestamps = line.match(/\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]/g);
+    if (!timestamps) {
+      return;
+    }
+
+    const lyric = line.replace(/\[[^\]]+\]/g, '').trim();
+
+    timestamps.forEach((stamp) => {
+      const cleanStamp = stamp.slice(1, -1);
+      entries.push({
+        time: songMotifsParseTimestamp(cleanStamp),
+        text: lyric
+      });
+    });
+  });
+
+  const seen = new Set();
+  return entries
+    .sort((a, b) => a.time - b.time)
+    .filter((entry) => {
+      const key = entry.time.toFixed(3) + '|' + entry.text;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+}
+
+function songMotifsLoadKaraokeEntries() {
+  if (window.SongLyrics && typeof window.SongLyrics.loadCurrentSongLyrics === 'function') {
+    return window.SongLyrics.loadCurrentSongLyrics().then((data) => {
+      if (!data || !Array.isArray(data.timedEntries)) {
+        return [];
+      }
+      return data.timedEntries;
+    });
+  }
+
+  const file = (window.location.pathname.split('/').pop() || '').replace(/\.html$/i, '').toLowerCase();
+  if (!file) {
+    return Promise.resolve([]);
+  }
+
+  const path = '../../public/lyrics/' + file + '.lrc';
+  return fetch(path, { cache: 'no-store' })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error('No LRC file');
+      }
+      return response.text();
+    })
+    .then((text) => songMotifsParseLrcTimedEntries(text))
+    .catch(() => []);
+}
+
+function buildSongMotifsVolumeControl() {
+  const state = getSongMotifsState();
+  const wrap = document.createElement('div');
+  wrap.className = 'song-motif-volume-wrap';
+
+  const label = document.createElement('label');
+  label.className = 'song-motif-volume-label';
+  label.htmlFor = 'songMotifVolumeSlider';
+  label.textContent = 'Volume';
+  wrap.appendChild(label);
+
+  const input = document.createElement('input');
+  input.id = 'songMotifVolumeSlider';
+  input.className = 'song-motif-volume-slider';
+  input.type = 'range';
+  input.min = '0';
+  input.max = '100';
+  input.step = '1';
+  input.value = String(state.volume);
+  input.setAttribute('aria-label', 'Connections player volume');
+  input.addEventListener('input', () => {
+    setSongMotifsVolume(input.value);
+  });
+  wrap.appendChild(input);
+
+  state.volumeInput = input;
+  return wrap;
 }
 
 function songMotifsFindSong() {
@@ -187,6 +458,7 @@ function songMotifsUpdateProgress() {
   state.progressNode.style.width = ((current / duration) * 100) + '%';
   state.currentLabel.textContent = songMotifFormatTime(current);
   songMotifsUpdateLegend(current);
+  songMotifsUpdateKaraoke(current);
 }
 
 function songMotifsSeekTo(seconds) {
@@ -201,6 +473,7 @@ function songMotifsSeekTo(seconds) {
   state.currentLabel.textContent = songMotifFormatTime(target);
   state.progressNode.style.width = ((target / (state.duration || 1)) * 100) + '%';
   songMotifsUpdateLegend(target);
+  songMotifsUpdateKaraoke(target);
 }
 
 function songMotifsRender(song, groupedRefs) {
@@ -244,6 +517,22 @@ function songMotifsRender(song, groupedRefs) {
   overlayPlayButton.className = 'song-motif-overlay-play';
   overlayPlayButton.textContent = '▶';
   videoWrap.appendChild(overlayPlayButton);
+
+  const volumeWrap = buildSongMotifsVolumeControl();
+  shell.appendChild(volumeWrap);
+
+  const karaokeWrap = document.createElement('section');
+  karaokeWrap.className = 'song-karaoke-wrap';
+  karaokeWrap.style.display = 'none';
+  shell.appendChild(karaokeWrap);
+
+  const karaokeViewport = document.createElement('div');
+  karaokeViewport.className = 'song-karaoke-viewport';
+  karaokeWrap.appendChild(karaokeViewport);
+
+  const karaokeLayerHost = document.createElement('div');
+  karaokeLayerHost.className = 'song-karaoke-layer-host';
+  karaokeViewport.appendChild(karaokeLayerHost);
 
   const controls = document.createElement('div');
   controls.className = 'song-motif-controls';
@@ -352,6 +641,9 @@ function songMotifsRender(song, groupedRefs) {
   state.durationLabel = durationLabel;
   state.mainTrack = mainTrack;
   state.playButton = overlayPlayButton;
+  state.karaokeWrap = karaokeWrap;
+  state.karaokeLayerHost = karaokeLayerHost;
+  state.karaokeActiveLayer = null;
 
   overlayPlayButton.addEventListener('click', () => {
     if (!state.player || typeof state.player.getPlayerState !== 'function') {
@@ -402,6 +694,10 @@ function songMotifsAttachPlayer(song) {
           iframe.style.pointerEvents = 'none';
           iframe.setAttribute('tabindex', '-1');
           iframe.setAttribute('aria-hidden', 'true');
+        }
+
+        if (typeof event.target.setVolume === 'function') {
+          event.target.setVolume(state.volume);
         }
 
         const ytDuration = Number(event.target.getDuration()) || 0;
@@ -460,6 +756,10 @@ function renderSongMotifsSection() {
 
   const groupedRefs = songMotifsGroupRefs(song);
   songMotifsRender(song, groupedRefs);
+
+  songMotifsLoadKaraokeEntries().then((entries) => {
+    songMotifsApplyKaraokeEntries(entries);
+  });
 
   if (window.YT && window.YT.Player) {
     songMotifsAttachPlayer(song);
