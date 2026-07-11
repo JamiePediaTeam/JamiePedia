@@ -20,6 +20,25 @@
   margin: 0 auto 18px;
 }
 
+.motif-volume-wrap {
+  width: min(198px, 90%);
+  margin: -4px auto 18px;
+}
+
+.motif-volume-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #222222;
+  font-size: 0.8em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.motif-volume-slider {
+  width: 100%;
+  margin: 0;
+}
+
 .motif-image {
   width: 100%;
   aspect-ratio: 1;

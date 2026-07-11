@@ -122,8 +122,53 @@ function getSongRefsForMotif(song, motif, variationId = '') {
 const PlayerStore = {
   rows: [],
   activeRow: null,
-  apiReady: false
+  apiReady: false,
+  volume: 100,
+  volumeInput: null
 };
+
+function setMotifPageVolume(value) {
+  const nextVolume = Math.max(0, Math.min(100, Number(value) || 0));
+  PlayerStore.volume = nextVolume;
+
+  if (PlayerStore.volumeInput) {
+    PlayerStore.volumeInput.value = String(nextVolume);
+  }
+
+  PlayerStore.rows.forEach((row) => {
+    if (row.player && typeof row.player.setVolume === 'function') {
+      row.player.setVolume(nextVolume);
+    }
+  });
+}
+
+function buildMotifVolumeControl() {
+  const wrap = document.createElement('div');
+  wrap.className = 'motif-volume-wrap';
+
+  const label = document.createElement('label');
+  label.className = 'motif-volume-label';
+  label.htmlFor = 'motifVolumeSlider';
+  label.textContent = 'Volume';
+  wrap.appendChild(label);
+
+  const input = document.createElement('input');
+  input.id = 'motifVolumeSlider';
+  input.className = 'motif-volume-slider';
+  input.type = 'range';
+  input.min = '0';
+  input.max = '100';
+  input.step = '1';
+  input.value = String(PlayerStore.volume);
+  input.setAttribute('aria-label', 'Motif player volume');
+  input.addEventListener('input', () => {
+    setMotifPageVolume(input.value);
+  });
+  wrap.appendChild(input);
+
+  PlayerStore.volumeInput = input;
+  return wrap;
+}
 
 function pauseOthers(exceptRow) {
   PlayerStore.rows.forEach((row) => {
@@ -358,6 +403,9 @@ function createYouTubePlayers() {
       },
       events: {
         onReady: (event) => {
+          if (typeof event.target.setVolume === 'function') {
+            event.target.setVolume(PlayerStore.volume);
+          }
           const ytDuration = Number(event.target.getDuration()) || 0;
           const fallback = rowState.refs.reduce((max, ref) => Math.max(max, ref.endTime), 0);
           rowState.duration = Math.max(ytDuration, fallback);
@@ -398,6 +446,7 @@ function renderMotifPage() {
   const motifName = document.getElementById('motifName');
   const motifImage = document.getElementById('motifImage');
   const motifImageWrap = document.querySelector('.motif-image-wrap');
+  const existingVolumeWrap = document.querySelector('.motif-volume-wrap');
   const songList = document.getElementById('motifSongList');
   const songsHeading = document.getElementById('motifSongsHeading');
 
@@ -444,6 +493,15 @@ function renderMotifPage() {
     motifImage.src = motif.image || '../public/images/cover-art/bs.png';
     motifImage.alt = motif.name + ' motif image';
   }
+
+  if (existingVolumeWrap) {
+    existingVolumeWrap.remove();
+  }
+
+  if (motifImageWrap && motifImageWrap.parentNode) {
+    motifImageWrap.insertAdjacentElement('afterend', buildMotifVolumeControl());
+  }
+
   if (songsHeading) {
     songsHeading.textContent = 'Songs with ' + motif.name;
   }
