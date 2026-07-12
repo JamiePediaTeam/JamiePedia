@@ -114,7 +114,7 @@ function getSongRefsForMotif(song, motif, variationId = '') {
       isDefinition: ref.isDefinition,
       variationId: ref.variationId || ''
     }))
-    .filter((ref) => ref.endTime > ref.startTime)
+    .filter((ref) => ref.endTime > ref.startTime || ref.isDefinition)
     .filter((ref) => !variationId || ref.variationId === variationId)
     .sort((a, b) => a.startTime - b.startTime);
 }
@@ -468,7 +468,9 @@ function renderMotifPage() {
     }
   }
 
-  if (motif.variationGroup && motif.iconText && motifImageWrap) {
+  const hasVariations = Array.isArray(motif.variations) && motif.variations.length > 0;
+
+  if (hasVariations && motifImageWrap) {
     const badges = Array.isArray(motif.variations)
       ? motif.variations.map((variation) => variation.label || variation.id).filter(Boolean)
       : [];
@@ -516,14 +518,12 @@ function renderMotifPage() {
   if (songs.length === 0) {
     const emptyState = document.createElement('div');
     emptyState.className = 'motif-empty';
-    emptyState.textContent = 'No song entries yet. Add entries in assets/static/song-data.js.';
+    emptyState.textContent = 'No song entries yet. Add rows in public/motifs/JamiePedia Motifs spreadsheet - Sheet1.csv.';
     songList.appendChild(emptyState);
     return;
   }
 
   let rowIndex = 0;
-  const hasVariations = Array.isArray(motif.variations) && motif.variations.length > 0;
-
   if (hasVariations) {
     if (songsHeading) {
       songsHeading.textContent = 'Motif Variations';

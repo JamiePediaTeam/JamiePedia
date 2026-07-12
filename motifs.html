@@ -40,43 +40,78 @@
         <td>
           <div class="bodybar">
             <h2 class="album-section-heading">Motifs</h2>
-            <div class="albumgallery">
-              <div class="album-tile">
-                <a href="motifs/space-center.html">
-                  <div class="album-cover motif-variation-cover-panel">
-                    <div class="motif-variation-cover-art-wrap">
-                      <img src="public/images/cover-art/aa.png" alt="Space Center motif" class="motif-variation-cover-art">
-                    </div>
-                    <div class="motif-variation-cover-side">
-                      <span class="motif-variation-cover-badge" style="--variation-color: #9EC7CD;">A</span>
-                      <span class="motif-variation-cover-badge" style="--variation-color: #A2E9CF;">B</span>
-                    </div>
-                  </div>
-                  <span class="album-title">Space Center</span>
-                </a>
-              </div>
-              <div class="album-tile">
-                <a href="motifs/bittersweet-kalia-vibte.html">
-                  <img src="public/images/cover-art/bs.png" alt="Bittersweet/Kalia Vibte motif" class="album-cover">
-                  <span class="album-title">Bittersweet/Kalia Vibte</span>
-                </a>
-              </div>
-              <div class="album-tile">
-                <a href="motifs/gummyworm.html">
-                  <img src="public/images/motif-art/gummyworm.png" alt="Gummyworm motif" class="album-cover">
-                  <span class="album-title">Gummyworm</span>
-                </a>
-              </div>
-              <div class="album-tile">
-                <a href="motifs/constant-companions.html">
-                  <img src="public/images/cover-art/cc.png" alt="Constant Companions motif" class="album-cover">
-                  <span class="album-title">Constant Companions</span>
-                </a>
-              </div>
-            </div>
+            <div class="albumgallery" id="motifsGallery"></div>
           </div>
         </td>
       </tr>
     </table>
+    <script src="assets/static/csv-data.js"></script>
+    <script>
+      (function () {
+        function createMotifTile(motif) {
+          const tile = document.createElement('div');
+          tile.className = 'album-tile';
+
+          const link = document.createElement('a');
+          link.href = 'motifs/' + (motif.pageSlug || motif.id) + '.html';
+          tile.appendChild(link);
+
+          const hasVariations = Array.isArray(motif.variations) && motif.variations.length > 0;
+
+          if (hasVariations) {
+            const cover = document.createElement('div');
+            cover.className = 'album-cover motif-variation-cover-panel';
+
+            const artWrap = document.createElement('div');
+            artWrap.className = 'motif-variation-cover-art-wrap';
+            cover.appendChild(artWrap);
+
+            const art = document.createElement('img');
+            art.className = 'motif-variation-cover-art';
+            art.src = motif.image || 'public/images/cover-art/bs.png';
+            art.alt = motif.name + ' motif';
+            artWrap.appendChild(art);
+
+            const side = document.createElement('div');
+            side.className = 'motif-variation-cover-side';
+            motif.variations.forEach((variation) => {
+              const badge = document.createElement('span');
+              badge.className = 'motif-variation-cover-badge';
+              badge.style.setProperty('--variation-color', variation.color || motif.color || '#9ec7cd');
+              badge.textContent = variation.label || variation.id || '?';
+              side.appendChild(badge);
+            });
+
+            cover.appendChild(side);
+            link.appendChild(cover);
+          } else {
+            const image = document.createElement('img');
+            image.className = 'album-cover';
+            image.src = motif.image || 'public/images/cover-art/bs.png';
+            image.alt = motif.name + ' motif';
+            link.appendChild(image);
+          }
+
+          const title = document.createElement('span');
+          title.className = 'album-title';
+          title.textContent = motif.name;
+          link.appendChild(title);
+
+          return tile;
+        }
+
+        const gallery = document.getElementById('motifsGallery');
+        const motifs = window.MotifData && Array.isArray(window.MotifData.allMotifs) ? window.MotifData.allMotifs : [];
+
+        if (!gallery || motifs.length === 0) {
+          return;
+        }
+
+        gallery.innerHTML = '';
+        motifs.forEach((motif) => {
+          gallery.appendChild(createMotifTile(motif));
+        });
+      }());
+    </script>
   </body>
 </html>

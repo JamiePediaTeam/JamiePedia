@@ -673,6 +673,10 @@
   box-sizing: border-box;
 }
 
+.song-motif-segment.definition {
+  box-shadow: inset 0 0 0 2px #1f1f1f;
+}
+
 .song-motif-list-title {
   margin: 14px 0 6px;
   font-size: 0.88em;

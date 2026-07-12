@@ -229,8 +229,7 @@ function initializeSongConnectionsFeature() {
   const prefix = '../../';
 
   loadScriptOnce('https://www.youtube.com/iframe_api')
-    .then(() => loadScriptOnce(prefix + 'assets/static/motif-data.js'))
-    .then(() => loadScriptOnce(prefix + 'assets/static/song-data.js'))
+    .then(() => loadScriptOnce(prefix + 'assets/static/csv-data.js'))
     .then(() => loadScriptOnce(prefix + 'assets/static/song-lyrics.js'))
     .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js'));
 }

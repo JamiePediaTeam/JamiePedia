@@ -381,7 +381,7 @@ function songMotifsGroupRefs(song) {
   song.motifRefs.forEach((ref) => {
     const start = songMotifTimeToSeconds(ref.startTime);
     const end = songMotifTimeToSeconds(ref.endTime);
-    if (end <= start) {
+    if (end <= start && !ref.isDefinition) {
       return;
     }
 
@@ -404,7 +404,8 @@ function songMotifsGroupRefs(song) {
     map.get(key).ranges.push({
       start,
       end,
-      isVariation: !!ref.isVariation
+      isVariation: !!ref.isVariation,
+      isDefinition: !!ref.isDefinition
     });
   });
 
@@ -578,7 +579,7 @@ function songMotifsRender(song, groupedRefs) {
     entry.ranges.forEach((range) => {
       const segment = document.createElement('button');
       segment.type = 'button';
-      segment.className = 'song-motif-segment';
+      segment.className = 'song-motif-segment' + (range.isDefinition ? ' definition' : '');
       segment.title = songMotifFormatTime(range.start) + ' - ' + songMotifFormatTime(range.end);
       segment.style.left = ((range.start / state.duration) * 100) + '%';
       segment.style.width = Math.max(0.7, ((range.end - range.start) / state.duration) * 100) + '%';
@@ -586,6 +587,10 @@ function songMotifsRender(song, groupedRefs) {
 
       if (motifColor.toUpperCase() === '#FFFFFF') {
         segment.classList.add('white-segment');
+      }
+
+      if (range.isDefinition) {
+        segment.title += ' (definition)';
       }
 
       segment.addEventListener('click', () => {
@@ -599,7 +604,7 @@ function songMotifsRender(song, groupedRefs) {
 
     const link = document.createElement('a');
     link.className = 'song-motif-label-link';
-    link.href = '../../motifs/' + (entry.motif ? entry.motif.id : entry.motifId) + '.html';
+    link.href = '../../motifs/' + ((entry.motif && entry.motif.pageSlug) ? entry.motif.pageSlug : (entry.motif ? entry.motif.id : entry.motifId)) + '.html';
     link.textContent = motifName;
     row.appendChild(link);
 

@@ -6,7 +6,14 @@ const PORT = 3000;
 
 const server = http.createServer((req, res) => {
   // Remove leading slash and build the file path
-  let filePath = req.url === '/' ? 'index.html' : req.url.startsWith('/') ? req.url.slice(1) : req.url;
+  let requestPath = req.url || '/';
+  try {
+    requestPath = decodeURIComponent(requestPath);
+  } catch (error) {
+    // Keep the original URL if it is malformed; the read will fail naturally.
+  }
+
+  let filePath = requestPath === '/' ? 'index.html' : requestPath.startsWith('/') ? requestPath.slice(1) : requestPath;
   filePath = path.join(__dirname, filePath);
   
   fs.readFile(filePath, (err, content) => {
@@ -18,6 +25,7 @@ const server = http.createServer((req, res) => {
       let contentType = 'text/html';
       if (filePath.endsWith('.css')) contentType = 'text/css';
       else if (filePath.endsWith('.js')) contentType = 'application/javascript';
+      else if (filePath.endsWith('.csv')) contentType = 'text/csv';
       else if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) contentType = 'image/jpeg';
       else if (filePath.endsWith('.png')) contentType = 'image/png';
       else if (filePath.endsWith('.gif')) contentType = 'image/gif';
