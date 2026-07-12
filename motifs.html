@@ -48,6 +48,23 @@
     <script src="assets/static/csv-data.js"></script>
     <script>
       (function () {
+        function resolveMotifImagePath(rawPath) {
+          const text = String(rawPath || '').trim();
+          if (!text) {
+            return 'public/images/cover-art/bs.png';
+          }
+
+          if (/^https?:\/\//i.test(text) || text.startsWith('data:')) {
+            return text;
+          }
+
+          if (text.startsWith('../public/')) {
+            return text.replace(/^\.\.\//, '');
+          }
+
+          return text;
+        }
+
         function createMotifTile(motif) {
           const tile = document.createElement('div');
           tile.className = 'album-tile';
@@ -68,7 +85,7 @@
 
             const art = document.createElement('img');
             art.className = 'motif-variation-cover-art';
-            art.src = motif.image || 'public/images/cover-art/bs.png';
+            art.src = resolveMotifImagePath(motif.image);
             art.alt = motif.name + ' motif';
             artWrap.appendChild(art);
 
@@ -87,7 +104,7 @@
           } else {
             const image = document.createElement('img');
             image.className = 'album-cover';
-            image.src = motif.image || 'public/images/cover-art/bs.png';
+            image.src = resolveMotifImagePath(motif.image);
             image.alt = motif.name + ' motif';
             link.appendChild(image);
           }
