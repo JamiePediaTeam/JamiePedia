@@ -19,17 +19,17 @@ Gummyworm,gummyworm,../public/images/motif-art/gummyworm.png,TRUE,F7EC6F,B,,ROT 
 ,,,,,,,Strawberry,STRAWBERRY,../music/cc/strawberry.html,youtube,,000000,,SPACE_CENTER,space-center,1:10,1:24,FALSE,TRUE,A
 ,,,,,,,Manifesto,MANIFESTO,../music/cc/manifesto.html,youtube,,000000,,SPACE_CENTER,space-center,1:25,1:42,FALSE,TRUE,B
 ,,,,,,,Dance Delightful,DANCE_DELIGHTFUL,../music/cc/dance-delightful.html,youtube,sxO1RG9q30I,DE7F46,,SPACE_CENTER_PT2,space-center,0:40,0:42,FALSE,TRUE,B
-,,,,,,,,,,youtube,,,,SPACE_CENTER_PT2,space-center,1:02,1:20,FALSE,TRUE,A
-,,,,,,,,,,youtube,,,,SPACE_CENTER_PT2,space-center,1:18,1:42,FALSE,TRUE,B
-,,,,,,,,,,youtube,,,,DYAD,constant-companions,0:56,1:01,TRUE,FALSE,
-,,,,,,,,,,youtube,,,,DYAD,constant-companions,1:01,1:03,FALSE,FALSE,
-,,,,,,,,,,youtube,,,,DYAD,constant-companions,1:06.7,1:11,FALSE,FALSE,
-,,,,,,,,,,youtube,,,,DYAD,constant-companions,,,FALSE,FALSE,
-,,,,,,,,,,youtube,,,,DYAD,constant-companions,,,FALSE,FALSE,
-,,,,,,,,,,youtube,,,,,,,,FALSE,FALSE,
-,,,,,,,,,,youtube,,,,,,,,FALSE,FALSE,
-,,,,,,,,,,youtube,,,,,,,,FALSE,FALSE,
-,,,,,,,,,,youtube,,,,,,,,FALSE,FALSE,
+,,,,,,,dyad with vox.mp3,DYAD_DEMO,../music/cc/dyad.html,youtube,fEnptqjF8g8,C6C6C6,,SPACE_CENTER_PT2,space-center,1:02,1:20,FALSE,TRUE,A
+,,,,,,,all i ever do is watch wip 2.mp3 / not quite there.mp3,NOT_QUITE_THERE_DEMO,../music/cc/not-quite-there.html#demo,youtube,,C6C6C6,,SPACE_CENTER_PT2,space-center,1:18,1:42,FALSE,TRUE,B
+,,,,,,,cloutchaser longer.wav,ROT_FOR_CLOUT_DEMO,../music/cc/rot-for-clout.html#demo,youtube,lagssHOCgak,C6C6C6,,DYAD,constant-companions,0:56,1:01,TRUE,FALSE,
+,,,,,,,i wish that i could fall wip 1.mp3,I_WISH_THAT_I_COULD_FALL_DEMO,../music/cc/i-wish-that-i-could-fall.html#demo,youtube,z_pFPjN2Rvc,C6C6C6,,DYAD,constant-companions,1:01,1:03,FALSE,FALSE,
+,,,,,,,cadmium colors.mp3,CADMIUM_COLORS_DEMO,../music/cc/cadmium-colors.html#demo,youtube,luLwdVSwfCo,C6C6C6,,DYAD,constant-companions,1:06.7,1:11,FALSE,FALSE,
+,,,,,,,rolling sandwave (breeze blows) wippy 1.mp3,BREEZE_BLOWS_DEMO,../music/cc/breeze-blows.html#demo,youtube,dv8P3gWa5wA,C6C6C6,,DYAD,constant-companions,,,FALSE,FALSE,
+,,,,,,,oh my god its dumb and its has Strangs.mp3 / aggrandicize wip 1.mp3,AGGRANDICIZE_DEMO,../music/cc/aggrandicize.html#demo,youtube,F0C5g5JUGdA,C6C6C6,,DYAD,constant-companions,,,FALSE,FALSE,
+,,,,,,,fantasize wip 1.mp3 / liaison wip 1.mp3,LIAISON_DEMO,../music/cc/liaison.html#demo,youtube,J8jkV5quQ_s,C6C6C6,,,,,,FALSE,FALSE,
+,,,,,,,object of affection wip 1.mp3,OBJECT_OF_AFFECTION_DEMO,../music/cc/object-of-affection.html#demo,youtube,eJQxJZZ-IeI,C6C6C6,,,,,,FALSE,FALSE,
+,,,,,,,constant wip1.mp3 / im just a vessel i didnt mean to flex on you bro im just a vessel.mp3 / hathaway.mp3 ,MY_DARLING_MY_COMPANION_DEMO,../music/cc/my-darling-my-companion.html#demo,youtube,fcu4JdVGMZI,C6C6C6,,,,,,FALSE,FALSE,
+,,,,,,,machine love.mp3,MACHINE_LOVE_DEMO,../music/cc/machine-love.html#demo,youtube,9Ff_N03K0HA,C6C6C6,,,,,,FALSE,FALSE,
 ,,,,,,,,,,youtube,,,,,,,,FALSE,FALSE,
 ,,,,,,,,,,youtube,,,,,,,,FALSE,FALSE,
 ,,,,,,,,,,youtube,,,,,,,,FALSE,FALSE,

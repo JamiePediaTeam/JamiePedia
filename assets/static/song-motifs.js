@@ -25,6 +25,32 @@ function songMotifFormatTime(seconds) {
   return mins + ':' + String(secs).padStart(2, '0');
 }
 
+function songMotifsNormalizeYouTubeId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  let candidate = raw;
+  try {
+    if (raw.includes('://')) {
+      const parsed = new URL(raw);
+      if (parsed.hostname.includes('youtu.be')) {
+        candidate = parsed.pathname.replace(/^\//, '').split('/')[0] || '';
+      } else {
+        candidate = parsed.searchParams.get('v')
+          || parsed.pathname.split('/').filter(Boolean).pop()
+          || '';
+      }
+    }
+  } catch (error) {
+    // Keep raw candidate for non-URL-like input.
+  }
+
+  candidate = String(candidate).split(/[?&#]/)[0].trim();
+  return /^[A-Za-z0-9_-]{11}$/.test(candidate) ? candidate : '';
+}
+
 function songMotifsReadDeclaredDuration() {
   const findTimeInText = (text) => {
     const match = String(text || '').match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
@@ -55,22 +81,106 @@ function songMotifsReadDeclaredDuration() {
 }
 
 function getSongMotifsMount() {
-  let mount = document.getElementById('songMotifsContent');
-  if (mount) {
-    return mount;
-  }
-
-  const content = document.getElementById('content-motifs');
+  const motifContents = Array.from(document.querySelectorAll('[id^="content-motifs"]'));
+  const content = motifContents.find((node) => node && node.offsetParent !== null)
+    || motifContents.find((node) => node && node.classList && node.classList.contains('active'))
+    || document.getElementById('content-motifs');
   if (!content) {
     return null;
   }
 
+  motifContents.forEach((node) => {
+    if (!node) {
+      return;
+    }
+    node.querySelectorAll('[id^="songMotifsContent"]').forEach((child) => child.remove());
+  });
+
+  const suffix = content.id === 'content-motifs'
+    ? 'original'
+    : content.id.replace(/^content-motifs-/, '') || 'original';
+
+  let mount = content.querySelector('#songMotifsContent-' + suffix);
+  if (mount) {
+    return mount;
+  }
+
   content.innerHTML = '';
   mount = document.createElement('div');
-  mount.id = 'songMotifsContent';
+  mount.id = 'songMotifsContent-' + suffix;
   mount.className = 'song-motifs-content';
   content.appendChild(mount);
   return mount;
+}
+
+function songMotifsGetActiveVariantSuffix() {
+  const visibleVersion = Array.from(document.querySelectorAll('[id^="version-"]')).find((node) => {
+    return node && node.offsetParent !== null;
+  });
+
+  if (!visibleVersion) {
+    return '';
+  }
+
+  const versionId = String(visibleVersion.id || '').toLowerCase();
+  const suffix = versionId.replace(/^version-/, '');
+  if (!suffix || suffix === 'original') {
+    return '';
+  }
+
+  return suffix;
+}
+
+function songMotifsGetBaseSongSlug() {
+  const file = (window.location.pathname.split('/').pop() || '').replace(/\.html$/i, '').toLowerCase();
+  return file;
+}
+
+function songMotifsGetActiveVariantHashToken() {
+  const activeVersionTab = document.querySelector('.version-tab.active');
+  if (!activeVersionTab) {
+    return '';
+  }
+
+  return String(activeVersionTab.textContent || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function songMotifsResolveSongPathCandidates() {
+  const baseSlug = songMotifsGetBaseSongSlug();
+  const variantSuffix = songMotifsGetActiveVariantSuffix();
+  if (!baseSlug) {
+    return [];
+  }
+
+  if (!variantSuffix) {
+    return [baseSlug + '.html'];
+  }
+
+  const hashToken = songMotifsGetActiveVariantHashToken();
+  const candidates = [baseSlug + variantSuffix + '.html'];
+  if (hashToken) {
+    candidates.push(baseSlug + '.html#' + hashToken);
+  }
+  candidates.push(baseSlug + '.html#' + variantSuffix);
+  return candidates;
+}
+
+function songMotifsResolveSongSlugs() {
+  const baseSlug = songMotifsGetBaseSongSlug();
+  const variantSuffix = songMotifsGetActiveVariantSuffix();
+  if (!baseSlug) {
+    return [];
+  }
+
+  if (!variantSuffix) {
+    return [baseSlug];
+  }
+
+  return [baseSlug + variantSuffix];
 }
 
 function getSongMotifsState() {
@@ -308,8 +418,11 @@ function songMotifsParseLrcTimedEntries(text) {
 }
 
 function songMotifsLoadKaraokeEntries() {
+  const candidateSlugs = songMotifsResolveSongSlugs();
+  const primarySlug = candidateSlugs[0] || '';
+
   if (window.SongLyrics && typeof window.SongLyrics.loadCurrentSongLyrics === 'function') {
-    return window.SongLyrics.loadCurrentSongLyrics().then((data) => {
+    return window.SongLyrics.loadCurrentSongLyrics(primarySlug).then((data) => {
       if (!data || !Array.isArray(data.timedEntries)) {
         return [];
       }
@@ -317,7 +430,7 @@ function songMotifsLoadKaraokeEntries() {
     });
   }
 
-  const file = (window.location.pathname.split('/').pop() || '').replace(/\.html$/i, '').toLowerCase();
+  const file = primarySlug;
   if (!file) {
     return Promise.resolve([]);
   }
@@ -368,11 +481,44 @@ function songMotifsFindSong() {
     return null;
   }
 
-  const currentFile = (window.location.pathname.split('/').pop() || '').toLowerCase();
-  return window.SongData.allSongs.find((song) => {
-    const songFile = String(song.path || '').split('/').pop();
-    return songFile && songFile.toLowerCase() === currentFile;
-  }) || null;
+  const expectedCandidates = songMotifsResolveSongPathCandidates();
+
+  for (const expectedFile of expectedCandidates) {
+    const match = window.SongData.allSongs.find((song) => {
+      const songFile = String(song.path || '').split('/').pop();
+      return songFile && songFile.toLowerCase() === expectedFile;
+    });
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+}
+
+function songMotifsDisposeRuntimeState() {
+  const state = getSongMotifsState();
+
+  if (state.timer) {
+    clearInterval(state.timer);
+    state.timer = null;
+  }
+
+  if (state.karaokeTransitionTimer) {
+    clearTimeout(state.karaokeTransitionTimer);
+    state.karaokeTransitionTimer = null;
+  }
+
+  if (state.player && typeof state.player.destroy === 'function') {
+    try {
+      state.player.destroy();
+    } catch (_err) {
+      // Ignore teardown errors from iframe API during remount.
+    }
+  }
+
+  state.player = null;
+  state.volumeInput = null;
 }
 
 function songMotifsGroupRefs(song) {
@@ -477,7 +623,7 @@ function songMotifsSeekTo(seconds) {
   songMotifsUpdateKaraoke(target);
 }
 
-function songMotifsRender(song, groupedRefs) {
+function songMotifsRender(song, groupedRefs, youtubeId) {
   const mount = getSongMotifsMount();
   if (!mount) {
     return;
@@ -494,11 +640,7 @@ function songMotifsRender(song, groupedRefs) {
   state.duration = state.declaredDuration > 0 ? state.declaredDuration : refsDuration;
 
   mount.innerHTML = '';
-
-  if (!song.youtubeId || groupedRefs.length === 0) {
-    mount.innerHTML = '<div class="song-motif-empty">This song has no other connections.</div>';
-    return;
-  }
+  const hasVideo = !!youtubeId;
 
   const shell = document.createElement('section');
   shell.className = 'song-motifs-shell';
@@ -508,19 +650,28 @@ function songMotifsRender(song, groupedRefs) {
   videoWrap.className = 'song-motif-video-wrap';
   shell.appendChild(videoWrap);
 
-  const host = document.createElement('div');
-  host.id = 'songMotifPlayerHost';
-  host.className = 'song-motif-yt-host';
-  videoWrap.appendChild(host);
+  let overlayPlayButton = null;
+  if (hasVideo) {
+    const host = document.createElement('div');
+    host.id = 'songMotifPlayerHost';
+    host.className = 'song-motif-yt-host';
+    videoWrap.appendChild(host);
 
-  const overlayPlayButton = document.createElement('button');
-  overlayPlayButton.type = 'button';
-  overlayPlayButton.className = 'song-motif-overlay-play';
-  overlayPlayButton.textContent = '▶';
-  videoWrap.appendChild(overlayPlayButton);
+    overlayPlayButton = document.createElement('button');
+    overlayPlayButton.type = 'button';
+    overlayPlayButton.className = 'song-motif-overlay-play';
+    overlayPlayButton.textContent = '▶';
+    videoWrap.appendChild(overlayPlayButton);
+  } else {
+    videoWrap.innerHTML = '<div class="song-motif-empty">Playback is unavailable for this song.</div>';
+  }
 
-  const volumeWrap = buildSongMotifsVolumeControl();
-  shell.appendChild(volumeWrap);
+  if (hasVideo) {
+    const volumeWrap = buildSongMotifsVolumeControl();
+    shell.appendChild(volumeWrap);
+  } else {
+    state.volumeInput = null;
+  }
 
   const karaokeWrap = document.createElement('section');
   karaokeWrap.className = 'song-karaoke-wrap';
@@ -611,6 +762,13 @@ function songMotifsRender(song, groupedRefs) {
     rows.appendChild(row);
   });
 
+  if (groupedRefs.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'song-motif-empty';
+    empty.textContent = 'This song has no connections.';
+    rows.appendChild(empty);
+  }
+
   const listTitle = document.createElement('p');
   listTitle.className = 'song-motif-list-title';
   listTitle.textContent = 'Motifs in this song';
@@ -650,17 +808,19 @@ function songMotifsRender(song, groupedRefs) {
   state.karaokeLayerHost = karaokeLayerHost;
   state.karaokeActiveLayer = null;
 
-  overlayPlayButton.addEventListener('click', () => {
-    if (!state.player || typeof state.player.getPlayerState !== 'function') {
-      return;
-    }
+  if (overlayPlayButton) {
+    overlayPlayButton.addEventListener('click', () => {
+      if (!state.player || typeof state.player.getPlayerState !== 'function') {
+        return;
+      }
 
-    if (state.player.getPlayerState() === 1) {
-      state.player.pauseVideo();
-    } else {
-      state.player.playVideo();
-    }
-  });
+      if (state.player.getPlayerState() === 1) {
+        state.player.pauseVideo();
+      } else {
+        state.player.playVideo();
+      }
+    });
+  }
 
   mainTrack.addEventListener('click', (event) => {
     const rect = mainTrack.getBoundingClientRect();
@@ -670,17 +830,17 @@ function songMotifsRender(song, groupedRefs) {
   });
 }
 
-function songMotifsAttachPlayer(song) {
+function songMotifsAttachPlayer(song, youtubeId) {
   const state = getSongMotifsState();
 
-  if (!window.YT || !window.YT.Player || state.player) {
+  if (!youtubeId || !window.YT || !window.YT.Player || state.player) {
     return;
   }
 
   state.player = new YT.Player('songMotifPlayerHost', {
     height: '220',
     width: '100%',
-    videoId: song.youtubeId,
+    videoId: youtubeId,
     playerVars: {
       playsinline: 1,
       controls: 0,
@@ -753,21 +913,24 @@ function renderSongMotifsSection() {
     return;
   }
 
+  songMotifsDisposeRuntimeState();
+
   const song = songMotifsFindSong();
   if (!song) {
-    mount.innerHTML = '<div class="song-motif-empty">This song has no other connections.</div>';
+    mount.innerHTML = '<div class="song-motif-empty">This song has no connections.</div>';
     return;
   }
 
+  const youtubeId = songMotifsNormalizeYouTubeId(song.youtubeId);
   const groupedRefs = songMotifsGroupRefs(song);
-  songMotifsRender(song, groupedRefs);
+  songMotifsRender(song, groupedRefs, youtubeId);
 
   songMotifsLoadKaraokeEntries().then((entries) => {
     songMotifsApplyKaraokeEntries(entries);
   });
 
-  if (window.YT && window.YT.Player) {
-    songMotifsAttachPlayer(song);
+  if (youtubeId && window.YT && window.YT.Player) {
+    songMotifsAttachPlayer(song, youtubeId);
   }
 
   const previousYouTubeReady = window.onYouTubeIframeAPIReady;
@@ -775,7 +938,9 @@ function renderSongMotifsSection() {
     if (typeof previousYouTubeReady === 'function') {
       previousYouTubeReady();
     }
-    songMotifsAttachPlayer(song);
+    if (youtubeId) {
+      songMotifsAttachPlayer(song, youtubeId);
+    }
   };
 }
 
@@ -796,3 +961,5 @@ if (document.readyState === 'loading') {
 } else {
   initializeSongMotifsFeature(0);
 }
+
+window.renderSongMotifsSection = renderSongMotifsSection;

@@ -726,6 +726,14 @@
   background: #fafafa;
 }
 
+.song-empty-box {
+  border: 2px dashed #a09aa7;
+  border-radius: 6px;
+  padding: 10px;
+  color: #666;
+  background: #fafafa;
+}
+
 @media (max-width: 900px) {
   .song-motif-row {
     display: block;
