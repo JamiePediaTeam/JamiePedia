@@ -455,6 +455,10 @@
   text-overflow: ellipsis;
 }
 
+.song-karaoke-lyric-ref {
+  color: var(--lyric-ref-color, #ef8a85);
+}
+
 .song-karaoke-line-prev {
   transform: translateY(var(--karaoke-prev-y));
   font-size: 0.9em;
@@ -650,6 +654,10 @@
   color: #68BDE7;
 }
 
+.song-motif-label-text:hover {
+  color: #222;
+}
+
 .song-motif-track {
   position: relative;
   width: 100%;
@@ -692,6 +700,10 @@
   gap: 8px;
 }
 
+.song-motif-legend-entry {
+  list-style: none;
+}
+
 .song-motif-legend-item {
   display: inline-flex;
   align-items: center;
@@ -704,11 +716,17 @@
   filter: saturate(0.1);
   opacity: 0.45;
   transition: opacity 0.15s ease, filter 0.15s ease;
+  text-decoration: none;
+  color: #222;
 }
 
 .song-motif-legend-item.active {
   filter: saturate(1);
   opacity: 1;
+}
+
+.song-motif-legend-item:hover {
+  color: #68BDE7;
 }
 
 .song-motif-swatch {
