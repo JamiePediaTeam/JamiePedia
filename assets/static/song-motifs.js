@@ -25,6 +25,32 @@ function songMotifFormatTime(seconds) {
   return mins + ':' + String(secs).padStart(2, '0');
 }
 
+function songMotifsNormalizeYouTubeId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  let candidate = raw;
+  try {
+    if (raw.includes('://')) {
+      const parsed = new URL(raw);
+      if (parsed.hostname.includes('youtu.be')) {
+        candidate = parsed.pathname.replace(/^\//, '').split('/')[0] || '';
+      } else {
+        candidate = parsed.searchParams.get('v')
+          || parsed.pathname.split('/').filter(Boolean).pop()
+          || '';
+      }
+    }
+  } catch (error) {
+    // Keep raw candidate for non-URL-like input.
+  }
+
+  candidate = String(candidate).split(/[?&#]/)[0].trim();
+  return /^[A-Za-z0-9_-]{11}$/.test(candidate) ? candidate : '';
+}
+
 function songMotifsReadDeclaredDuration() {
   const findTimeInText = (text) => {
     const match = String(text || '').match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
@@ -55,22 +81,106 @@ function songMotifsReadDeclaredDuration() {
 }
 
 function getSongMotifsMount() {
-  let mount = document.getElementById('songMotifsContent');
-  if (mount) {
-    return mount;
-  }
-
-  const content = document.getElementById('content-motifs');
+  const motifContents = Array.from(document.querySelectorAll('[id^="content-motifs"]'));
+  const content = motifContents.find((node) => node && node.offsetParent !== null)
+    || motifContents.find((node) => node && node.classList && node.classList.contains('active'))
+    || document.getElementById('content-motifs');
   if (!content) {
     return null;
   }
 
+  motifContents.forEach((node) => {
+    if (!node) {
+      return;
+    }
+    node.querySelectorAll('[id^="songMotifsContent"]').forEach((child) => child.remove());
+  });
+
+  const suffix = content.id === 'content-motifs'
+    ? 'original'
+    : content.id.replace(/^content-motifs-/, '') || 'original';
+
+  let mount = content.querySelector('#songMotifsContent-' + suffix);
+  if (mount) {
+    return mount;
+  }
+
   content.innerHTML = '';
   mount = document.createElement('div');
-  mount.id = 'songMotifsContent';
+  mount.id = 'songMotifsContent-' + suffix;
   mount.className = 'song-motifs-content';
   content.appendChild(mount);
   return mount;
+}
+
+function songMotifsGetActiveVariantSuffix() {
+  const visibleVersion = Array.from(document.querySelectorAll('[id^="version-"]')).find((node) => {
+    return node && node.offsetParent !== null;
+  });
+
+  if (!visibleVersion) {
+    return '';
+  }
+
+  const versionId = String(visibleVersion.id || '').toLowerCase();
+  const suffix = versionId.replace(/^version-/, '');
+  if (!suffix || suffix === 'original') {
+    return '';
+  }
+
+  return suffix;
+}
+
+function songMotifsGetBaseSongSlug() {
+  const file = (window.location.pathname.split('/').pop() || '').replace(/\.html$/i, '').toLowerCase();
+  return file;
+}
+
+function songMotifsGetActiveVariantHashToken() {
+  const activeVersionTab = document.querySelector('.version-tab.active');
+  if (!activeVersionTab) {
+    return '';
+  }
+
+  return String(activeVersionTab.textContent || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function songMotifsResolveSongPathCandidates() {
+  const baseSlug = songMotifsGetBaseSongSlug();
+  const variantSuffix = songMotifsGetActiveVariantSuffix();
+  if (!baseSlug) {
+    return [];
+  }
+
+  if (!variantSuffix) {
+    return [baseSlug + '.html'];
+  }
+
+  const hashToken = songMotifsGetActiveVariantHashToken();
+  const candidates = [baseSlug + variantSuffix + '.html'];
+  if (hashToken) {
+    candidates.push(baseSlug + '.html#' + hashToken);
+  }
+  candidates.push(baseSlug + '.html#' + variantSuffix);
+  return candidates;
+}
+
+function songMotifsResolveSongSlugs() {
+  const baseSlug = songMotifsGetBaseSongSlug();
+  const variantSuffix = songMotifsGetActiveVariantSuffix();
+  if (!baseSlug) {
+    return [];
+  }
+
+  if (!variantSuffix) {
+    return [baseSlug];
+  }
+
+  return [baseSlug + variantSuffix];
 }
 
 function getSongMotifsState() {
@@ -90,6 +200,7 @@ function getSongMotifsState() {
       volume: 100,
       volumeInput: null,
       karaokeEntries: [],
+      lyricalRefs: [],
       karaokeCurrentIndex: -2,
       karaokeWrap: null,
       karaokeLayerHost: null,
@@ -102,17 +213,105 @@ function getSongMotifsState() {
 
 function songMotifsBuildKaraokePayload(currentIndex) {
   const state = getSongMotifsState();
-  const previousText = currentIndex > 0 ? state.karaokeEntries[currentIndex - 1].text : '';
-  const currentText = currentIndex >= 0 ? state.karaokeEntries[currentIndex].text : '';
-  const nextText = currentIndex >= 0 && currentIndex + 1 < state.karaokeEntries.length
-    ? state.karaokeEntries[currentIndex + 1].text
-    : '';
+  const previousEntry = currentIndex > 0 ? state.karaokeEntries[currentIndex - 1] : null;
+  const currentEntry = currentIndex >= 0 ? state.karaokeEntries[currentIndex] : null;
+  const nextEntry = currentIndex >= 0 && currentIndex + 1 < state.karaokeEntries.length
+    ? state.karaokeEntries[currentIndex + 1]
+    : null;
 
   return {
-    previousText: previousText || ' ',
-    currentText: currentText || ' ',
-    nextText: nextText || ' '
+    previousEntry,
+    currentEntry,
+    nextEntry
   };
+}
+
+function songMotifsEscapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function songMotifsEscapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function songMotifsNormalizeSiteHref(value) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return '';
+  }
+
+  if (/^(https?:|mailto:|#|\/)/i.test(text)) {
+    return text;
+  }
+
+  return '/' + text.replace(/^(\.\.\/)+/, '');
+}
+
+function songMotifsResolveMotifHref(motif, motifId) {
+  if (motif && motif.hasPage !== false) {
+    return '../../motifs/' + ((motif && motif.pageSlug) ? motif.pageSlug : (motif ? motif.id : motifId)) + '.html';
+  }
+
+  if (motif && motif.referenceLink) {
+    return songMotifsNormalizeSiteHref(motif.referenceLink);
+  }
+
+  return '';
+}
+
+function songMotifsGetKaraokeLyricHighlights(entry) {
+  const state = getSongMotifsState();
+  if (!entry || !Array.isArray(state.lyricalRefs) || state.lyricalRefs.length === 0) {
+    return [];
+  }
+
+  return state.lyricalRefs.filter((ref) => {
+    const start = songMotifTimeToSeconds(ref.startTime);
+    const end = songMotifTimeToSeconds(ref.endTime);
+    return entry.time >= start - 0.01
+      && entry.time <= end + 0.01
+      && ref.lyrics
+      && String(entry.text || '').includes(ref.lyrics);
+  });
+}
+
+function songMotifsBuildKaraokeLineHtml(entry) {
+  if (!entry || !entry.text) {
+    return ' ';
+  }
+
+  const highlights = songMotifsGetKaraokeLyricHighlights(entry)
+    .sort((a, b) => String(b.lyrics || '').length - String(a.lyrics || '').length);
+
+  if (highlights.length === 0) {
+    return songMotifsEscapeHtml(entry.text);
+  }
+
+  let rendered = songMotifsEscapeHtml(entry.text);
+
+  highlights.forEach((ref) => {
+    const motif = window.MotifData && typeof window.MotifData.getMotifById === 'function'
+      ? window.MotifData.getMotifById(ref.motifId)
+      : null;
+    const color = motif && motif.color ? motif.color : '#ef8a85';
+    const escapedLyrics = songMotifsEscapeHtml(ref.lyrics);
+    const pattern = new RegExp(songMotifsEscapeRegExp(escapedLyrics), 'g');
+    rendered = rendered.replace(
+      pattern,
+      '<span class="song-karaoke-lyric-ref" style="--lyric-ref-color: ' + color + ';">$&</span>'
+    );
+  });
+
+  return rendered;
+}
+
+function songMotifsPopulateKaraokeLine(node, entry) {
+  node.innerHTML = songMotifsBuildKaraokeLineHtml(entry);
 }
 
 function songMotifsBuildKaraokeLayer(payload, layerClassName) {
@@ -121,17 +320,17 @@ function songMotifsBuildKaraokeLayer(payload, layerClassName) {
 
   const previous = document.createElement('p');
   previous.className = 'song-karaoke-line song-karaoke-line-prev';
-  previous.textContent = payload.previousText;
+  songMotifsPopulateKaraokeLine(previous, payload.previousEntry);
   layer.appendChild(previous);
 
   const current = document.createElement('p');
   current.className = 'song-karaoke-line song-karaoke-line-current';
-  current.textContent = payload.currentText;
+  songMotifsPopulateKaraokeLine(current, payload.currentEntry);
   layer.appendChild(current);
 
   const next = document.createElement('p');
   next.className = 'song-karaoke-line song-karaoke-line-next';
-  next.textContent = payload.nextText;
+  songMotifsPopulateKaraokeLine(next, payload.nextEntry);
   layer.appendChild(next);
 
   return layer;
@@ -308,8 +507,11 @@ function songMotifsParseLrcTimedEntries(text) {
 }
 
 function songMotifsLoadKaraokeEntries() {
+  const candidateSlugs = songMotifsResolveSongSlugs();
+  const primarySlug = candidateSlugs[0] || '';
+
   if (window.SongLyrics && typeof window.SongLyrics.loadCurrentSongLyrics === 'function') {
-    return window.SongLyrics.loadCurrentSongLyrics().then((data) => {
+    return window.SongLyrics.loadCurrentSongLyrics(primarySlug).then((data) => {
       if (!data || !Array.isArray(data.timedEntries)) {
         return [];
       }
@@ -317,7 +519,7 @@ function songMotifsLoadKaraokeEntries() {
     });
   }
 
-  const file = (window.location.pathname.split('/').pop() || '').replace(/\.html$/i, '').toLowerCase();
+  const file = primarySlug;
   if (!file) {
     return Promise.resolve([]);
   }
@@ -368,17 +570,58 @@ function songMotifsFindSong() {
     return null;
   }
 
-  const currentFile = (window.location.pathname.split('/').pop() || '').toLowerCase();
-  return window.SongData.allSongs.find((song) => {
-    const songFile = String(song.path || '').split('/').pop();
-    return songFile && songFile.toLowerCase() === currentFile;
-  }) || null;
+  const expectedCandidates = songMotifsResolveSongPathCandidates();
+
+  for (const expectedFile of expectedCandidates) {
+    const match = window.SongData.allSongs.find((song) => {
+      const songFile = String(song.path || '').split('/').pop();
+      return songFile && songFile.toLowerCase() === expectedFile;
+    });
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+}
+
+function songMotifsDisposeRuntimeState() {
+  const state = getSongMotifsState();
+
+  if (state.timer) {
+    clearInterval(state.timer);
+    state.timer = null;
+  }
+
+  if (state.karaokeTransitionTimer) {
+    clearTimeout(state.karaokeTransitionTimer);
+    state.karaokeTransitionTimer = null;
+  }
+
+  if (state.player && typeof state.player.destroy === 'function') {
+    try {
+      state.player.destroy();
+    } catch (_err) {
+      // Ignore teardown errors from iframe API during remount.
+    }
+  }
+
+  state.player = null;
+  state.volumeInput = null;
 }
 
 function songMotifsGroupRefs(song) {
+  return songMotifsGroupReferenceList(song.motifRefs || [], 'motif');
+}
+
+function songMotifsGroupLyricalRefs(song) {
+  return songMotifsGroupReferenceList(song.lyricalRefs || [], 'lyrical');
+}
+
+function songMotifsGroupReferenceList(refs, keyPrefix) {
   const map = new Map();
 
-  song.motifRefs.forEach((ref) => {
+  refs.forEach((ref) => {
     const start = songMotifTimeToSeconds(ref.startTime);
     const end = songMotifTimeToSeconds(ref.endTime);
     if (end <= start && !ref.isDefinition) {
@@ -389,7 +632,7 @@ function songMotifsGroupRefs(song) {
     const isVariationMotif = motif && Array.isArray(motif.variations) && motif.variations.length > 0;
     const variationId = isVariationMotif ? (ref.variationId || '') : '';
     const canonicalMotifId = motif ? motif.id : ref.motifId;
-    const key = canonicalMotifId + '::' + variationId;
+    const key = keyPrefix + '::' + canonicalMotifId + '::' + variationId;
 
     if (!map.has(key)) {
       map.set(key, {
@@ -477,16 +720,18 @@ function songMotifsSeekTo(seconds) {
   songMotifsUpdateKaraoke(target);
 }
 
-function songMotifsRender(song, groupedRefs) {
+function songMotifsRender(song, groupedRefs, youtubeId) {
   const mount = getSongMotifsMount();
   if (!mount) {
     return;
   }
 
   const state = getSongMotifsState();
-  state.refsByMotif = groupedRefs;
+  const groupedLyricalRefs = songMotifsGroupLyricalRefs(song);
+  state.refsByMotif = groupedRefs.concat(groupedLyricalRefs);
+  state.lyricalRefs = song.lyricalRefs || [];
 
-  const refsDuration = groupedRefs.reduce((max, entry) => {
+  const refsDuration = state.refsByMotif.reduce((max, entry) => {
     return Math.max(max, entry.ranges[entry.ranges.length - 1].end);
   }, 0);
 
@@ -494,11 +739,7 @@ function songMotifsRender(song, groupedRefs) {
   state.duration = state.declaredDuration > 0 ? state.declaredDuration : refsDuration;
 
   mount.innerHTML = '';
-
-  if (!song.youtubeId || groupedRefs.length === 0) {
-    mount.innerHTML = '<div class="song-motif-empty">This song has no other connections.</div>';
-    return;
-  }
+  const hasVideo = !!youtubeId;
 
   const shell = document.createElement('section');
   shell.className = 'song-motifs-shell';
@@ -508,19 +749,28 @@ function songMotifsRender(song, groupedRefs) {
   videoWrap.className = 'song-motif-video-wrap';
   shell.appendChild(videoWrap);
 
-  const host = document.createElement('div');
-  host.id = 'songMotifPlayerHost';
-  host.className = 'song-motif-yt-host';
-  videoWrap.appendChild(host);
+  let overlayPlayButton = null;
+  if (hasVideo) {
+    const host = document.createElement('div');
+    host.id = 'songMotifPlayerHost';
+    host.className = 'song-motif-yt-host';
+    videoWrap.appendChild(host);
 
-  const overlayPlayButton = document.createElement('button');
-  overlayPlayButton.type = 'button';
-  overlayPlayButton.className = 'song-motif-overlay-play';
-  overlayPlayButton.textContent = '▶';
-  videoWrap.appendChild(overlayPlayButton);
+    overlayPlayButton = document.createElement('button');
+    overlayPlayButton.type = 'button';
+    overlayPlayButton.className = 'song-motif-overlay-play';
+    overlayPlayButton.textContent = '▶';
+    videoWrap.appendChild(overlayPlayButton);
+  } else {
+    videoWrap.innerHTML = '<div class="song-motif-empty">Playback is unavailable for this song.</div>';
+  }
 
-  const volumeWrap = buildSongMotifsVolumeControl();
-  shell.appendChild(volumeWrap);
+  if (hasVideo) {
+    const volumeWrap = buildSongMotifsVolumeControl();
+    shell.appendChild(volumeWrap);
+  } else {
+    state.volumeInput = null;
+  }
 
   const karaokeWrap = document.createElement('section');
   karaokeWrap.className = 'song-karaoke-wrap';
@@ -564,82 +814,129 @@ function songMotifsRender(song, groupedRefs) {
 
   const rows = document.createElement('div');
   rows.className = 'song-motif-rows';
-  shell.appendChild(rows);
+  if (groupedRefs.length > 0 || groupedLyricalRefs.length === 0) {
+    shell.appendChild(rows);
+  }
 
-  groupedRefs.forEach((entry) => {
-    const row = document.createElement('article');
-    row.className = 'song-motif-row';
+  function appendReferenceRows(targetRows, entries) {
+    entries.forEach((entry) => {
+      const row = document.createElement('article');
+      row.className = 'song-motif-row';
 
-    const motifName = entry.displayName;
-    const motifColor = entry.displayColor;
+      const motifName = entry.displayName;
+      const motifColor = entry.displayColor;
 
-    const track = document.createElement('div');
-    track.className = 'song-motif-track';
+      const track = document.createElement('div');
+      track.className = 'song-motif-track';
 
-    entry.ranges.forEach((range) => {
-      const segment = document.createElement('button');
-      segment.type = 'button';
-      segment.className = 'song-motif-segment' + (range.isDefinition ? ' definition' : '');
-      segment.title = songMotifFormatTime(range.start) + ' - ' + songMotifFormatTime(range.end);
-      segment.style.left = ((range.start / state.duration) * 100) + '%';
-      segment.style.width = Math.max(0.7, ((range.end - range.start) / state.duration) * 100) + '%';
-      segment.style.background = motifColor;
+      entry.ranges.forEach((range) => {
+        const segment = document.createElement('button');
+        segment.type = 'button';
+        segment.className = 'song-motif-segment' + (range.isDefinition ? ' definition' : '');
+        segment.title = songMotifFormatTime(range.start) + ' - ' + songMotifFormatTime(range.end);
+        segment.style.left = ((range.start / state.duration) * 100) + '%';
+        segment.style.width = Math.max(0.7, ((range.end - range.start) / state.duration) * 100) + '%';
+        segment.style.background = motifColor;
 
-      if (motifColor.toUpperCase() === '#FFFFFF') {
-        segment.classList.add('white-segment');
-      }
+        if (motifColor.toUpperCase() === '#FFFFFF') {
+          segment.classList.add('white-segment');
+        }
 
-      if (range.isDefinition) {
-        segment.title += ' (definition)';
-      }
+        if (range.isDefinition) {
+          segment.title += ' (definition)';
+        }
 
-      segment.addEventListener('click', () => {
-        songMotifsSeekTo(range.start);
+        segment.addEventListener('click', () => {
+          songMotifsSeekTo(range.start);
+        });
+
+        track.appendChild(segment);
       });
 
-      track.appendChild(segment);
+      row.appendChild(track);
+
+      const label = document.createElement('div');
+      label.className = 'song-motif-label-link';
+      label.classList.add('song-motif-label-text');
+      label.textContent = motifName;
+      row.appendChild(label);
+
+      targetRows.appendChild(row);
     });
+  }
 
-    row.appendChild(track);
+  if (groupedRefs.length > 0) {
+    appendReferenceRows(rows, groupedRefs);
+  }
 
-    const link = document.createElement('a');
-    link.className = 'song-motif-label-link';
-    link.href = '../../motifs/' + ((entry.motif && entry.motif.pageSlug) ? entry.motif.pageSlug : (entry.motif ? entry.motif.id : entry.motifId)) + '.html';
-    link.textContent = motifName;
-    row.appendChild(link);
-
-    rows.appendChild(row);
-  });
-
-  const listTitle = document.createElement('p');
-  listTitle.className = 'song-motif-list-title';
-  listTitle.textContent = 'Motifs in this song';
-  shell.appendChild(listTitle);
-
-  const legend = document.createElement('ul');
-  legend.className = 'song-motif-legend';
-  shell.appendChild(legend);
+  if (groupedRefs.length === 0 && groupedLyricalRefs.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'song-motif-empty';
+    empty.textContent = 'This song has no connections.';
+    rows.appendChild(empty);
+  }
 
   state.legendNodes.clear();
-  groupedRefs.forEach((entry) => {
-    const motifName = entry.displayName;
-    const motifColor = entry.displayColor;
+  function appendLegendEntries(targetLegend, entries) {
+    entries.forEach((entry) => {
+      const motifName = entry.displayName;
+      const motifColor = entry.displayColor;
 
-    const item = document.createElement('li');
-    item.className = 'song-motif-legend-item';
+      const item = document.createElement('li');
+      item.className = 'song-motif-legend-entry';
 
-    const swatch = document.createElement('span');
-    swatch.className = 'song-motif-swatch';
-    swatch.style.background = motifColor;
-    item.appendChild(swatch);
+      const motifHref = songMotifsResolveMotifHref(entry.motif, entry.motifId);
+      const content = motifHref
+        ? document.createElement('a')
+        : document.createElement('div');
+      content.className = 'song-motif-legend-item';
+      if (content.tagName === 'A') {
+        content.href = motifHref;
+      }
 
-    const label = document.createElement('span');
-    label.textContent = motifName;
-    item.appendChild(label);
+      const swatch = document.createElement('span');
+      swatch.className = 'song-motif-swatch';
+      swatch.style.background = motifColor;
+      content.appendChild(swatch);
 
-    legend.appendChild(item);
-    state.legendNodes.set(entry.key, item);
-  });
+      const label = document.createElement('span');
+      label.textContent = motifName;
+      content.appendChild(label);
+
+      item.appendChild(content);
+      targetLegend.appendChild(item);
+      state.legendNodes.set(entry.key, content);
+    });
+  }
+
+  if (groupedRefs.length > 0) {
+    const listTitle = document.createElement('p');
+    listTitle.className = 'song-motif-list-title';
+    listTitle.textContent = 'Motifs in this song';
+    shell.appendChild(listTitle);
+
+    const legend = document.createElement('ul');
+    legend.className = 'song-motif-legend';
+    shell.appendChild(legend);
+    appendLegendEntries(legend, groupedRefs);
+  }
+
+  if (groupedLyricalRefs.length > 0) {
+    const lyricalTitle = document.createElement('p');
+    lyricalTitle.className = 'song-motif-list-title';
+    lyricalTitle.textContent = 'Lyrical References';
+    shell.appendChild(lyricalTitle);
+
+    const lyricalRows = document.createElement('div');
+    lyricalRows.className = 'song-motif-rows';
+    shell.appendChild(lyricalRows);
+    appendReferenceRows(lyricalRows, groupedLyricalRefs);
+
+    const lyricalLegend = document.createElement('ul');
+    lyricalLegend.className = 'song-motif-legend';
+    shell.appendChild(lyricalLegend);
+    appendLegendEntries(lyricalLegend, groupedLyricalRefs);
+  }
 
   state.progressNode = progress;
   state.currentLabel = currentLabel;
@@ -650,17 +947,19 @@ function songMotifsRender(song, groupedRefs) {
   state.karaokeLayerHost = karaokeLayerHost;
   state.karaokeActiveLayer = null;
 
-  overlayPlayButton.addEventListener('click', () => {
-    if (!state.player || typeof state.player.getPlayerState !== 'function') {
-      return;
-    }
+  if (overlayPlayButton) {
+    overlayPlayButton.addEventListener('click', () => {
+      if (!state.player || typeof state.player.getPlayerState !== 'function') {
+        return;
+      }
 
-    if (state.player.getPlayerState() === 1) {
-      state.player.pauseVideo();
-    } else {
-      state.player.playVideo();
-    }
-  });
+      if (state.player.getPlayerState() === 1) {
+        state.player.pauseVideo();
+      } else {
+        state.player.playVideo();
+      }
+    });
+  }
 
   mainTrack.addEventListener('click', (event) => {
     const rect = mainTrack.getBoundingClientRect();
@@ -670,17 +969,17 @@ function songMotifsRender(song, groupedRefs) {
   });
 }
 
-function songMotifsAttachPlayer(song) {
+function songMotifsAttachPlayer(song, youtubeId) {
   const state = getSongMotifsState();
 
-  if (!window.YT || !window.YT.Player || state.player) {
+  if (!youtubeId || !window.YT || !window.YT.Player || state.player) {
     return;
   }
 
   state.player = new YT.Player('songMotifPlayerHost', {
     height: '220',
     width: '100%',
-    videoId: song.youtubeId,
+    videoId: youtubeId,
     playerVars: {
       playsinline: 1,
       controls: 0,
@@ -753,21 +1052,24 @@ function renderSongMotifsSection() {
     return;
   }
 
+  songMotifsDisposeRuntimeState();
+
   const song = songMotifsFindSong();
   if (!song) {
-    mount.innerHTML = '<div class="song-motif-empty">This song has no other connections.</div>';
+    mount.innerHTML = '<div class="song-motif-empty">This song has no connections.</div>';
     return;
   }
 
+  const youtubeId = songMotifsNormalizeYouTubeId(song.youtubeId);
   const groupedRefs = songMotifsGroupRefs(song);
-  songMotifsRender(song, groupedRefs);
+  songMotifsRender(song, groupedRefs, youtubeId);
 
   songMotifsLoadKaraokeEntries().then((entries) => {
     songMotifsApplyKaraokeEntries(entries);
   });
 
-  if (window.YT && window.YT.Player) {
-    songMotifsAttachPlayer(song);
+  if (youtubeId && window.YT && window.YT.Player) {
+    songMotifsAttachPlayer(song, youtubeId);
   }
 
   const previousYouTubeReady = window.onYouTubeIframeAPIReady;
@@ -775,7 +1077,9 @@ function renderSongMotifsSection() {
     if (typeof previousYouTubeReady === 'function') {
       previousYouTubeReady();
     }
-    songMotifsAttachPlayer(song);
+    if (youtubeId) {
+      songMotifsAttachPlayer(song, youtubeId);
+    }
   };
 }
 
@@ -796,3 +1100,5 @@ if (document.readyState === 'loading') {
 } else {
   initializeSongMotifsFeature(0);
 }
+
+window.renderSongMotifsSection = renderSongMotifsSection;

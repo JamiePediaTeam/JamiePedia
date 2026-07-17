@@ -55,6 +55,10 @@ function parseJamiePediaCsv(text) {
   return rows;
 }
 
+function normalizeJamiePediaHeader(value) {
+  return normalizeJamiePediaText(value).toLowerCase();
+}
+
 function normalizeJamiePediaText(value) {
   return String(value || '').trim();
 }
@@ -210,24 +214,27 @@ function loadJamiePediaCsvText() {
 }
 
 class MotifReference {
-  constructor(motifId, startTime = '', endTime = '', isVariation = false, isDefinition = false, variationId = '') {
+  constructor(motifId, startTime = '', endTime = '', isVariation = false, isDefinition = false, variationId = '', options = {}) {
     this.motifId = motifId;
     this.startTime = startTime;
     this.endTime = endTime;
     this.isVariation = isVariation;
     this.isDefinition = isDefinition;
     this.variationId = variationId;
+    this.isLyrical = !!options.isLyrical;
+    this.lyrics = options.lyrics || '';
   }
 }
 
 class Song {
-  constructor(title, path = '', youtubeId = '', color = '#351854', motifRefs = [], songId = '') {
+  constructor(title, path = '', youtubeId = '', color = '#351854', motifRefs = [], songId = '', lyricalRefs = []) {
     this.title = title;
     this.path = path;
     this.youtubeId = youtubeId;
     this.color = color;
     this.motifRefs = motifRefs;
     this.songId = songId;
+    this.lyricalRefs = lyricalRefs;
   }
 }
 
@@ -238,7 +245,10 @@ class Motif {
     this.image = image;
     this.aliases = aliases;
     this.color = color;
-    this.pageSlug = options.pageSlug || id;
+    this.hasPage = options.hasPage !== false;
+    this.pageSlug = this.hasPage ? (options.pageSlug || id) : '';
+    this.referenceLink = options.referenceLink || '';
+    this.isLyrical = !!options.isLyrical;
     this.variationGroup = options.variationGroup || null;
     this.variationLabel = options.variationLabel || null;
     this.iconText = options.iconText || null;
@@ -247,21 +257,89 @@ class Motif {
   }
 }
 
+function buildJamiePediaColumnLookup(headerRow) {
+  const lookup = new Map();
+
+  headerRow.forEach((cell, index) => {
+    const key = normalizeJamiePediaHeader(cell);
+    if (!key) {
+      return;
+    }
+
+    if (!lookup.has(key)) {
+      lookup.set(key, []);
+    }
+
+    lookup.get(key).push(index);
+  });
+
+  return function getColumnIndex(headerName, occurrence = 0) {
+    const matches = lookup.get(normalizeJamiePediaHeader(headerName)) || [];
+    return matches[occurrence] ?? -1;
+  };
+}
+
+function readJamiePediaRowValue(row, index) {
+  if (index < 0 || index >= row.length) {
+    return '';
+  }
+
+  return row[index];
+}
+
 function createJamiePediaData() {
   const csvRows = parseJamiePediaCsv(loadJamiePediaCsvText());
+  const headerRow = csvRows[0] || [];
+  const getColumnIndex = buildJamiePediaColumnLookup(headerRow);
   const dataRows = csvRows.slice(1).filter((row) => row.some((cell) => normalizeJamiePediaText(cell) !== ''));
+
+  const columns = {
+    motifName: getColumnIndex('Motif Name'),
+    motifId: getColumnIndex('Motif ID', 0),
+    motifImage: getColumnIndex('Motif Image'),
+    motifIsVariation: getColumnIndex('is variation'),
+    motifIsLyrical: getColumnIndex('Is Lyrical'),
+    motifHasPage: getColumnIndex('Has Page'),
+    motifReferenceLink: getColumnIndex('reference link'),
+    motifColor: getColumnIndex('motif color'),
+    motifVariationLetter: getColumnIndex('variation letter', 0),
+    songName: getColumnIndex('Song Name'),
+    songId: getColumnIndex('Song ID', 0),
+    songFile: getColumnIndex('Song File'),
+    songEmbedType: getColumnIndex('Embed Type'),
+    songEmbedLink: getColumnIndex('Embed Link'),
+    songColor: getColumnIndex('Song Color'),
+    refSongId: getColumnIndex('Song ID', 1),
+    refMotifId: getColumnIndex('Motif ID', 1),
+    refStartTime: getColumnIndex('Start Time', 0),
+    refEndTime: getColumnIndex('End Time', 0),
+    refDefinition: getColumnIndex('Definition'),
+    refVariation: getColumnIndex('Variation'),
+    refVariationLetter: getColumnIndex('Variation Letter', 1),
+    lyricalSongId: getColumnIndex('Song ID', 2),
+    lyricalMotifId: getColumnIndex('Motif Id', 2),
+    lyricalStartTime: getColumnIndex('Start Time', 1),
+    lyricalEndTime: getColumnIndex('End Time', 1),
+    lyricalLyrics: getColumnIndex('Lyrics')
+  };
 
   const motifRecords = new Map();
   const songRecords = new Map();
   const refsBySongId = new Map();
+  const lyricalRefsBySongId = new Map();
 
   dataRows.forEach((row) => {
-    const motifId = normalizeJamiePediaText(row[1]);
-    const motifName = normalizeJamiePediaText(row[0]);
-    const motifImage = normalizeJamiePediaText(row[2]);
-    const motifIsVariation = normalizeJamiePediaBool(row[3]);
-    const motifColor = normalizeJamiePediaColor(row[4], '#ef8a85');
-    const motifVariationLetter = normalizeJamiePediaText(row[5]);
+    const motifId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifId));
+    const motifName = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifName));
+    const motifImage = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifImage));
+    const motifIsVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifIsVariation));
+    const motifIsLyrical = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifIsLyrical));
+    const motifHasPage = columns.motifHasPage >= 0
+      ? normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifHasPage))
+      : true;
+    const motifReferenceLink = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifReferenceLink));
+    const motifColor = normalizeJamiePediaColor(readJamiePediaRowValue(row, columns.motifColor), '#ef8a85');
+    const motifVariationLetter = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifVariationLetter));
 
     if (motifId) {
       if (!motifRecords.has(motifId)) {
@@ -271,6 +349,9 @@ function createJamiePediaData() {
           image: motifImage || null,
           color: motifColor || null,
           isVariation: motifIsVariation,
+          isLyrical: motifIsLyrical,
+          hasPage: motifHasPage,
+          referenceLink: motifReferenceLink,
           variationLetters: new Set(),
           variationColors: new Map(),
           rowCount: 0
@@ -283,18 +364,21 @@ function createJamiePediaData() {
       if (motifImage) motifRecord.image = motifImage;
       if (motifColor && !motifRecord.color) motifRecord.color = motifColor;
       if (motifIsVariation) motifRecord.isVariation = true;
+      if (motifIsLyrical) motifRecord.isLyrical = true;
+      if (columns.motifHasPage >= 0) motifRecord.hasPage = motifHasPage;
+      if (motifReferenceLink) motifRecord.referenceLink = motifReferenceLink;
       if (motifVariationLetter) {
         motifRecord.variationLetters.add(motifVariationLetter);
         if (motifColor) motifRecord.variationColors.set(motifVariationLetter, motifColor);
       }
     }
 
-    const songName = normalizeJamiePediaText(row[7]);
-    const songId = normalizeJamiePediaText(row[8]);
-    const songFile = normalizeJamiePediaText(row[9]);
-    const songEmbedType = normalizeJamiePediaText(row[10]);
-    const songEmbedLink = normalizeJamiePediaText(row[11]);
-    const songColor = normalizeJamiePediaColor(row[12], '#351854');
+    const songName = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songName));
+    const songId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songId));
+    const songFile = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songFile));
+    const songEmbedType = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songEmbedType));
+    const songEmbedLink = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songEmbedLink));
+    const songColor = normalizeJamiePediaColor(readJamiePediaRowValue(row, columns.songColor), '#351854');
 
     if (songId) {
       if (!songRecords.has(songId)) {
@@ -317,12 +401,13 @@ function createJamiePediaData() {
       if (songColor) songRecord.color = songColor;
     }
 
-    const refSongId = normalizeJamiePediaText(row[14]);
-    const refMotifId = normalizeJamiePediaText(row[15]);
-    const startTime = normalizeJamiePediaText(row[16]);
-    const endTime = normalizeJamiePediaText(row[17]);
-    const isDefinition = normalizeJamiePediaBool(row[18]);
-    const variationId = normalizeJamiePediaText(row[20]);
+    const refSongId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refSongId));
+    const refMotifId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refMotifId));
+    const startTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refStartTime));
+    const endTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refEndTime));
+    const isDefinition = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.refDefinition));
+    const isVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.refVariation));
+    const variationId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refVariationLetter));
 
     if (refSongId && refMotifId && startTime && endTime) {
       if (!refsBySongId.has(refSongId)) {
@@ -333,9 +418,34 @@ function createJamiePediaData() {
         refMotifId,
         startTime,
         endTime,
-        false,
+        isVariation,
         isDefinition,
         variationId
+      ));
+    }
+
+    const lyricalSongId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalSongId));
+    const lyricalMotifId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalMotifId));
+    const lyricalStartTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalStartTime));
+    const lyricalEndTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalEndTime));
+    const lyricalLyrics = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalLyrics));
+
+    if (lyricalSongId && lyricalMotifId && lyricalStartTime && lyricalEndTime) {
+      if (!lyricalRefsBySongId.has(lyricalSongId)) {
+        lyricalRefsBySongId.set(lyricalSongId, []);
+      }
+
+      lyricalRefsBySongId.get(lyricalSongId).push(new MotifReference(
+        lyricalMotifId,
+        lyricalStartTime,
+        lyricalEndTime,
+        false,
+        false,
+        '',
+        {
+          isLyrical: true,
+          lyrics: lyricalLyrics
+        }
       ));
     }
   });
@@ -366,6 +476,9 @@ function createJamiePediaData() {
       record.color,
       shouldBuildVariations
         ? {
+            hasPage: record.hasPage,
+          referenceLink: record.referenceLink,
+            isLyrical: record.isLyrical,
             pageSlug: record.id === 'kalia-vibte' ? 'bittersweet-kalia-vibte' : record.id,
             variationGroup: record.id,
             iconText: record.name,
@@ -373,6 +486,9 @@ function createJamiePediaData() {
             variations
           }
         : {
+            hasPage: record.hasPage,
+            referenceLink: record.referenceLink,
+            isLyrical: record.isLyrical,
             pageSlug: record.id === 'kalia-vibte' ? 'bittersweet-kalia-vibte' : record.id
           }
     );
@@ -382,7 +498,15 @@ function createJamiePediaData() {
 
   const allSongs = [];
   songRecords.forEach((record) => {
-    const song = new Song(record.title, record.path, record.embedLink, record.color, refsBySongId.get(record.id) || [], record.id);
+    const song = new Song(
+      record.title,
+      record.path,
+      record.embedLink,
+      record.color,
+      refsBySongId.get(record.id) || [],
+      record.id,
+      lyricalRefsBySongId.get(record.id) || []
+    );
     allSongs.push(song);
   });
 
@@ -398,6 +522,7 @@ function createJamiePediaData() {
     getSongsWithMotifId(motifId) {
       return allSongs.filter((song) =>
         song.motifRefs.some((ref) => ref.motifId === motifId)
+        || song.lyricalRefs.some((ref) => ref.motifId === motifId)
       );
     }
   };
