@@ -56,6 +56,24 @@ function motifEscapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+function motifPageScriptBaseUrl() {
+  const current = document.currentScript;
+  if (current && current.src) {
+    return current.src;
+  }
+
+  const known = document.querySelector('script[src*="/assets/static/motif-page.js"], script[src*="assets/static/motif-page.js"]');
+  if (known && known.src) {
+    return known.src;
+  }
+
+  return window.location.href;
+}
+
+function motifPageVendorUrl(fileName) {
+  return new URL('./vendor/' + fileName, motifPageScriptBaseUrl()).href;
+}
+
 function renderMotifSummaryParagraphs(text) {
   const trimmed = String(text || '').trim();
   if (!trimmed) {
@@ -1214,7 +1232,7 @@ async function loadMotifTranscriptToneLibrary() {
   if (!window.__motifTranscriptTonePromise) {
     window.__motifTranscriptTonePromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = '/assets/static/vendor/Tone.js';
+      script.src = motifPageVendorUrl('Tone.js');
       script.async = true;
       script.onload = () => {
         if (window.Tone) {
@@ -1497,7 +1515,7 @@ async function loadMotifTranscriptLibrary() {
   if (!window.__motifTranscriptLibraryPromise) {
     window.__motifTranscriptLibraryPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = '/assets/static/vendor/vexflow-musicxml.js';
+      script.src = motifPageVendorUrl('vexflow-musicxml.js');
       script.async = true;
       script.onload = () => {
         if (getMotifTranscriptRendererCtor()) {
