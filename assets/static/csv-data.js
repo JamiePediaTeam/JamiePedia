@@ -68,6 +68,17 @@ function normalizeJamiePediaBool(value) {
   return text === 'TRUE' || text === '1' || text === 'YES';
 }
 
+function normalizeJamiePediaMotifType(value) {
+  const text = normalizeJamiePediaText(value).toLowerCase();
+  if (text === 'lyrical') {
+    return 'lyrical';
+  }
+  if (text === 'sample') {
+    return 'sample';
+  }
+  return 'motif';
+}
+
 function normalizeJamiePediaColor(value, fallback = '#351854') {
   const text = normalizeJamiePediaText(value);
   if (!text) {
@@ -222,18 +233,20 @@ class MotifReference {
     this.isDefinition = isDefinition;
     this.variationId = variationId;
     this.isLyrical = !!options.isLyrical;
+    this.isSample = !!options.isSample;
     this.lyrics = options.lyrics || '';
   }
 }
 
 class Song {
-  constructor(title, path = '', youtubeId = '', color = '#351854', motifRefs = [], songId = '', lyricalRefs = []) {
+  constructor(title, path = '', youtubeId = '', color = '#351854', motifRefs = [], songId = '', sampleRefs = [], lyricalRefs = []) {
     this.title = title;
     this.path = path;
     this.youtubeId = youtubeId;
     this.color = color;
     this.motifRefs = motifRefs;
     this.songId = songId;
+    this.sampleRefs = sampleRefs;
     this.lyricalRefs = lyricalRefs;
   }
 }
@@ -248,6 +261,7 @@ class Motif {
     this.hasPage = options.hasPage !== false;
     this.pageSlug = this.hasPage ? (options.pageSlug || id) : '';
     this.referenceLink = options.referenceLink || '';
+    this.motifType = normalizeJamiePediaMotifType(options.motifType);
     this.isLyrical = !!options.isLyrical;
     this.variationGroup = options.variationGroup || null;
     this.variationLabel = options.variationLabel || null;
@@ -298,6 +312,7 @@ function createJamiePediaData() {
     motifId: getColumnIndex('Motif ID', 0),
     motifImage: getColumnIndex('Motif Image'),
     motifIsVariation: getColumnIndex('is variation'),
+    motifType: getColumnIndex('Type?'),
     motifIsLyrical: getColumnIndex('Is Lyrical'),
     motifHasPage: getColumnIndex('Has Page'),
     motifReferenceLink: getColumnIndex('reference link'),
@@ -320,12 +335,17 @@ function createJamiePediaData() {
     lyricalMotifId: getColumnIndex('Motif Id', 2),
     lyricalStartTime: getColumnIndex('Start Time', 1),
     lyricalEndTime: getColumnIndex('End Time', 1),
-    lyricalLyrics: getColumnIndex('Lyrics')
+    lyricalLyrics: getColumnIndex('Lyrics'),
+    sampleSongId: getColumnIndex('Song ID', 3),
+    sampleMotifId: getColumnIndex('Motif Id', 3),
+    sampleStartTime: getColumnIndex('Start Time', 2),
+    sampleEndTime: getColumnIndex('End Time', 2)
   };
 
   const motifRecords = new Map();
   const songRecords = new Map();
   const refsBySongId = new Map();
+  const sampleRefsBySongId = new Map();
   const lyricalRefsBySongId = new Map();
 
   dataRows.forEach((row) => {
@@ -333,7 +353,9 @@ function createJamiePediaData() {
     const motifName = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifName));
     const motifImage = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifImage));
     const motifIsVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifIsVariation));
-    const motifIsLyrical = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifIsLyrical));
+    const motifType = normalizeJamiePediaMotifType(readJamiePediaRowValue(row, columns.motifType));
+    const legacyIsLyrical = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifIsLyrical));
+    const motifIsLyrical = motifType === 'lyrical' || legacyIsLyrical;
     const motifHasPage = columns.motifHasPage >= 0
       ? normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifHasPage))
       : true;
@@ -349,6 +371,7 @@ function createJamiePediaData() {
           image: motifImage || null,
           color: motifColor || null,
           isVariation: motifIsVariation,
+          motifType,
           isLyrical: motifIsLyrical,
           hasPage: motifHasPage,
           referenceLink: motifReferenceLink,
@@ -364,7 +387,8 @@ function createJamiePediaData() {
       if (motifImage) motifRecord.image = motifImage;
       if (motifColor && !motifRecord.color) motifRecord.color = motifColor;
       if (motifIsVariation) motifRecord.isVariation = true;
-      if (motifIsLyrical) motifRecord.isLyrical = true;
+      if (motifType) motifRecord.motifType = motifType;
+      motifRecord.isLyrical = motifRecord.motifType === 'lyrical' || motifRecord.isLyrical || motifIsLyrical;
       if (columns.motifHasPage >= 0) motifRecord.hasPage = motifHasPage;
       if (motifReferenceLink) motifRecord.referenceLink = motifReferenceLink;
       if (motifVariationLetter) {
@@ -448,6 +472,29 @@ function createJamiePediaData() {
         }
       ));
     }
+
+    const sampleSongId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.sampleSongId));
+    const sampleMotifId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.sampleMotifId));
+    const sampleStartTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.sampleStartTime));
+    const sampleEndTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.sampleEndTime));
+
+    if (sampleSongId && sampleMotifId && sampleStartTime && sampleEndTime) {
+      if (!sampleRefsBySongId.has(sampleSongId)) {
+        sampleRefsBySongId.set(sampleSongId, []);
+      }
+
+      sampleRefsBySongId.get(sampleSongId).push(new MotifReference(
+        sampleMotifId,
+        sampleStartTime,
+        sampleEndTime,
+        false,
+        false,
+        '',
+        {
+          isSample: true
+        }
+      ));
+    }
   });
 
   const allMotifs = [];
@@ -478,6 +525,7 @@ function createJamiePediaData() {
         ? {
             hasPage: record.hasPage,
           referenceLink: record.referenceLink,
+            motifType: record.motifType,
             isLyrical: record.isLyrical,
             pageSlug: record.id === 'kalia-vibte' ? 'bittersweet-kalia-vibte' : record.id,
             variationGroup: record.id,
@@ -488,6 +536,7 @@ function createJamiePediaData() {
         : {
             hasPage: record.hasPage,
             referenceLink: record.referenceLink,
+            motifType: record.motifType,
             isLyrical: record.isLyrical,
             pageSlug: record.id === 'kalia-vibte' ? 'bittersweet-kalia-vibte' : record.id
           }
@@ -505,6 +554,7 @@ function createJamiePediaData() {
       record.color,
       refsBySongId.get(record.id) || [],
       record.id,
+      sampleRefsBySongId.get(record.id) || [],
       lyricalRefsBySongId.get(record.id) || []
     );
     allSongs.push(song);
@@ -522,6 +572,7 @@ function createJamiePediaData() {
     getSongsWithMotifId(motifId) {
       return allSongs.filter((song) =>
         song.motifRefs.some((ref) => ref.motifId === motifId)
+        || song.sampleRefs.some((ref) => ref.motifId === motifId)
         || song.lyricalRefs.some((ref) => ref.motifId === motifId)
       );
     }

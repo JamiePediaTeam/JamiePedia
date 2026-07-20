@@ -1,0 +1,1089 @@
+{
+  "version": 1,
+  "source": "gummyworm-b.xml",
+  "instrument": "piano",
+  "bpm": 79,
+  "duration": 24.3038,
+  "noteCount": 52,
+  "notes": [
+    {
+      "partId": "P1",
+      "time": 0.56962,
+      "duration": 0.56962,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.13924,
+      "duration": 0.18987,
+      "midi": 77,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.32911,
+      "duration": 0.18987,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.51899,
+      "duration": 0.37975,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 2.08861,
+      "duration": 0.56962,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 2.65823,
+      "duration": 0.18987,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 2.8481,
+      "duration": 0.18987,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.03797,
+      "duration": 0.37975,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.60759,
+      "duration": 0.56962,
+      "midi": 71,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 4.17722,
+      "duration": 0.18987,
+      "midi": 69,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 4.36709,
+      "duration": 0.18987,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 4.55696,
+      "duration": 0.37975,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 4.93671,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 5.12658,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 5.31646,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 5.6962,
+      "duration": 0.56962,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 6.26582,
+      "duration": 0.56962,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 7.40506,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 7.59494,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 7.78481,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 8.16456,
+      "duration": 0.56962,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 8.73418,
+      "duration": 0.18987,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 8.92405,
+      "duration": 0.37975,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.3038,
+      "duration": 0.37975,
+      "midi": 65,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.68354,
+      "duration": 0.18987,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.87342,
+      "duration": 0.75949,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 12.72152,
+      "duration": 0.56962,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 13.29114,
+      "duration": 0.18987,
+      "midi": 77,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 13.48101,
+      "duration": 0.18987,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 13.67089,
+      "duration": 0.37975,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 14.24051,
+      "duration": 0.56962,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 14.81013,
+      "duration": 0.18987,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 15,
+      "duration": 0.18987,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 15.18987,
+      "duration": 0.37975,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 15.75949,
+      "duration": 0.56962,
+      "midi": 71,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 16.32911,
+      "duration": 0.18987,
+      "midi": 69,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 16.51899,
+      "duration": 0.18987,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 16.70886,
+      "duration": 0.37975,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 17.08861,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 17.27848,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 17.46835,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 17.8481,
+      "duration": 0.56962,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 18.41772,
+      "duration": 0.56962,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 19.55696,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 19.74684,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 19.93671,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 20.31646,
+      "duration": 0.56962,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 20.88608,
+      "duration": 0.18987,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 21.07595,
+      "duration": 0.37975,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 21.4557,
+      "duration": 0.18987,
+      "midi": 65,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 21.64557,
+      "duration": 0.37975,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 22.02532,
+      "duration": 0.75949,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false
+    }
+  ],
+  "keyframeCount": 66,
+  "keyframes": [
+    {
+      "partId": "P1",
+      "time": 0.56962,
+      "duration": 0.18987,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 0.75949,
+      "duration": 0.37975,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 1.13924,
+      "duration": 0.18987,
+      "midi": 77,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.32911,
+      "duration": 0.18987,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.51899,
+      "duration": 0.37975,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 2.08861,
+      "duration": 0.18987,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 2.27848,
+      "duration": 0.37975,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 2.65823,
+      "duration": 0.18987,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 2.8481,
+      "duration": 0.18987,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.03797,
+      "duration": 0.37975,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.60759,
+      "duration": 0.18987,
+      "midi": 71,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 3.79747,
+      "duration": 0.37975,
+      "midi": 71,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 4.17722,
+      "duration": 0.18987,
+      "midi": 69,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 4.36709,
+      "duration": 0.18987,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 4.55696,
+      "duration": 0.37975,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 4.93671,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 5.12658,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 5.31646,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 5.6962,
+      "duration": 0.37975,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 6.07595,
+      "duration": 0.18987,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 6.26582,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 6.4557,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 7.40506,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 7.59494,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 7.78481,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 8.16456,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 8.35443,
+      "duration": 0.37975,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 8.73418,
+      "duration": 0.18987,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 8.92405,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 9.11392,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 9.3038,
+      "duration": 0.37975,
+      "midi": 65,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.68354,
+      "duration": 0.18987,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.87342,
+      "duration": 0.75949,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 12.72152,
+      "duration": 0.18987,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 12.91139,
+      "duration": 0.37975,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 13.29114,
+      "duration": 0.18987,
+      "midi": 77,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 13.48101,
+      "duration": 0.18987,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 13.67089,
+      "duration": 0.37975,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 14.24051,
+      "duration": 0.18987,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 14.43038,
+      "duration": 0.37975,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 14.81013,
+      "duration": 0.18987,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 15,
+      "duration": 0.18987,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 15.18987,
+      "duration": 0.37975,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 15.75949,
+      "duration": 0.18987,
+      "midi": 71,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 15.94937,
+      "duration": 0.37975,
+      "midi": 71,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 16.32911,
+      "duration": 0.18987,
+      "midi": 69,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 16.51899,
+      "duration": 0.18987,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 16.70886,
+      "duration": 0.37975,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 17.08861,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 17.27848,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 17.46835,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 17.8481,
+      "duration": 0.37975,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 18.22785,
+      "duration": 0.18987,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 18.41772,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 18.60759,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 19.55696,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 19.74684,
+      "duration": 0.18987,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 19.93671,
+      "duration": 0.37975,
+      "midi": 64,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 20.31646,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 20.50633,
+      "duration": 0.37975,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 20.88608,
+      "duration": 0.18987,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 21.07595,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 21.26582,
+      "duration": 0.18987,
+      "midi": 62,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": false,
+      "tied": true
+    },
+    {
+      "partId": "P1",
+      "time": 21.4557,
+      "duration": 0.18987,
+      "midi": 65,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 21.64557,
+      "duration": 0.37975,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 22.02532,
+      "duration": 0.75949,
+      "midi": 60,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    }
+  ]
+}

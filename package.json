@@ -4,7 +4,8 @@
   "description": "A website dedicated to tracking information on the musician Jamie Paige",
   "scripts": {
     "start": "node server.js",
-    "serve": "node server.js"
+    "serve": "node server.js",
+    "build:transcripts": "node scripts/generate-transcript-playback-json.js"
   },
   "keywords": [
     "jamie paige",
@@ -13,5 +14,10 @@
   ],
   "devDependencies": {
     "http-server": "^14.1.1"
+  },
+  "dependencies": {
+    "musicxml-interfaces": "^0.0.21",
+    "tone": "^15.1.22",
+    "vexflow-musicxml": "^0.3.1"
   }
 }

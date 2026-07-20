@@ -47,7 +47,7 @@
     </table>
     <script src="assets/static/csv-data.js"></script>
     <script>
-      (function () {
+      (async function () {
         function resolveMotifImagePath(rawPath) {
           const text = String(rawPath || '').trim();
           if (!text) {
@@ -117,6 +117,22 @@
           return tile;
         }
 
+        async function motifPageExists(slug) {
+          const safeSlug = String(slug || '').trim();
+          if (!safeSlug) {
+            return false;
+          }
+
+          const path = 'motifs/' + safeSlug + '.html';
+
+          try {
+            const response = await fetch(path, { cache: 'no-store' });
+            return response.ok;
+          } catch (_error) {
+            return false;
+          }
+        }
+
         const gallery = document.getElementById('motifsGallery');
         const motifs = window.MotifData && Array.isArray(window.MotifData.allMotifs) ? window.MotifData.allMotifs : [];
 
@@ -124,8 +140,24 @@
           return;
         }
 
+        const motifsWithPages = motifs.filter((motif) => {
+          if (!motif || motif.hasPage === false) {
+            return false;
+          }
+
+          return Boolean(String(motif.pageSlug || motif.id || '').trim());
+        });
+
+        const verifiedMotifs = [];
+        for (const motif of motifsWithPages) {
+          const slug = String(motif.pageSlug || motif.id || '').trim();
+          if (await motifPageExists(slug)) {
+            verifiedMotifs.push(motif);
+          }
+        }
+
         gallery.innerHTML = '';
-        motifs.forEach((motif) => {
+        verifiedMotifs.forEach((motif) => {
           gallery.appendChild(createMotifTile(motif));
         });
       }());

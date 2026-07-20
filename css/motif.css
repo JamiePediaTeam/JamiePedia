@@ -9,27 +9,92 @@
 }
 
 .motif-main h1 {
-  margin-top: 0;
-  margin-bottom: 16px;
-  font-size: 2em;
-  line-height: 1.1;
+  margin-top: 4px;
+  margin-bottom: 15px;
+  font-size: 2.5em;
+  line-height: 1.0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #999;
+}
+
+.motif-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.motif-overview-summary {
+  min-width: 0;
+}
+
+.motif-summary-box {
+  min-height: 100px;
+}
+
+.motif-summary-title {
+  margin: 0 0 8px;
+  font-size: 1.05em;
+  color: #2a2a2a;
+}
+
+.motif-summary-content {
+  font-size: 0.86em;
+  line-height: 1.45;
+  color: #222222;
+}
+
+.motif-summary-content p {
+  margin: 0 0 8px;
+}
+
+.motif-empty-box {
+  border: 2px dashed #a09aa7;
+  border-radius: 6px;
+  padding: 10px;
+  color: #666666;
+  background: #fafafa;
+}
+
+.motif-overview-meta {
+  min-width: 0;
+}
+
+.motif-meta-panel {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.motif-transcript-control-dock {
+  margin-top: 8px;
+}
+
+.motif-transcript-control-label {
+  margin: 0 0 4px;
+  color: #3a3a3a;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .motif-image-wrap {
-  width: min(220px, 100%);
-  margin: 0 auto 18px;
+  width: 100%;
+  margin: 0 0 10px;
 }
 
 .motif-volume-wrap {
-  width: min(198px, 90%);
-  margin: -4px auto 18px;
+  width: 100%;
+  margin: 8px 0 0;
 }
 
 .motif-volume-label {
   display: block;
   margin-bottom: 6px;
   color: #222222;
-  font-size: 0.8em;
+  font-size: 0.72em;
   font-weight: 700;
   text-align: center;
 }
@@ -46,6 +111,36 @@
   border: 2px solid #351854;
   border-radius: 6px;
   background: #f9f7f5;
+}
+
+.motif-first-appears {
+  margin-top: 10px;
+  border-top: 1px solid #d9d9d9;
+  padding-top: 8px;
+}
+
+.motif-first-appears-title {
+  margin: 0 0 4px;
+  font-size: 0.78em;
+  font-weight: 700;
+  color: #333333;
+}
+
+.motif-first-appears-value {
+  font-size: 0.8em;
+  color: #202020;
+  min-height: 1.2em;
+}
+
+.motif-first-appears-value a {
+  color: #202020;
+  text-decoration: none;
+  border-bottom: 1px solid #9a9a9a;
+}
+
+.motif-first-appears-value a:hover {
+  color: #68BDE7;
+  border-bottom-color: #68BDE7;
 }
 
 .motif-variation-icon {
@@ -95,6 +190,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  width: 100%;
+  cursor: pointer;
   color: color-mix(in srgb, var(--variation-color, #9ec7cd) 80%, #ffffff);
   background: linear-gradient(
     to bottom right,
@@ -109,6 +207,17 @@
     1px 0 #000000,
     0 -1px #000000,
     0 1px #000000;
+  transition: filter 0.18s ease, opacity 0.18s ease;
+}
+
+.motif-variation-side-badge.is-inactive {
+  filter: saturate(0.25);
+  opacity: 0.72;
+}
+
+.motif-variation-side-badge.is-active {
+  filter: saturate(1);
+  opacity: 1;
 }
 
 .motif-variation-side-badge + .motif-variation-side-badge {
@@ -146,8 +255,158 @@
   margin-top: 10px;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #bdbdbd;
+  border-bottom: 2px solid #999;
   font-size: 1.2em;
+}
+
+.motif-transcript-section {
+  margin: 8px 0 18px;
+  max-width: 100%;
+}
+
+.motif-transcript-title {
+  margin-top: 4px;
+}
+
+.motif-transcript-subtitle {
+  margin: -4px 0 10px;
+  color: #4b4b4b;
+  font-size: 0.85em;
+}
+
+.motif-transcript-status {
+  margin: 0 0 10px;
+  color: #4b4b4b;
+  font-size: 0.8em;
+  min-height: 0;
+}
+
+.motif-transcript-status.is-error {
+  color: #8a1f1f;
+}
+
+.motif-transcript-status.is-muted {
+  color: #666666;
+}
+
+.motif-transcript-player {
+  margin: 0;
+  border: 1px solid #d0d0d0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #efefef;
+  width: fit-content;
+}
+
+.motif-transcript-player.is-hidden {
+  display: none;
+}
+
+.motif-transcript-player-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.motif-transcript-player-btn {
+  border: 1px solid #2f2f2f;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #111111;
+  font-weight: 700;
+  font-size: 0.82em;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.motif-transcript-play-btn {
+  width: 34px;
+  height: 26px;
+  min-height: 26px;
+  border-radius: 5px;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.motif-transcript-player-btn:hover {
+  background: #f1f1f1;
+}
+
+.motif-transcript-player-btn.secondary {
+  font-weight: 600;
+}
+
+.motif-transcript-player-timing {
+  color: #333333;
+  font-size: 0.74em;
+  margin-left: 0;
+  min-width: 64px;
+}
+
+.motif-transcript-player-message {
+  margin: 6px 0 0;
+  color: #555555;
+  font-size: 0.78em;
+  display: none;
+}
+
+.motif-transcript-player-message.is-error {
+  color: #8a1f1f;
+}
+
+.motif-transcript-player-message.is-muted {
+  color: #666666;
+}
+
+.motif-transcript-mount {
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  position: relative;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+#motifTranscriptMount .motif-empty-box {
+  margin: 0;
+}
+
+.motif-transcript-scanline {
+  position: absolute;
+  top: 10px;
+  height: 60px;
+  width: 2px;
+  pointer-events: none;
+  opacity: 0;
+  background: #ffe754;
+  transition: opacity 0.15s ease;
+  z-index: 12;
+}
+
+.motif-transcript-scanline.active {
+  opacity: 1;
+}
+
+.motif-transcript-canvas {
+  min-width: 0;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.motif-transcript-canvas svg {
+  width: auto;
+  max-width: none;
+  height: auto;
+}
+
+.motif-transcript-mount .vf-stavetempo,
+.motif-transcript-mount .vf-bpm {
+  display: none !important;
 }
 
 .motif-song-list {
@@ -270,16 +529,6 @@
   overflow: visible;
 }
 
-.motif-segment.variation {
-  background: repeating-linear-gradient(
-    90deg,
-    #351854,
-    #351854 4px,
-    #ffffff 4px,
-    #ffffff 8px
-  );
-}
-
 .motif-segment.definition {
   box-shadow: inset 0 0 0 2px #1f1f1f;
 }
@@ -325,6 +574,18 @@
 @media (max-width: 900px) {
   .motif-layout {
     flex-direction: column;
+  }
+
+  .motif-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .motif-transcript-canvas {
+    min-width: 0;
+  }
+
+  .motif-transcript-canvas svg {
+    transform: none;
   }
 
   .motif-image-wrap {
