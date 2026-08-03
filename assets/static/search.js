@@ -2,6 +2,170 @@
 let fullSearchResults = [];
 let currentSearchQuery = '';
 
+function searchEscapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function parseSearchLrcRawLines(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  const timedEntries = [];
+
+  lines.forEach((line) => {
+    const timestamps = [];
+    const timestampPattern = /\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]/g;
+    let match;
+
+    while ((match = timestampPattern.exec(line)) !== null) {
+      timestamps.push(match[1]);
+    }
+
+    if (timestamps.length === 0) {
+      return;
+    }
+
+    const lyric = line.replace(/\[[^\]]+\]/g, '').trim();
+    timestamps.forEach((stamp) => {
+      timedEntries.push({ stamp, text: lyric });
+    });
+  });
+
+  const seen = new Set();
+  return timedEntries
+    .filter((entry) => {
+      const key = entry.stamp + '|' + entry.text;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .map((entry) => entry.text);
+}
+
+function resolveSearchPath(basePath, filePath) {
+  if (!filePath) {
+    return '';
+  }
+  return (basePath || '') + filePath;
+}
+
+async function fetchSearchText(path) {
+  if (!path) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(path);
+    if (!response.ok) {
+      return null;
+    }
+    const text = await response.text();
+    return String(text || '').trim() ? text : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function getSearchSongVariantSlugs(doc, fileEntry) {
+  const fileName = String(fileEntry.path || '').split('/').pop() || '';
+  const baseSlug = fileName.replace(/\.html$/i, '').toLowerCase();
+  const slugs = [baseSlug];
+
+  const htmlElement = doc && doc.documentElement;
+  const versionsAttr = htmlElement ? htmlElement.getAttribute('data-versions') : '';
+  if (!versionsAttr) {
+    return slugs;
+  }
+
+  try {
+    const versions = JSON.parse(versionsAttr);
+    Object.keys(versions || {}).forEach((versionName) => {
+      const normalized = String(versionName || '').trim().toLowerCase();
+      if (!normalized || normalized === 'original') {
+        return;
+      }
+
+      const nextSlug = baseSlug + normalized;
+      if (!slugs.includes(nextSlug)) {
+        slugs.push(nextSlug);
+      }
+    });
+  } catch (_error) {
+    // Ignore invalid version metadata during search indexing.
+  }
+
+  return slugs;
+}
+
+function buildSearchSnippet(text, query) {
+  const sourceText = String(text || '').replace(/\s+/g, ' ').trim();
+  const normalizedQuery = String(query || '').toLowerCase();
+  if (!sourceText || !normalizedQuery) {
+    return {
+      snippet: '',
+      hasContentBefore: false,
+      hasContentAfter: false
+    };
+  }
+
+  const lowerSource = sourceText.toLowerCase();
+  const index = lowerSource.indexOf(normalizedQuery);
+  if (index < 0) {
+    return {
+      snippet: sourceText.slice(0, 120).trim(),
+      hasContentBefore: false,
+      hasContentAfter: sourceText.length > 120
+    };
+  }
+
+  const start = Math.max(0, index - 60);
+  const end = Math.min(sourceText.length, index + normalizedQuery.length + 60);
+  return {
+    snippet: sourceText.substring(start, end).trim(),
+    hasContentBefore: start > 0,
+    hasContentAfter: end < sourceText.length
+  };
+}
+
+async function getSearchSongExternalContent(basePath, doc, fileEntry) {
+  const slugs = getSearchSongVariantSlugs(doc, fileEntry);
+  const content = {
+    summary: '',
+    lyrics: '',
+    extended: ''
+  };
+
+  await Promise.all(slugs.map(async (slug) => {
+    const [summaryText, annotatedText, extendedText, lrcText] = await Promise.all([
+      fetchSearchText(resolveSearchPath(basePath, '/public/summaries/' + slug + '.txt')),
+      fetchSearchText(resolveSearchPath(basePath, '/public/annotations/' + slug + '.txt')),
+      fetchSearchText(resolveSearchPath(basePath, '/public/extended/' + slug + '.txt')),
+      fetchSearchText(resolveSearchPath(basePath, '/public/lyrics/' + slug + '.lrc'))
+    ]);
+
+    if (summaryText) {
+      content.summary += ' ' + summaryText;
+    }
+    if (annotatedText) {
+      content.lyrics += ' ' + annotatedText;
+    }
+    if (extendedText) {
+      content.extended += ' ' + extendedText;
+    }
+    if (lrcText) {
+      content.lyrics += ' ' + parseSearchLrcRawLines(lrcText).join(' ');
+    }
+  }));
+
+  content.summary = content.summary.trim();
+  content.lyrics = content.lyrics.trim();
+  content.extended = content.extended.trim();
+  return content;
+}
+
 // Fetch and search a single file
 async function searchFile(fileEntry, query) {
   try {
@@ -30,7 +194,7 @@ async function searchFile(fileEntry, query) {
       'cover-art-footer'
     ];
     
-    // Exclude annotated lyrics from search
+    // Exclude in-page annotated lyrics placeholders; real text is loaded from public files below.
     const excludeIds = ['lyrics-annotated'];
     excludeIds.forEach(id => {
       const element = doc.getElementById(id);
@@ -61,7 +225,22 @@ async function searchFile(fileEntry, query) {
       textWithBrMarkers = textWithBrMarkers.replace(/\s+/g, ' ').trim();
     }
     
-    const lowerTextWithBr = textWithBrMarkers.toLowerCase();
+    const pathParts = fileEntry.path.split('/').filter(p => p);
+    const isAlbumPage = pathParts.length === 2; // /music/aa.html
+    const isSongPage = pathParts.length === 3; // /music/aa/song.html
+
+    const externalContent = isSongPage
+      ? await getSearchSongExternalContent(basePath, doc, fileEntry)
+      : { summary: '', lyrics: '', extended: '' };
+
+    const combinedSearchText = [
+      textWithBrMarkers,
+      externalContent.summary,
+      externalContent.lyrics,
+      externalContent.extended
+    ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+
+    const lowerTextWithBr = combinedSearchText.toLowerCase();
     const lowerQuery = query.toLowerCase();
     
     if (lowerTextWithBr.includes(lowerQuery)) {
@@ -126,17 +305,6 @@ async function searchFile(fileEntry, query) {
         title = fileEntry.path.split('/').pop().replace('.html', '').replace(/-/g, ' ');
       }
       
-      // Extract snippet from text with space bar markers for <br>
-      const index = lowerTextWithBr.indexOf(lowerQuery);
-      const start = Math.max(0, index - 60);
-      const end = Math.min(textWithBrMarkers.length, index + lowerQuery.length + 60);
-      const snippet = textWithBrMarkers.substring(start, end).trim();
-      
-      // Detect page type (album vs song)
-      const pathParts = fileEntry.path.split('/').filter(p => p);
-      const isAlbumPage = pathParts.length === 2; // /music/aa.html
-      const isSongPage = pathParts.length === 3; // /music/aa/song.html
-      
       // Detect which content types contain the search query
       const contentTypes = [];
       
@@ -148,16 +316,19 @@ async function searchFile(fileEntry, query) {
         const rightView = doc.querySelector('.song-rightview');
         
         // Check each content area
-        if (summaryDiv && summaryDiv.textContent.toLowerCase().includes(lowerQuery)) {
+        const summaryText = ((summaryDiv && summaryDiv.textContent) || '') + ' ' + (externalContent.summary || '');
+        if (summaryText.toLowerCase().includes(lowerQuery)) {
           contentTypes.push('summary');
         }
-        if (lyricsDiv && lyricsDiv.textContent.toLowerCase().includes(lowerQuery)) {
+        const lyricsText = ((lyricsDiv && lyricsDiv.textContent) || '') + ' ' + (externalContent.lyrics || '');
+        if (lyricsText.toLowerCase().includes(lowerQuery)) {
           contentTypes.push('lyrics');
         }
         if (motifsDiv && motifsDiv.textContent.toLowerCase().includes(lowerQuery)) {
           contentTypes.push('connections');
         }
-        if (extendedDiv && extendedDiv.textContent.toLowerCase().includes(lowerQuery)) {
+        const extendedText = ((extendedDiv && extendedDiv.textContent) || '') + ' ' + (externalContent.extended || '');
+        if (extendedText.toLowerCase().includes(lowerQuery)) {
           contentTypes.push('extended');
         }
         if (rightView && rightView.textContent.toLowerCase().includes(lowerQuery)) {
@@ -183,15 +354,32 @@ async function searchFile(fileEntry, query) {
       if (contentTypes.length === 0) {
         contentTypes.push('other');
       }
+
+      const snippetCandidates = [
+        externalContent.summary,
+        externalContent.lyrics,
+        externalContent.extended,
+        textWithBrMarkers
+      ].filter(Boolean);
+
+      let snippetSource = combinedSearchText;
+      for (const candidate of snippetCandidates) {
+        if (String(candidate).toLowerCase().includes(lowerQuery)) {
+          snippetSource = candidate;
+          break;
+        }
+      }
+
+      const snippetData = buildSearchSnippet(snippetSource, query);
       
       return {
         album: fileEntry.album,
         title: title,
         url: fileEntry.path,
-        content: snippet,
+        content: snippetData.snippet,
         coverSrc: coverSrc,
-        hasContentBefore: start > 0,
-        hasContentAfter: end < textWithBrMarkers.length,
+        hasContentBefore: snippetData.hasContentBefore,
+        hasContentAfter: snippetData.hasContentAfter,
         pageType: isAlbumPage ? 'album' : 'song',
         contentTypes: contentTypes
       };

@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node server.js",
     "serve": "node server.js",
-    "build:transcripts": "node scripts/generate-transcript-playback-json.js"
+    "build:transcripts": "node scripts/generate-transcript-playback-json.js",
+    "build:art-previews": "node scripts/generate-art-previews.js"
   },
   "keywords": [
     "jamie paige",
@@ -13,7 +14,8 @@
     "fansite"
   ],
   "devDependencies": {
-    "http-server": "^14.1.1"
+    "http-server": "^14.1.1",
+    "sharp": "^0.35.3"
   },
   "dependencies": {
     "musicxml-interfaces": "^0.0.21",

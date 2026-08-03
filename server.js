@@ -15,9 +15,27 @@ const server = http.createServer((req, res) => {
 
   let filePath = requestPath === '/' ? 'index.html' : requestPath.startsWith('/') ? requestPath.slice(1) : requestPath;
   filePath = path.join(__dirname, filePath);
+
+  const rawRouteRequested = /\/raw\/?$/i.test(requestPath);
   
   fs.readFile(filePath, (err, content) => {
     if (err) {
+      if (rawRouteRequested) {
+        const fallbackPath = path.join(__dirname, '404.html');
+        fs.readFile(fallbackPath, (fallbackErr, fallbackContent) => {
+          if (fallbackErr) {
+            console.error(`Error reading ${fallbackPath}:`, fallbackErr.message);
+            res.writeHead(404, { 'Content-Type': 'text/html' });
+            res.end('404 - File Not Found', 'utf-8');
+            return;
+          }
+
+          res.writeHead(404, { 'Content-Type': 'text/html' });
+          res.end(fallbackContent, 'utf-8');
+        });
+        return;
+      }
+
       console.error(`Error reading ${filePath}:`, err.message);
       res.writeHead(404, { 'Content-Type': 'text/html' });
       res.end('404 - File Not Found', 'utf-8');

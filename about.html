@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script src="assets/static/load.js"></script>
+    <link href="css/about.css" rel="stylesheet" type="text/css" media="all">
   </head>
   <body>
   <a href="./"><div class="head"></div></a>
@@ -36,12 +37,171 @@
         </div>
       </td>
       <td>
-        <div class="bodybar" style="text-align:center;">
-            <p>i'm only doing this so it doesn't 404, will set up actual about page later. :)</p>
-            <p>btw this is like an "about us" page so like if you see this you can put info about yourself here</p>
+        <div class="bodybar">
+          <section class="about-page">
+            <p class="about-intro"></p>
+
+            <div class="contributor-list">
+              <article class="contributor-card">
+                <div class="contributor-content">
+                  <h1 class="contributor-name">Trinity</h1>
+                  <p class="contributor-description">i'm trinty! i'm the lead programmer for jamiepedia. i'm responsible for like the majority of this site's back end functionality (like pretty much every major feature of this site, i'm responsible for lol). i don't really have any kind of social media pressence right now, but you can find my bluesky at https://bsky.app/profile/xtradev.gay</p>
+                </div>
+                <div class="contributor-media">
+                  <img src="public/images/contributors/trinity.jpg" alt="Trinity">
+                </div>
+              </article>
+
+              <article class="contributor-card">
+                <div class="contributor-content">
+                  <h1 class="contributor-name">Contributor Two</h1>
+                  <p class="contributor-description">Placeholder bio text for Contributor Two.</p>
+                </div>
+                <div class="contributor-media">
+                  <img src="public/images/contributors/contributor-two.jpg" alt="Contributor Two placeholder portrait">
+                </div>
+              </article>
+
+              <article class="contributor-card">
+                <div class="contributor-content">
+                  <h1 class="contributor-name">Contributor Three</h1>
+                  <p class="contributor-description">Placeholder bio text for Contributor Three.</p>
+                </div>
+                <div class="contributor-media">
+                  <img src="public/images/contributors/contributor-three.jpg" alt="Contributor Three placeholder portrait">
+                </div>
+              </article>
+            </div>
+          </section>
         </div>
       </td>
     </tr>
   </table>
+  <script>
+    (function () {
+      function splitTrailingPunctuation(url) {
+        const match = String(url || '').match(/^(.*?)([.,!?;:)]*)$/);
+        if (!match) {
+          return { cleanUrl: url, trailing: '' };
+        }
+
+        return {
+          cleanUrl: match[1],
+          trailing: match[2] || ''
+        };
+      }
+
+      function buildHref(rawUrl) {
+        const text = String(rawUrl || '').trim();
+        if (!text) {
+          return '';
+        }
+
+        if (/^https?:\/\//i.test(text)) {
+          return text;
+        }
+
+        if (/^www\./i.test(text)) {
+          return 'https://' + text;
+        }
+
+        return '';
+      }
+
+      function linkifyTextNode(node) {
+        const text = node.nodeValue;
+        if (!text) {
+          return;
+        }
+
+        const urlPattern = /(https?:\/\/[^\s<>"]+|www\.[^\s<>"]+)/gi;
+        let match;
+        let lastIndex = 0;
+        const fragment = document.createDocumentFragment();
+        let replaced = false;
+
+        while ((match = urlPattern.exec(text)) !== null) {
+          const fullMatch = match[0];
+          const start = match.index;
+
+          if (start > lastIndex) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+          }
+
+          const split = splitTrailingPunctuation(fullMatch);
+          const href = buildHref(split.cleanUrl);
+
+          if (href) {
+            const link = document.createElement('a');
+            link.href = href;
+            link.textContent = split.cleanUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            fragment.appendChild(link);
+            replaced = true;
+          } else {
+            fragment.appendChild(document.createTextNode(fullMatch));
+          }
+
+          if (split.trailing) {
+            fragment.appendChild(document.createTextNode(split.trailing));
+          }
+
+          lastIndex = start + fullMatch.length;
+        }
+
+        if (!replaced) {
+          return;
+        }
+
+        if (lastIndex < text.length) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        node.parentNode.replaceChild(fragment, node);
+      }
+
+      function linkifyContainer(container) {
+        if (!container) {
+          return;
+        }
+
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+          acceptNode(textNode) {
+            if (!textNode || !textNode.nodeValue || !textNode.nodeValue.trim()) {
+              return NodeFilter.FILTER_REJECT;
+            }
+
+            const parent = textNode.parentElement;
+            if (!parent) {
+              return NodeFilter.FILTER_REJECT;
+            }
+
+            if (parent.closest('a, script, style')) {
+              return NodeFilter.FILTER_REJECT;
+            }
+
+            return NodeFilter.FILTER_ACCEPT;
+          }
+        });
+
+        const textNodes = [];
+        let current;
+        while ((current = walker.nextNode())) {
+          textNodes.push(current);
+        }
+
+        textNodes.forEach((textNode) => linkifyTextNode(textNode));
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+          linkifyContainer(document.querySelector('.about-page'));
+        });
+      } else {
+        linkifyContainer(document.querySelector('.about-page'));
+      }
+    }());
+  </script>
   </body>
 </html>

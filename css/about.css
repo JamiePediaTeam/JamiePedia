@@ -1,0 +1,86 @@
+.about-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.about-intro {
+  margin: 0 0 26px 0;
+  color: #222;
+  font-size: 1.02em;
+  line-height: 1.55;
+}
+
+.contributor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.contributor-card {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+.contributor-card:nth-child(even) {
+  flex-direction: row-reverse;
+}
+
+.contributor-media {
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.contributor-media img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+  border: 2px solid #351854;
+  border-radius: 6px;
+  background: #f9f7f5;
+}
+
+.contributor-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.contributor-name {
+  margin: 0 0 10px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #999;
+  color: #351854;
+  font-family: "Nunito", sans-serif;
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.contributor-description {
+  margin: 0;
+  color: #151515;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .about-page {
+    padding: 14px;
+  }
+
+  .contributor-card,
+  .contributor-card:nth-child(even) {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .contributor-media {
+    width: min(100%, 280px);
+  }
+
+  .contributor-name {
+    font-size: 1.7em;
+  }
+}

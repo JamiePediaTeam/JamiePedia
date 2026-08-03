@@ -167,6 +167,151 @@ function initializeDataNavButtons() {
   });
 }
 
+function isProgressiveArtPath(pathname) {
+  return pathname.includes('/public/images/cover-art/') || pathname.includes('/public/images/motif-art/');
+}
+
+function replaceExtensionWithWebp(pathname) {
+  return pathname.replace(/\.[a-z0-9]+$/i, '.webp');
+}
+
+function toPreviewPathname(pathname) {
+  if (pathname.includes('/public/images/cover-art/')) {
+    return replaceExtensionWithWebp(pathname.replace('/public/images/cover-art/', '/public/images/previews/cover-art/'));
+  }
+
+  if (pathname.includes('/public/images/motif-art/')) {
+    return replaceExtensionWithWebp(pathname.replace('/public/images/motif-art/', '/public/images/previews/motif-art/'));
+  }
+
+  return '';
+}
+
+function toPreviewUrl(originalSrc) {
+  if (!originalSrc) {
+    return '';
+  }
+
+  try {
+    const absolute = new URL(originalSrc, window.location.href);
+    if (!isProgressiveArtPath(absolute.pathname)) {
+      return '';
+    }
+
+    const previewPathname = toPreviewPathname(absolute.pathname);
+    if (!previewPathname) {
+      return '';
+    }
+
+    absolute.pathname = previewPathname;
+    absolute.search = '';
+    absolute.hash = '';
+    return absolute.href;
+  } catch (_error) {
+    return '';
+  }
+}
+
+function applyProgressiveArtPreviewToImage(image) {
+  if (!image || image.nodeType !== 1 || image.tagName !== 'IMG') {
+    return;
+  }
+
+  const currentSrc = image.getAttribute('src') || '';
+  const managedHqSrc = image.dataset.previewManagedHqSrc || '';
+  const managedPreviewSrc = image.dataset.previewManagedPreviewSrc || '';
+
+  if (managedHqSrc) {
+    if (currentSrc === managedHqSrc || currentSrc === managedPreviewSrc) {
+      return;
+    }
+
+    image.dataset.previewManagedHqSrc = '';
+    image.dataset.previewManagedPreviewSrc = '';
+  }
+
+  const originalSrc = currentSrc;
+  const previewSrc = toPreviewUrl(originalSrc);
+  if (!previewSrc) {
+    return;
+  }
+
+  image.dataset.previewManagedHqSrc = originalSrc;
+  image.dataset.previewManagedPreviewSrc = previewSrc;
+
+  const previewProbe = new Image();
+  previewProbe.onload = function () {
+    if (image.dataset.previewManagedHqSrc !== originalSrc) {
+      return;
+    }
+
+    image.src = previewSrc;
+
+    const highQualityProbe = new Image();
+    highQualityProbe.onload = function () {
+      if (image.dataset.previewManagedHqSrc !== originalSrc) {
+        return;
+      }
+
+      image.src = originalSrc;
+    };
+    highQualityProbe.src = originalSrc;
+  };
+  previewProbe.src = previewSrc;
+}
+
+function applyProgressiveArtPreviews(rootNode) {
+  const root = rootNode && rootNode.nodeType === 1 ? rootNode : document;
+
+  if (root.tagName === 'IMG') {
+    applyProgressiveArtPreviewToImage(root);
+    return;
+  }
+
+  const images = root.querySelectorAll ? root.querySelectorAll('img') : [];
+  images.forEach((image) => {
+    applyProgressiveArtPreviewToImage(image);
+  });
+}
+
+function installProgressiveArtObserver() {
+  if (window.__jamiePediaProgressiveArtObserverInstalled) {
+    return;
+  }
+
+  window.__jamiePediaProgressiveArtObserverInstalled = true;
+  applyProgressiveArtPreviews(document);
+
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach((node) => {
+          applyProgressiveArtPreviews(node);
+        });
+      }
+
+      if (mutation.type === 'attributes' && mutation.target && mutation.target.tagName === 'IMG') {
+        applyProgressiveArtPreviewToImage(mutation.target);
+      }
+    });
+  });
+
+  const observeRoot = document.body || document.documentElement;
+  if (!observeRoot) {
+    document.addEventListener('DOMContentLoaded', installProgressiveArtObserver, { once: true });
+    return;
+  }
+
+  observer.observe(observeRoot, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['src']
+  });
+}
+
+installProgressiveArtObserver();
+
 document.addEventListener('DOMContentLoaded', function () {
   initializeDataNavButtons();
 });

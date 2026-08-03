@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        color: #111111;
+        font-family: sans-serif;
+      }
+
+      body {
+        padding: 24px;
+      }
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        font: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      (function () {
+        function getSourcePath(pathname) {
+          return String(pathname || '').replace(/\/raw\/?$/i, '');
+        }
+
+        function getSiteBase(pathname) {
+          const parts = String(pathname || '').split('/').filter(Boolean);
+          const musicIndex = parts.indexOf('music');
+          if (musicIndex > 0) {
+            return '/' + parts.slice(0, musicIndex).join('/');
+          }
+          return '';
+        }
+
+        function getSongSlug(sourcePath) {
+          const file = String(sourcePath || '').split('/').pop() || '';
+          return file.replace(/\.html$/i, '').toLowerCase();
+        }
+
+        function parseLrcRawLines(text) {
+          const lines = String(text || '').split(/\r?\n/);
+          const entries = [];
+
+          lines.forEach(function (line) {
+            const timestamps = line.match(/\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]/g);
+            if (!timestamps) {
+              return;
+            }
+
+            const lyric = line.replace(/\[[^\]]+\]/g, '').trim();
+            timestamps.forEach(function (stamp) {
+              const clean = stamp.slice(1, -1);
+              const match = clean.match(/^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
+              if (!match) {
+                return;
+              }
+
+              const mins = Number(match[1]);
+              const secs = Number(match[2]);
+              const frac = Number('0.' + String(match[3] || '0').padEnd(3, '0'));
+              entries.push({
+                time: mins * 60 + secs + frac,
+                text: lyric
+              });
+            });
+          });
+
+          const seen = new Set();
+          return entries
+            .sort(function (a, b) { return a.time - b.time; })
+            .filter(function (entry) {
+              const key = entry.time.toFixed(3) + '|' + entry.text;
+              if (seen.has(key)) {
+                return false;
+              }
+              seen.add(key);
+              return true;
+            })
+            .map(function (entry) { return entry.text; });
+        }
+
+        function renderText(text, title) {
+          document.title = title;
+          document.body.innerHTML = '';
+          var pre = document.createElement('pre');
+          pre.textContent = text;
+          document.body.appendChild(pre);
+        }
+
+        var path = window.location.pathname || '';
+        if (!/\/raw\/?$/i.test(path)) {
+          renderText('Page not found.', 'Page Not Found');
+          return;
+        }
+
+        var sourcePath = getSourcePath(path);
+        var slug = getSongSlug(sourcePath);
+        if (!slug) {
+          renderText('Raw lyrics unavailable.', 'Raw Lyrics');
+          return;
+        }
+
+        var lyricsPath = getSiteBase(path) + '/public/lyrics/' + slug + '.lrc';
+        fetch(lyricsPath, { cache: 'no-store' })
+          .then(function (response) {
+            if (!response.ok) {
+              throw new Error('Missing lyrics');
+            }
+            return response.text();
+          })
+          .then(function (text) {
+            var rawLines = parseLrcRawLines(text);
+            renderText(rawLines.length > 0 ? rawLines.join('\n') : 'This song has no raw lyrics.', slug + ' raw lyrics');
+          })
+          .catch(function () {
+            renderText('This song has no raw lyrics.', slug + ' raw lyrics');
+          });
+      })();
+    </script>
+  </body>
+</html>

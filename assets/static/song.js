@@ -89,8 +89,28 @@ function getActiveVersionName() {
   return 'original';
 }
 
+function getActiveMainTabName() {
+  const activeTab = document.querySelector('.song-tab.active');
+  if (!activeTab) {
+    return 'motifs';
+  }
+
+  const onClick = String(activeTab.getAttribute('onclick') || '');
+  if (onClick.includes("switchTab('summary')") || onClick.includes('switchTab("summary")')) {
+    return 'summary';
+  }
+  if (onClick.includes("switchTab('lyrics')") || onClick.includes('switchTab("lyrics")')) {
+    return 'lyrics';
+  }
+  if (onClick.includes("switchTab('extended')") || onClick.includes('switchTab("extended")')) {
+    return 'extended';
+  }
+  return 'motifs';
+}
+
 function switchVersion(versionName, options) {
   const settings = options || {};
+  const nextTabName = settings.preserveTab === false ? 'motifs' : getActiveMainTabName();
   // Hide all version content
   versionOrder.forEach(version => {
     const versionElement = document.getElementById('version-' + version);
@@ -150,8 +170,8 @@ function switchVersion(versionName, options) {
     syncVersionHash(versionName);
   }
   
-  // Reset tab view to Summary
-  switchTab('summary');
+  // Preserve the current tab when changing versions, defaulting to Connections.
+  switchTab(nextTabName || 'motifs');
 }
 
 
@@ -197,21 +217,13 @@ function switchTab(tabName) {
   if (contentElement) {
     contentElement.classList.add('active');
   }
-  
-  // Find and activate the correct tab button by mapping tabName to index
-  const tabNameToIndex = {
-    'summary': 0,
-    'lyrics': 1,
-    'motifs': 2,
-    'extended': 3
-  };
-  const tabIndex = tabNameToIndex[tabName];
-  if (tabIndex !== undefined) {
-    const allSongTabs = document.querySelectorAll('.song-tab');
-    const tabButton = allSongTabs[tabIndex];
-    if (tabButton) {
-      tabButton.classList.add('active');
-    }
+
+  const tabButton = Array.from(document.querySelectorAll('.song-tab')).find((button) => {
+    const onClick = String(button.getAttribute('onclick') || '');
+    return onClick.includes("switchTab('" + tabName + "')") || onClick.includes('switchTab("' + tabName + '")');
+  });
+  if (tabButton) {
+    tabButton.classList.add('active');
   }
   
   // Show/hide lyrics subtabs based on selected tab
@@ -233,7 +245,49 @@ function switchTab(tabName) {
   }
 }
 
+function reorderSongTabs() {
+  document.querySelectorAll('.song-tabs').forEach((tabsContainer) => {
+    const tabs = Array.from(tabsContainer.querySelectorAll('.song-tab'));
+    if (tabs.length === 0) {
+      return;
+    }
+
+    const byName = {};
+    tabs.forEach((button) => {
+      const onClick = String(button.getAttribute('onclick') || '');
+      if (onClick.includes("switchTab('summary')") || onClick.includes('switchTab("summary")')) {
+        byName.summary = button;
+      } else if (onClick.includes("switchTab('lyrics')") || onClick.includes('switchTab("lyrics")')) {
+        byName.lyrics = button;
+      } else if (onClick.includes("switchTab('motifs')") || onClick.includes('switchTab("motifs")')) {
+        byName.motifs = button;
+      } else if (onClick.includes("switchTab('extended')") || onClick.includes('switchTab("extended")')) {
+        byName.extended = button;
+      }
+    });
+
+    const spacer = tabsContainer.querySelector('.tabs-spacer');
+    const orderedTabs = [byName.motifs, byName.summary, byName.lyrics, byName.extended].filter(Boolean);
+
+    orderedTabs.forEach((button) => {
+      tabsContainer.appendChild(button);
+    });
+
+    if (spacer) {
+      tabsContainer.appendChild(spacer);
+    }
+
+    Array.from(tabsContainer.querySelectorAll('.version-tab')).forEach((button) => {
+      tabsContainer.appendChild(button);
+    });
+  });
+}
+
 function switchLyricsTab(lyricsType) {
+  if (lyricsType !== 'annotated') {
+    lyricsType = 'annotated';
+  }
+
   // Check if version system is in use
   if (versionOrder && versionOrder.length > 0) {
     // Version-based logic
@@ -289,6 +343,35 @@ function switchLyricsTab(lyricsType) {
       event.target.classList.add('active');
     }
   }
+}
+
+function removeRawLyricsUi() {
+  document.querySelectorAll('.lyrics-subtabs-container').forEach((container) => {
+    const rawButtons = Array.from(container.querySelectorAll('.lyrics-subtab')).filter((button) => {
+      const label = String(button.textContent || '').trim().toLowerCase();
+      const onClick = String(button.getAttribute('onclick') || '').toLowerCase();
+      return label === 'raw lyrics' || onClick.includes("switchlyricstab('raw')") || onClick.includes('switchlyricstab("raw")');
+    });
+
+    rawButtons.forEach((button) => button.remove());
+
+    const remainingButtons = container.querySelectorAll('.lyrics-subtab');
+    if (remainingButtons.length <= 1) {
+      container.style.display = 'none';
+    }
+
+    if (remainingButtons[0]) {
+      remainingButtons[0].classList.add('active');
+    }
+  });
+
+  document.querySelectorAll('[id^="lyrics-raw"]').forEach((container) => {
+    container.remove();
+  });
+
+  document.querySelectorAll('[id^="lyrics-annotated"]').forEach((container) => {
+    container.classList.add('active');
+  });
 }
 
 // Initialize lyrics subtabs visibility on page load
@@ -382,41 +465,169 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
-function renderTextParagraphs(text) {
-  const trimmed = String(text || '').trim();
+function sanitizeMarkdownUrl(url) {
+  const candidate = String(url || '').trim();
+  if (!candidate) {
+    return '#';
+  }
+
+  if (/^(https?:|mailto:|\/|#|\.\/|\.\.\/)/i.test(candidate)) {
+    return candidate.replace(/"/g, '%22');
+  }
+
+  return '#';
+}
+
+function renderMarkdownInline(text) {
+  const codeTokens = [];
+  let html = escapeHtml(text);
+
+  html = html.replace(/`([^`]+)`/g, (_, codeText) => {
+    const token = '@@CODETOKEN' + codeTokens.length + '@@';
+    codeTokens.push('<code>' + codeText + '</code>');
+    return token;
+  });
+
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+    const href = sanitizeMarkdownUrl(url);
+    return '<a href="' + href + '">' + label + '</a>';
+  });
+
+  html = html
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>');
+
+  html = html.replace(/@@CODETOKEN(\d+)@@/g, (_, index) => codeTokens[Number(index)] || '');
+  return html;
+}
+
+function isMarkdownBlockBoundary(line) {
+  const trimmed = String(line || '').trim();
   if (!trimmed) {
+    return true;
+  }
+
+  return /^#{1,6}\s+/.test(trimmed)
+    || /^```/.test(trimmed)
+    || /^[-*+]\s+/.test(trimmed)
+    || /^\d+\.\s+/.test(trimmed)
+    || /^>\s?/.test(trimmed)
+    || /^(-{3,}|\*{3,}|_{3,})$/.test(trimmed);
+}
+
+function renderMarkdownText(text) {
+  const normalized = String(text || '').replace(/\r\n/g, '\n').trim();
+  if (!normalized) {
     return '';
   }
 
-  const blocks = trimmed
-    .split(/\n\s*\n/)
-    .map((block) => block.trim())
-    .filter(Boolean);
+  const lines = normalized.split('\n');
+  const chunks = [];
+  let index = 0;
 
-  return blocks
-    .map((block) => '<p>' + escapeHtml(block).replace(/\n/g, '<br>') + '</p>')
-    .join('');
+  while (index < lines.length) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      index += 1;
+      continue;
+    }
+
+    if (/^```/.test(trimmed)) {
+      const codeLines = [];
+      index += 1;
+      while (index < lines.length && !/^```/.test(lines[index].trim())) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length && /^```/.test(lines[index].trim())) {
+        index += 1;
+      }
+
+      const codeHtml = escapeHtml(codeLines.join('\n'));
+      chunks.push('<pre class="song-markdown-code"><code>' + codeHtml + '</code></pre>');
+      continue;
+    }
+
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const tag = 'h' + level;
+      const className = 'song-markdown-' + tag;
+      chunks.push('<' + tag + ' class="' + className + '">' + renderMarkdownInline(headingMatch[2].trim()) + '</' + tag + '>');
+      index += 1;
+      continue;
+    }
+
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      chunks.push('<hr class="song-markdown-hr">');
+      index += 1;
+      continue;
+    }
+
+    if (/^[-*+]\s+/.test(trimmed)) {
+      const items = [];
+      while (index < lines.length && /^[-*+]\s+/.test(lines[index].trim())) {
+        items.push(lines[index].trim().replace(/^[-*+]\s+/, ''));
+        index += 1;
+      }
+
+      const listHtml = items.map((item) => '<li>' + renderMarkdownInline(item) + '</li>').join('');
+      chunks.push('<ul>' + listHtml + '</ul>');
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(trimmed)) {
+      const items = [];
+      while (index < lines.length && /^\d+\.\s+/.test(lines[index].trim())) {
+        items.push(lines[index].trim().replace(/^\d+\.\s+/, ''));
+        index += 1;
+      }
+
+      const listHtml = items.map((item) => '<li>' + renderMarkdownInline(item) + '</li>').join('');
+      chunks.push('<ol>' + listHtml + '</ol>');
+      continue;
+    }
+
+    if (/^>\s?/.test(trimmed)) {
+      const quoteLines = [];
+      while (index < lines.length && /^>\s?/.test(lines[index].trim())) {
+        quoteLines.push(lines[index].trim().replace(/^>\s?/, ''));
+        index += 1;
+      }
+
+      const quoteHtml = quoteLines.map((quoteLine) => renderMarkdownInline(quoteLine)).join('<br>');
+      chunks.push('<blockquote>' + quoteHtml + '</blockquote>');
+      continue;
+    }
+
+    const paragraphLines = [];
+    while (index < lines.length && !isMarkdownBlockBoundary(lines[index])) {
+      paragraphLines.push(lines[index].trim());
+      index += 1;
+    }
+
+    if (paragraphLines.length > 0) {
+      const paragraphHtml = paragraphLines.map((paragraphLine) => renderMarkdownInline(paragraphLine)).join('<br>');
+      chunks.push('<p>' + paragraphHtml + '</p>');
+      continue;
+    }
+
+    index += 1;
+  }
+
+  return chunks.join('');
+}
+
+function renderTextParagraphs(text) {
+  return renderMarkdownText(text);
 }
 
 function renderSummaryParagraphs(text) {
-  const trimmed = String(text || '').trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  const blocks = trimmed
-    .split(/\n\s*\n/)
-    .map((block) => block.trim())
-    .filter(Boolean);
-
-  const tabPrefix = '&nbsp;&nbsp;&nbsp;&nbsp;';
-
-  return blocks
-    .map((block) => {
-      const escapedLines = block.split(/\n/).map((line) => escapeHtml(line.trim()));
-      return '<p>' + tabPrefix + escapedLines.join('<br>' + tabPrefix) + '</p>';
-    })
-    .join('');
+  return renderMarkdownText(text);
 }
 
 function makeEmptyBoxHtml(label) {
@@ -588,13 +799,15 @@ function initializeSongConnectionsFeature() {
 
 document.addEventListener('DOMContentLoaded', function() {
   loadVersionConfig();
+  removeRawLyricsUi();
+  reorderSongTabs();
 
   const hashVersionName = getCurrentHashVersionName();
   if (hashVersionName && versionConfig[hashVersionName]) {
     switchVersion(hashVersionName, { skipHashUpdate: true });
   } else {
-    // Load summary as default tab
-    switchTab('summary');
+    // Load connections as default tab
+    switchTab('motifs');
   }
 
   const activeVersionName = getActiveVersionName();

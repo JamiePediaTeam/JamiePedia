@@ -115,6 +115,71 @@
   display: block;
 }
 
+.song-content h1.song-markdown-h1,
+.lyrics-content h1.song-markdown-h1 {
+  margin: 0 0 14px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #999;
+  color: #351854;
+  font-family: "Nunito", sans-serif;
+  font-size: 2em;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.song-content h2.song-markdown-h2,
+.lyrics-content h2.song-markdown-h2 {
+  margin: 18px 0 10px 0;
+  color: #351854;
+  font-size: 1.45em;
+  line-height: 1.2;
+}
+
+.song-content h3.song-markdown-h3,
+.lyrics-content h3.song-markdown-h3 {
+  margin: 16px 0 8px 0;
+  color: #351854;
+  font-size: 1.2em;
+  line-height: 1.25;
+}
+
+.song-content ul,
+.song-content ol,
+.lyrics-content ul,
+.lyrics-content ol {
+  margin: 8px 0 12px 22px;
+  padding: 0;
+}
+
+.song-content blockquote,
+.lyrics-content blockquote {
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #999;
+  background: #fafafa;
+}
+
+.song-markdown-code {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #d4d4d4;
+  border-radius: 6px;
+  background: #fafafa;
+  overflow-x: auto;
+}
+
+.song-markdown-code code {
+  font-family: "Courier New", monospace;
+  font-size: 0.92em;
+  white-space: pre;
+}
+
+.song-markdown-hr {
+  border: 0;
+  border-top: 1px solid #ccc;
+  margin: 14px 0;
+}
+
 .lyrics-subtabs-container {
   margin: -10px 0 20px 0;
   padding: 0;

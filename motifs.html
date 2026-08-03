@@ -39,8 +39,7 @@
         </td>
         <td>
           <div class="bodybar">
-            <h2 class="album-section-heading">Motifs</h2>
-            <div class="albumgallery" id="motifsGallery"></div>
+            <div id="motifSections"></div>
           </div>
         </td>
       </tr>
@@ -117,6 +116,39 @@
           return tile;
         }
 
+        function getMotifCategory(motif) {
+          const motifType = String(motif && motif.motifType ? motif.motifType : '').toLowerCase();
+
+          if (motifType === 'lyrical' || motif && motif.isLyrical) {
+            return 'lyrical';
+          }
+
+          if (motifType === 'sample') {
+            return 'sample';
+          }
+
+          return 'motif';
+        }
+
+        function createMotifSection(headingText, motifs) {
+          const section = document.createElement('section');
+
+          const heading = document.createElement('h2');
+          heading.className = 'album-section-heading';
+          heading.textContent = headingText;
+          section.appendChild(heading);
+
+          const gallery = document.createElement('div');
+          gallery.className = 'albumgallery';
+          section.appendChild(gallery);
+
+          motifs.forEach((motif) => {
+            gallery.appendChild(createMotifTile(motif));
+          });
+
+          return section;
+        }
+
         async function motifPageExists(slug) {
           const safeSlug = String(slug || '').trim();
           if (!safeSlug) {
@@ -133,10 +165,10 @@
           }
         }
 
-        const gallery = document.getElementById('motifsGallery');
+        const sectionsRoot = document.getElementById('motifSections');
         const motifs = window.MotifData && Array.isArray(window.MotifData.allMotifs) ? window.MotifData.allMotifs : [];
 
-        if (!gallery || motifs.length === 0) {
+        if (!sectionsRoot || motifs.length === 0) {
           return;
         }
 
@@ -156,9 +188,36 @@
           }
         }
 
-        gallery.innerHTML = '';
+        const categorized = {
+          motif: [],
+          lyrical: [],
+          sample: []
+        };
+
         verifiedMotifs.forEach((motif) => {
-          gallery.appendChild(createMotifTile(motif));
+          const category = getMotifCategory(motif);
+          if (!categorized[category]) {
+            categorized.motif.push(motif);
+            return;
+          }
+
+          categorized[category].push(motif);
+        });
+
+        const sections = [
+          { key: 'motif', heading: 'Leitmotifs' },
+          { key: 'lyrical', heading: 'Lyrical References' },
+          { key: 'sample', heading: 'Samples' }
+        ];
+
+        sectionsRoot.innerHTML = '';
+        sections.forEach((section) => {
+          const motifsForSection = categorized[section.key] || [];
+          if (motifsForSection.length === 0) {
+            return;
+          }
+
+          sectionsRoot.appendChild(createMotifSection(section.heading, motifsForSection));
         });
       }());
     </script>
