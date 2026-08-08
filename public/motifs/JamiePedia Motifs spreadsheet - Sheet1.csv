@@ -11,7 +11,7 @@ Space Center,space-center,../public/images/cover-art/aa.png,TRUE,Motif,TRUE,,9EC
 Jya~,jya,../public/images/motif-art/jya.png,FALSE,Sample,TRUE,,FCE73E,,Clouddrop,CLOUDDROP,../music/cc/clouddrop.html,youtube,f3yFpxbP0pc,000000,NOT_QUITE_THERE,gummyworm,2:03,2:06.5,FALSE,TRUE,B,PAISLEY_PATTERNS,BITTERSWEET,3:19,3:20,bittersweet,STREETCAT,let-the-bass-go,1:25,1:27
 Let The Bass Go,let-the-bass-go,../public/images/motif-art/letthebassgo.png,FALSE,Sample,TRUE,,1F1F1F,,"My Darling, My Companion",MY_DARLING_MY_COMPANION,../music/cc/my-darling-my-companion.html,youtube,D-vfGlcyQ28,9AB00A,NOT_QUITE_THERE,gummyworm,3:15,3:26,FALSE,TRUE,A,,,,,,STREETCAT,let-the-bass-go,1:27,1:30
 PP Aliteration,pp-alliteration,../public/images/cover-art/pjscpfp.jpg,FALSE,Lyrical,TRUE,,F391CC,,Machine Love,MACHINE_LOVE,../music/cc/machine-love.html,youtube,mrLI2gw4Emo,DC4468,NOT_QUITE_THERE,gummyworm,3:26,3:42,FALSE,TRUE,A,,,,,,STREETCAT,let-the-bass-go,1:30,1:33
-Where Hearts Thaw,where-hearts-thaw,,FALSE,Motif,TRUE,,FFFFFF,,BIRDBRAIN,BIRDBRAIN,../music/cc/birdbrain.html,youtube,Cn__J8t7agk,FECC35,NOT_QUITE_THERE,bittersweet-kalia-vibte,2:11,2:16,FALSE,FALSE,,,,,,,STREETCAT,let-the-bass-go,1:33,1:39
+Where Hearts Thaw,where-hearts-thaw,,FALSE,Motif,TRUE,,615858,,BIRDBRAIN,BIRDBRAIN,../music/cc/birdbrain.html,youtube,Cn__J8t7agk,FECC35,NOT_QUITE_THERE,bittersweet-kalia-vibte,2:11,2:16,FALSE,FALSE,,,,,,,STREETCAT,let-the-bass-go,1:33,1:39
 The Patterns of Clouds,patterns-of-clouds,,FALSE,Motif,TRUE,,FFFFFF,,Shiny Chariot,SHINY_CHARIOT,../music/cc/shiny-chariot.html,youtube,WXeeY5JVBGU,91DB69,NOT_QUITE_THERE,constant-companions,4:16,4:23,FALSE,FALSE,,,,,,,STREETCAT,let-the-bass-go,1:56,1:57
 Autumn Every Day,autumn-every-day,,,,,,,,Strawberry,STRAWBERRY,../music/cc/strawberry.html,youtube,CQBbYjMWorc,C82A0B,DANCE_DELIGHTFUL,gummyworm,3:33,3:38,FALSE,TRUE,A,,,,,,STREETCAT,let-the-bass-go,2:07,2:09
 ,,,,,,,,,Manifesto,MANIFESTO,../music/cc/manifesto.html,youtube,g7rbq4XSOeg,F7393B,SPACE_CENTER,space-center,0:18,0:32,TRUE,TRUE,A,,,,,,STREETCAT,let-the-bass-go,2:20,2:21
@@ -62,13 +62,13 @@ Autumn Every Day,autumn-every-day,,,,,,,,Strawberry,STRAWBERRY,../music/cc/straw
 ,,,,,,,,,Space Center [pt. 2],SPACE_CENTER_PT2,../music/aa/space-center-pt-2.html,youtube,cw41RXs2vJ4,A2E9CF,CADMIUM_COLORS,kalia-vibte,4:20,4:25.9,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,"Good Time, Lead Line
 ",GOOD_TIME,../music/aa/good-time-lead-line.html,youtube,ql4DEQMondE,DAF9FE,CADMIUM_COLORS,autumn-every-day,4:24,4:26.8,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,papergirl,PAPERGIRL,../music/cs/papergirl.html,youtube,rx0gAuk_gm0,1E92E3,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,little anger,LITTLE_ANGER,../music/cs/little-anger.html,youtube,90FSU2059FM,EA3066,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,ringtone,RINGTONE,../music/cs/ringtone.html,youtube,lChKJTrx8ZI,194F7C,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,one small moment of silence,ONE_SMALL_MOMENT_OF_SILENCE,../music/cs/one-small-moment-of-silence.html,youtube,tJoICd0W-BE,F0A4FC,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,some more of that song,SOME_MORE_OF_THAT_SONG,../music/cs/some-more-of-that-song.html,youtube,IOUoub2eGhc,F6F7CF,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,BUTCHER VANITY,BUTCHER_VANITY,../music/ccontrepoint/butcher-vanity.html,youtube,WvHg7jSDN4A,FF2000,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,rawdog,RAWDOG,../music/ccontrepoint/rawdog.html,youtube,xbNDYGqRTSk,FE9E26,,,,,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,papergirl,PAPERGIRL,../music/cs/papergirl.html,youtube,rx0gAuk_gm0,1E92E3,WHERE_HEARTS_THAW,where-hearts-thaw,0:00,0:01.2,TRUE,FALSE,,,,,,,,,,
+,,,,,,,,,little anger,LITTLE_ANGER,../music/cs/little-anger.html,youtube,90FSU2059FM,EA3066,WHERE_HEARTS_THAW,where-hearts-thaw,0:01.2,1:29.1,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,ringtone,RINGTONE,../music/cs/ringtone.html,youtube,lChKJTrx8ZI,194F7C,WHERE_HEARTS_THAW,kalia-vibte,0:59,1:11.1,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,one small moment of silence,ONE_SMALL_MOMENT_OF_SILENCE,../music/cs/one-small-moment-of-silence.html,youtube,tJoICd0W-BE,F0A4FC,WHERE_HEARTS_THAW,kalia-vibte,1:12.1,1:24.2,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,some more of that song,SOME_MORE_OF_THAT_SONG,../music/cs/some-more-of-that-song.html,youtube,IOUoub2eGhc,F6F7CF,WHERE_HEARTS_THAW,kalia-vibte,1:28.3,1:40.1,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,BUTCHER VANITY,BUTCHER_VANITY,../music/ccontrepoint/butcher-vanity.html,youtube,WvHg7jSDN4A,FF2000,WHERE_HEARTS_THAW,kalia-vibte,1:42,1:54.1,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,rawdog,RAWDOG,../music/ccontrepoint/rawdog.html,youtube,xbNDYGqRTSk,FE9E26,PEOPLE_POSTURE_PLAY_PRETEND,where-hearts-thaw,3:04.1,3:15.3,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,weathergirl,WEATHERGIRL,../music/ccontrepoint/weathergirl.html,youtube,o5CyWg-Wyng,98A0B3,,,,,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,炜WARD ROMANCE,WEIWARD_ROMANCE,../music/ccontrepoint/weiward-romance.html,youtube,msrfXj3xyXg,096786,,,,,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,Water the Roses,WATER_THE_ROSES,../music/ccontrepoint/water-the-roses.html,youtube,8L9qCnWslK0,ADCD6A,,,,,FALSE,FALSE,,,,,,,,,,
@@ -119,7 +119,7 @@ Autumn Every Day,autumn-every-day,,,,,,,,Strawberry,STRAWBERRY,../music/cc/straw
 ,,,,,,,,,between the day and night (ally beta),BETWEEN_THE_DAY_AND_NIGHT,../music/bc/between-the-day-and-night-ally-beta.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,asemic speech (demo),ASEMIC_SPEECH_DEMO,../music/bc/asemic-speech-demo.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,bittersweet (demo),BITTERSWEET_DEMO,../music/bc/bittersweet-demo.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,where hearts thaw,WHERE_HEARTS_THAW,../music/bc/where-hearts-thaw.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,where hearts thaw,WHERE_HEARTS_THAW,../music/bc/where-hearts-thaw.html,youtube,,615858,,,,,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,the patterns of clouds,THE_PATTERNS_OF_CLOUDS,../music/bc/the-patterns-of-clouds.html,youtube,5xUC1pmaHxA,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,eScape (ffxiv cover),ESCAPE_FFXIV_COVER,../music/bc/escape-ffxiv-cover.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,spaceman (the killers cover),SPACEMAN,../music/bc/spaceman-the-killers-cover.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
