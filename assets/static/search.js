@@ -52,6 +52,33 @@ function resolveSearchPath(basePath, filePath) {
   return (basePath || '') + filePath;
 }
 
+function resolveSearchImageSrc(basePath, pagePath, rawSrc) {
+  const source = String(rawSrc || '').trim();
+  if (!source) {
+    return '';
+  }
+
+  if (/^(https?:|data:|blob:)/i.test(source)) {
+    return source;
+  }
+
+  let normalized = source;
+  if (normalized.startsWith('/') && basePath && !normalized.startsWith(basePath + '/')) {
+    normalized = basePath + normalized;
+  }
+
+  try {
+    const pageUrl = new URL((basePath || '') + pagePath, window.location.origin);
+    const resolved = new URL(normalized, pageUrl.href);
+    if (resolved.origin === window.location.origin) {
+      return resolved.pathname + resolved.search + resolved.hash;
+    }
+    return resolved.href;
+  } catch (_error) {
+    return normalized;
+  }
+}
+
 async function fetchSearchText(path) {
   if (!path) {
     return null;
@@ -250,40 +277,19 @@ async function searchFile(fileEntry, query) {
       // Try to find cover image from songs (album-art-image ID)
       const coverImg = doc.getElementById('album-art-image');
       if (coverImg && coverImg.getAttribute('src')) {
-        let imagePath = coverImg.getAttribute('src');
-        // Prepend basePath to absolute paths
-        if (imagePath.startsWith('/') && !imagePath.startsWith(basePath)) {
-          coverSrc = basePath + imagePath;
-        } else {
-          coverSrc = imagePath;
+        const imagePath = coverImg.getAttribute('src');
+        const resolvedCoverSrc = resolveSearchImageSrc(basePath, fileEntry.path, imagePath);
+        if (resolvedCoverSrc) {
+          coverSrc = resolvedCoverSrc;
         }
       } else {
         // Try to find cover image from album pages (album-cover-container class)
         const albumCoverContainer = doc.querySelector('.album-cover-container img');
         if (albumCoverContainer && albumCoverContainer.getAttribute('src')) {
-          let imagePath = albumCoverContainer.getAttribute('src');
-          // Resolve relative paths from the file's location
-          if (!imagePath.startsWith('/')) {
-            const fileDir = fileEntry.path.substring(0, fileEntry.path.lastIndexOf('/'));
-            imagePath = fileDir + '/' + imagePath;
-            // Resolve ../ references
-            const parts = imagePath.split('/');
-            const resolved = [];
-            for (const part of parts) {
-              if (part === '..') {
-                resolved.pop();
-              } else if (part !== '.' && part !== '') {
-                resolved.push(part);
-              }
-            }
-            coverSrc = basePath + '/' + resolved.join('/');
-          } else {
-            // Absolute path - prepend basePath if needed
-            if (!imagePath.startsWith(basePath)) {
-              coverSrc = basePath + imagePath;
-            } else {
-              coverSrc = imagePath;
-            }
+          const imagePath = albumCoverContainer.getAttribute('src');
+          const resolvedCoverSrc = resolveSearchImageSrc(basePath, fileEntry.path, imagePath);
+          if (resolvedCoverSrc) {
+            coverSrc = resolvedCoverSrc;
           }
         }
       }
@@ -449,6 +455,10 @@ function displaySearchResults(results, originalQuery) {
         imgSrc = basePath + imgSrc;
       }
       coverImg.src = imgSrc;
+      coverImg.onerror = function () {
+        this.onerror = null;
+        this.src = basePath + '/public/images/cover-art/as.png';
+      };
       coverImg.alt = item.title;
       coverImg.style.cssText = 'width: 80px; height: auto; flex-shrink: 0; border: 1px solid #ddd; border-radius: 2px;';
       

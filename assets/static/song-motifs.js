@@ -252,6 +252,63 @@ function songMotifsNormalizeSiteHref(value) {
   return '/' + text.replace(/^(\.\.\/)+/, '');
 }
 
+function songMotifsIsSongReferenceId(value) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return false;
+  }
+
+  // Song IDs are authored as all-caps tokens in the CSV.
+  return /[A-Z]/.test(text) && text === text.toUpperCase();
+}
+
+function songMotifsGetSongById(songId) {
+  const normalized = String(songId || '').trim();
+  if (!normalized || !window.SongData) {
+    return null;
+  }
+
+  if (window.SongData.Songs && window.SongData.Songs[normalized]) {
+    return window.SongData.Songs[normalized];
+  }
+
+  if (Array.isArray(window.SongData.allSongs)) {
+    return window.SongData.allSongs.find((song) => String(song.songId || '') === normalized) || null;
+  }
+
+  return null;
+}
+
+function songMotifsResolveReferenceTarget(referenceId) {
+  const normalizedId = String(referenceId || '').trim();
+  if (!normalizedId) {
+    return {
+      type: 'motif',
+      motif: null,
+      song: null,
+      canonicalId: ''
+    };
+  }
+
+  if (songMotifsIsSongReferenceId(normalizedId)) {
+    const song = songMotifsGetSongById(normalizedId);
+    return {
+      type: 'song',
+      motif: null,
+      song,
+      canonicalId: song && song.songId ? song.songId : normalizedId
+    };
+  }
+
+  const motif = window.MotifData.getMotifById(normalizedId);
+  return {
+    type: 'motif',
+    motif,
+    song: null,
+    canonicalId: motif ? motif.id : normalizedId
+  };
+}
+
 function songMotifsResolveMotifHref(motif, motifId) {
   if (motif && motif.hasPage !== false) {
     return '../../motifs/' + ((motif && motif.pageSlug) ? motif.pageSlug : (motif ? motif.id : motifId)) + '.html';
@@ -262,6 +319,18 @@ function songMotifsResolveMotifHref(motif, motifId) {
   }
 
   return '';
+}
+
+function songMotifsResolveReferenceHref(entry) {
+  if (!entry) {
+    return '';
+  }
+
+  if (entry.referenceType === 'song') {
+    return entry.song && entry.song.path ? songMotifsNormalizeSiteHref(entry.song.path) : '';
+  }
+
+  return songMotifsResolveMotifHref(entry.motif, entry.motifId);
 }
 
 function songMotifsGetKaraokeLyricHighlights(entry) {
@@ -310,10 +379,10 @@ function songMotifsBuildKaraokeLineHtml(entry) {
   let rendered = songMotifsEscapeHtml(entry.text);
 
   highlights.forEach((ref) => {
-    const motif = window.MotifData && typeof window.MotifData.getMotifById === 'function'
-      ? window.MotifData.getMotifById(ref.motifId)
-      : null;
-    const color = motif && motif.color ? motif.color : '#ef8a85';
+    const target = songMotifsResolveReferenceTarget(ref.motifId);
+    const color = target.type === 'song'
+      ? (target.song && target.song.color ? target.song.color : '#ef8a85')
+      : (target.motif && target.motif.color ? target.motif.color : '#ef8a85');
     const escapedLyrics = songMotifsEscapeHtml(ref.lyrics);
     const pattern = new RegExp(songMotifsEscapeRegExp(escapedLyrics), 'g');
     rendered = rendered.replace(
@@ -694,17 +763,22 @@ function songMotifsGroupReferenceList(refs, keyPrefix) {
 
     const normalizedEnd = end > start ? end : start + 0.01;
 
-    const motif = window.MotifData.getMotifById(ref.motifId);
-    const isVariationMotif = motif && Array.isArray(motif.variations) && motif.variations.length > 0;
+    const target = songMotifsResolveReferenceTarget(ref.motifId);
+    const motif = target.motif;
+    const song = target.song;
+    const referenceType = target.type;
+    const isVariationMotif = referenceType === 'motif' && motif && Array.isArray(motif.variations) && motif.variations.length > 0;
     const variationId = isVariationMotif ? (ref.variationId || '') : '';
-    const canonicalMotifId = motif ? motif.id : ref.motifId;
-    const key = keyPrefix + '::' + canonicalMotifId + '::' + variationId;
+    const canonicalReferenceId = target.canonicalId;
+    const key = keyPrefix + '::' + referenceType + '::' + canonicalReferenceId + '::' + variationId;
 
     if (!map.has(key)) {
       map.set(key, {
         key,
+        referenceType,
         motif,
-        motifId: canonicalMotifId,
+        song,
+        motifId: canonicalReferenceId,
         variationId,
         ranges: []
       });
@@ -726,15 +800,21 @@ function songMotifsGroupReferenceList(refs, keyPrefix) {
       ? entry.motif.variations.find((item) => item.id === entry.variationId || item.label === entry.variationId)
       : null;
 
-    const baseName = entry.motif ? entry.motif.name : entry.motifId;
+    const baseName = entry.referenceType === 'song'
+      ? ((entry.song && entry.song.title) || entry.motifId)
+      : (entry.motif ? entry.motif.name : entry.motifId);
     const variationLabel = variation ? (variation.label || variation.id) : '';
     const displayName = variationLabel ? (baseName + ' (' + variationLabel + ')') : baseName;
-    const displayColor = (variation && variation.color) || (entry.motif && entry.motif.color) || '#999999';
+    const displayColor = entry.referenceType === 'song'
+      ? ((entry.song && entry.song.color) || '#999999')
+      : ((variation && variation.color) || (entry.motif && entry.motif.color) || '#999999');
 
     grouped.push({
       key: entry.key,
+      referenceType: entry.referenceType,
       motifId: entry.motifId,
       motif: entry.motif,
+      song: entry.song,
       variationId: entry.variationId,
       variation,
       ranges: entry.ranges,
@@ -863,6 +943,8 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   controls.className = 'song-motif-controls';
   shell.appendChild(controls);
 
+  const songColor = String(song && song.color ? song.color : '').trim() || '#ef8a85';
+
   const timelineWrap = document.createElement('div');
   controls.appendChild(timelineWrap);
 
@@ -884,6 +966,7 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
 
   const progress = document.createElement('div');
   progress.className = 'song-motif-main-progress';
+  progress.style.background = songColor;
   mainTrack.appendChild(progress);
 
   const rows = document.createElement('div');
@@ -953,13 +1036,13 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
       const item = document.createElement('li');
       item.className = 'song-motif-legend-entry';
 
-      const motifHref = songMotifsResolveMotifHref(entry.motif, entry.motifId);
-      const content = motifHref
+      const referenceHref = songMotifsResolveReferenceHref(entry);
+      const content = referenceHref
         ? document.createElement('a')
         : document.createElement('div');
       content.className = 'song-motif-legend-item';
       if (content.tagName === 'A') {
-        content.href = motifHref;
+        content.href = referenceHref;
       }
 
       const swatch = document.createElement('span');

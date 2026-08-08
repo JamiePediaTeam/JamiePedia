@@ -630,6 +630,79 @@ function renderSummaryParagraphs(text) {
   return renderMarkdownText(text);
 }
 
+function songLyricsFallbackParseTimestamp(value) {
+  const text = String(value || '').trim();
+  const match = text.match(/^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
+  if (!match) {
+    return 0;
+  }
+
+  const mins = Number(match[1]);
+  const secs = Number(match[2]);
+  const fracText = match[3] || '0';
+  const frac = Number('0.' + fracText.padEnd(3, '0'));
+
+  return mins * 60 + secs + frac;
+}
+
+function songLyricsFallbackParseRawLines(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  const timedEntries = [];
+
+  lines.forEach((line) => {
+    const timestamps = [];
+    const timestampPattern = /\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]/g;
+    let match;
+
+    while ((match = timestampPattern.exec(line)) !== null) {
+      timestamps.push(match[1]);
+    }
+
+    if (timestamps.length === 0) {
+      return;
+    }
+
+    const lyric = line.replace(/\[[^\]]+\]/g, '').trim();
+
+    timestamps.forEach((stamp) => {
+      timedEntries.push({
+        time: songLyricsFallbackParseTimestamp(stamp),
+        text: lyric
+      });
+    });
+  });
+
+  const deduped = [];
+  const seen = new Set();
+  timedEntries
+    .sort((a, b) => a.time - b.time)
+    .forEach((entry) => {
+      const key = entry.time.toFixed(3) + '|' + entry.text;
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      deduped.push(entry);
+    });
+
+  return deduped.map((entry) => entry.text);
+}
+
+function renderRawLyricsLines(rawLines) {
+  const escapedLines = Array.isArray(rawLines) ? rawLines.map((line) =>
+    String(line)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+  ) : [];
+
+  if (escapedLines.length === 0) {
+    return '';
+  }
+
+  return '<p>' + escapedLines.join('<br>') + '</p>';
+}
+
 function makeEmptyBoxHtml(label) {
   return '<div class="song-empty-box">This song has no ' + label + '.</div>';
 }
@@ -775,8 +848,20 @@ function loadSongTextContent() {
     const scopedSlug = buildVariantSongSlug(baseSlug, variantSuffix);
     return fetchScopedText('annotations', scopedSlug, 'txt').then((annotationsText) => {
       if (!annotationsText) {
-        container.innerHTML = makeEmptyBoxHtml('annotated lyrics');
-        return;
+        return fetchScopedText('lyrics', scopedSlug, 'lrc').then((lrcText) => {
+          if (!lrcText) {
+            container.innerHTML = makeEmptyBoxHtml('annotated lyrics');
+            return;
+          }
+
+          const rawLines = songLyricsFallbackParseRawLines(lrcText);
+          if (!rawLines.length) {
+            container.innerHTML = makeEmptyBoxHtml('annotated lyrics');
+            return;
+          }
+
+          container.innerHTML = renderRawLyricsLines(rawLines) || makeEmptyBoxHtml('annotated lyrics');
+        });
       }
 
       renderAnnotatedLyricsContainer(container, annotationsText);
