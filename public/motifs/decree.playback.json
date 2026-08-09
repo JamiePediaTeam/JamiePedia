@@ -1,0 +1,499 @@
+{
+  "version": 1,
+  "source": "decree.xml",
+  "instrument": "piano",
+  "bpm": 120,
+  "duration": 11.5,
+  "noteCount": 27,
+  "notes": [
+    {
+      "partId": "P1",
+      "time": 0,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.25,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.5,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.75,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 1,
+      "duration": 0.75,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.75,
+      "duration": 0.75,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 2.5,
+      "duration": 0.5,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 3,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.25,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.5,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.75,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 4,
+      "duration": 0.75,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 4.75,
+      "duration": 0.75,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 5.5,
+      "duration": 0.5,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 6,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 6.25,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 6.5,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 6.75,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 7,
+      "duration": 0.75,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 7.75,
+      "duration": 0.75,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 8.5,
+      "duration": 0.25,
+      "midi": 81,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 8.75,
+      "duration": 0.25,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 9,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.25,
+      "duration": 0.25,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.5,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.75,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 10,
+      "duration": 0.5,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    }
+  ],
+  "keyframeCount": 27,
+  "keyframes": [
+    {
+      "partId": "P1",
+      "time": 0,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.25,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.5,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.75,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 1,
+      "duration": 0.75,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.75,
+      "duration": 0.75,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 2.5,
+      "duration": 0.5,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 3,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.25,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.5,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 3.75,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 4,
+      "duration": 0.75,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 4.75,
+      "duration": 0.75,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 5.5,
+      "duration": 0.5,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 6,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 6.25,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 6.5,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 6.75,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 7,
+      "duration": 0.75,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 7.75,
+      "duration": 0.75,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 8.5,
+      "duration": 0.25,
+      "midi": 81,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 8.75,
+      "duration": 0.25,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 9,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.25,
+      "duration": 0.25,
+      "midi": 79,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.5,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 9.75,
+      "duration": 0.25,
+      "midi": 74,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 10,
+      "duration": 0.5,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    }
+  ]
+}

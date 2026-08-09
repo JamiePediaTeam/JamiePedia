@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "source": "jijo.xml",
+  "instrument": "piano",
+  "bpm": 120,
+  "duration": 2,
+  "noteCount": 8,
+  "notes": [
+    {
+      "partId": "P1",
+      "time": 0,
+      "duration": 0.25,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.25,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.5,
+      "duration": 0.125,
+      "midi": 69,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.625,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.875,
+      "duration": 0.25,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.125,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.375,
+      "duration": 0.25,
+      "midi": 69,
+      "velocity": 0.709,
+      "grace": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.625,
+      "duration": 0.375,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false
+    }
+  ],
+  "keyframeCount": 8,
+  "keyframes": [
+    {
+      "partId": "P1",
+      "time": 0,
+      "duration": 0.25,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.25,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.5,
+      "duration": 0.125,
+      "midi": 69,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.625,
+      "duration": 0.25,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 0.875,
+      "duration": 0.25,
+      "midi": 67,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.125,
+      "duration": 0.25,
+      "midi": 76,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.375,
+      "duration": 0.25,
+      "midi": 69,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    },
+    {
+      "partId": "P1",
+      "time": 1.625,
+      "duration": 0.375,
+      "midi": 72,
+      "velocity": 0.709,
+      "grace": false,
+      "attack": true,
+      "tied": false
+    }
+  ]
+}
