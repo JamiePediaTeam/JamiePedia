@@ -330,7 +330,18 @@ function songMotifsResolveReferenceHref(entry) {
     return entry.song && entry.song.path ? songMotifsNormalizeSiteHref(entry.song.path) : '';
   }
 
-  return songMotifsResolveMotifHref(entry.motif, entry.motifId);
+  const baseHref = songMotifsResolveMotifHref(entry.motif, entry.motifId);
+  if (!baseHref) {
+    return '';
+  }
+
+  const variationKey = String(entry.variationId || '').trim();
+  if (!variationKey) {
+    return baseHref;
+  }
+
+  const separator = baseHref.includes('?') ? '&' : '?';
+  return baseHref + separator + 'v=' + encodeURIComponent(variationKey);
 }
 
 function songMotifsGetKaraokeLyricHighlights(entry) {

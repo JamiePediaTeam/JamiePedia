@@ -49,6 +49,15 @@ function normalizeVariationKey(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function getRequestedMotifVariationKey() {
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    return normalizeVariationKey(params.get('v') || params.get('variation') || '');
+  } catch (error) {
+    return '';
+  }
+}
+
 function motifEscapeHtml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -687,6 +696,8 @@ function getMotifTranscriptPlayerState() {
       noteVisuals: [],
       rowExtents: [],
       rowBands: [],
+      rowStaffBands: [],
+      grandStaffScan: null,
       lastVisualIndex: -1,
       scanLineNode: null,
       lastScanRowIndex: -1
@@ -753,6 +764,7 @@ function motifTranscriptBuildNoteVisuals() {
     state.noteVisuals = [];
     state.rowExtents = [];
     state.rowBands = [];
+    state.rowStaffBands = [];
     return;
   }
 
@@ -890,10 +902,294 @@ function motifTranscriptBuildNoteVisuals() {
     }
   });
 
+  // Expand row extents with all rendered measures so rest-only bars are scanline-addressable.
+  const measureNodes = Array.from(mount.querySelectorAll('svg .vf-measure'));
+  measureNodes.forEach((measureNode) => {
+    const rect = measureNode.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) {
+      return;
+    }
+
+    const measureLeft = rect.left - mountRect.left + mount.scrollLeft;
+    const measureRight = rect.right - mountRect.left + mount.scrollLeft;
+    const measureTop = rect.top - mountRect.top + mount.scrollTop;
+    const measureBottom = rect.bottom - mountRect.top + mount.scrollTop;
+    const measureCenter = measureTop + ((measureBottom - measureTop) / 2);
+
+    let targetRow = -1;
+    let bestOverlap = 0;
+    rowBands.forEach((band, rowIndex) => {
+      if (!band) {
+        return;
+      }
+
+      const overlap = Math.max(0, Math.min(measureBottom, band.bottom) - Math.max(measureTop, band.top));
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        targetRow = rowIndex;
+      }
+    });
+
+    if (targetRow < 0) {
+      let nearestDistance = Number.POSITIVE_INFINITY;
+      rowBands.forEach((band, rowIndex) => {
+        if (!band) {
+          return;
+        }
+        const bandCenter = band.top + ((band.bottom - band.top) / 2);
+        const distance = Math.abs(measureCenter - bandCenter);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          targetRow = rowIndex;
+        }
+      });
+    }
+
+    if (targetRow < 0) {
+      return;
+    }
+
+    const extent = rowExtents[targetRow];
+    if (!extent) {
+      rowExtents[targetRow] = {
+        minX: measureLeft,
+        maxX: measureRight
+      };
+      return;
+    }
+
+    extent.minX = Math.min(extent.minX, measureLeft);
+    extent.maxX = Math.max(extent.maxX, measureRight);
+  });
+
+  const staffBands = [];
+  const staveNodes = Array.from(mount.querySelectorAll('svg .vf-stave, svg .staffline'));
+  const rawStaves = staveNodes.map((node) => {
+    const rect = node.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) {
+      return null;
+    }
+
+    const top = rect.top - mountRect.top + mount.scrollTop;
+    const bottom = rect.bottom - mountRect.top + mount.scrollTop;
+    return {
+      top,
+      bottom,
+      center: top + ((bottom - top) / 2),
+      source: node.classList && node.classList.contains('staffline') ? 'staffline' : 'stave'
+    };
+  }).filter(Boolean);
+
+  const groupedStafflineStaves = (() => {
+    const staffLines = rawStaves
+      .filter((entry) => entry.source === 'staffline')
+      .sort((left, right) => left.center - right.center);
+
+    if (staffLines.length === 0) {
+      return [];
+    }
+
+    // Some renderers expose one .staffline group per stave; others expose one per line.
+    const averageHeight = staffLines.reduce((sum, entry) => sum + Math.max(0, entry.bottom - entry.top), 0) / staffLines.length;
+    if (averageHeight >= 8) {
+      return staffLines.map((entry) => ({
+        top: entry.top,
+        bottom: entry.bottom,
+        center: entry.center
+      }));
+    }
+
+    if (staffLines.length < 4) {
+      return [];
+    }
+
+    const groups = [];
+    let current = [staffLines[0]];
+    const sameStaveThreshold = 14;
+
+    for (let index = 1; index < staffLines.length; index += 1) {
+      const previous = current[current.length - 1];
+      const next = staffLines[index];
+      if (Math.abs(next.center - previous.center) <= sameStaveThreshold) {
+        current.push(next);
+      } else {
+        groups.push(current);
+        current = [next];
+      }
+    }
+
+    groups.push(current);
+
+    return groups
+      .filter((group) => group.length >= 4)
+      .map((group) => {
+        const top = Math.min(...group.map((entry) => entry.top));
+        const bottom = Math.max(...group.map((entry) => entry.bottom));
+        return {
+          top,
+          bottom,
+          center: top + ((bottom - top) / 2)
+        };
+      });
+  })();
+
+  const staves = groupedStafflineStaves.length > 0
+    ? groupedStafflineStaves
+    : rawStaves
+      .filter((entry) => entry.source === 'stave')
+      .map((entry) => ({ top: entry.top, bottom: entry.bottom, center: entry.center }));
+
+  rowBands.forEach((band, rowIndex) => {
+    const rowVisuals = alignedVisuals.filter((visual) => visual.rowIndex === rowIndex);
+    if (!band || rowVisuals.length === 0) {
+      return;
+    }
+
+    const rowCenter = rowVisuals.reduce((sum, visual) => sum + visual.noteY, 0) / rowVisuals.length;
+
+    let nearestStave = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    staves.forEach((stave) => {
+      const distance = Math.abs(stave.center - rowCenter);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestStave = stave;
+      }
+    });
+
+    if (nearestStave) {
+      staffBands[rowIndex] = {
+        top: nearestStave.top,
+        bottom: nearestStave.bottom
+      };
+    }
+  });
+
   state.noteVisuals = alignedVisuals;
   state.visualEvents = alignedEvents.slice(0, alignedVisuals.length);
   state.rowExtents = rowExtents;
   state.rowBands = rowBands;
+  state.rowStaffBands = staffBands;
+
+  const hasGrandStaffMarkup = Boolean(mount.querySelector('svg .vf-brace, svg .vf-connector'));
+  if (hasGrandStaffMarkup && rowExtents.length >= 2 && staffBands.length >= 2) {
+    const rowInfos = rowExtents
+      .map((extent, rowIndex) => ({
+        rowIndex,
+        extent,
+        staff: staffBands[rowIndex] || null
+      }))
+      .filter((entry) => entry.extent && entry.staff)
+      .sort((left, right) => left.rowIndex - right.rowIndex);
+
+    const usedRows = new Set();
+    const systems = [];
+
+    rowInfos.forEach((rowInfo) => {
+      if (usedRows.has(rowInfo.rowIndex)) {
+        return;
+      }
+
+      const primaryCenter = rowInfo.staff.top + ((rowInfo.staff.bottom - rowInfo.staff.top) / 2);
+      let bestMatch = null;
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      rowInfos.forEach((candidate) => {
+        if (candidate.rowIndex === rowInfo.rowIndex || usedRows.has(candidate.rowIndex)) {
+          return;
+        }
+
+        const overlap = Math.max(
+          0,
+          Math.min(rowInfo.extent.maxX, candidate.extent.maxX) - Math.max(rowInfo.extent.minX, candidate.extent.minX)
+        );
+        const rowSpan = Math.max(1, rowInfo.extent.maxX - rowInfo.extent.minX);
+        const candidateSpan = Math.max(1, candidate.extent.maxX - candidate.extent.minX);
+        const rowCoverage = overlap / rowSpan;
+        const candidateCoverage = overlap / candidateSpan;
+        if (overlap < 12 || Math.max(rowCoverage, candidateCoverage) < 0.45) {
+          return;
+        }
+
+        const candidateCenter = candidate.staff.top + ((candidate.staff.bottom - candidate.staff.top) / 2);
+        const yDistance = Math.abs(candidateCenter - primaryCenter);
+        if (yDistance < 14 || yDistance > 170) {
+          return;
+        }
+
+        if (yDistance < bestDistance) {
+          bestDistance = yDistance;
+          bestMatch = candidate;
+        }
+      });
+
+      const rows = bestMatch
+        ? [rowInfo.rowIndex, bestMatch.rowIndex].sort((a, b) => a - b)
+        : [rowInfo.rowIndex];
+
+      rows.forEach((rowIndex) => {
+        usedRows.add(rowIndex);
+      });
+
+      const systemMinX = Math.min(...rows.map((rowIndex) => rowExtents[rowIndex].minX));
+      const systemMaxX = Math.max(...rows.map((rowIndex) => rowExtents[rowIndex].maxX));
+      const systemTop = Math.min(...rows.map((rowIndex) => (staffBands[rowIndex] || rowBands[rowIndex]).top));
+      const systemBottom = Math.max(...rows.map((rowIndex) => (staffBands[rowIndex] || rowBands[rowIndex]).bottom));
+
+      const eventIndices = alignedVisuals
+        .map((visual, index) => ({ visual, index }))
+        .filter((entry) => rows.includes(entry.visual.rowIndex))
+        .map((entry) => entry.index);
+
+      if (eventIndices.length === 0) {
+        return;
+      }
+
+      const firstEventIndex = Math.min(...eventIndices);
+      const lastEventIndex = Math.max(...eventIndices);
+      const startTime = Number((state.visualEvents[firstEventIndex] || state.events[firstEventIndex] || {}).time) || 0;
+      const lastEvent = state.visualEvents[lastEventIndex] || state.events[lastEventIndex] || null;
+      const endTime = Math.max(
+        startTime + 0.001,
+        (Number(lastEvent && lastEvent.time) || startTime)
+          + Math.max(0.001, Number(lastEvent && lastEvent.duration) || 0.001)
+      );
+
+      systems.push({
+        rows,
+        minX: systemMinX,
+        maxX: systemMaxX,
+        top: systemTop,
+        bottom: systemBottom,
+        firstEventIndex,
+        lastEventIndex,
+        startTime,
+        endTime
+      });
+    });
+
+    systems.sort((left, right) => left.firstEventIndex - right.firstEventIndex);
+
+    const hasDualStaffSystem = systems.some((system) => system.rows.length >= 2);
+    if (systems.length > 0 && hasDualStaffSystem) {
+      const firstSystem = systems[0];
+      const lastSystem = systems[systems.length - 1];
+      state.grandStaffScan = {
+        enabled: true,
+        systems,
+        minX: firstSystem.minX,
+        maxX: firstSystem.maxX,
+        top: firstSystem.top,
+        bottom: firstSystem.bottom,
+        startTime: firstSystem.startTime,
+        endTime: lastSystem.endTime
+      };
+    } else {
+      state.grandStaffScan = null;
+    }
+  } else {
+    state.grandStaffScan = null;
+  }
 
   state.lastVisualIndex = -1;
 }
@@ -907,6 +1203,12 @@ function motifTranscriptGetScanX(currentSeconds) {
 
   const duration = Math.max(0.001, Number(state.duration) || 0.001);
   const current = Math.max(0, Math.min(duration, Number(currentSeconds) || 0));
+
+  const grandFrame = motifTranscriptGetGrandStaffFrame(current);
+  if (grandFrame) {
+    return grandFrame.x;
+  }
+
   const visuals = state.noteVisuals;
   const events = Array.isArray(state.visualEvents) && state.visualEvents.length > 0
     ? state.visualEvents
@@ -959,6 +1261,75 @@ function motifTranscriptGetScanX(currentSeconds) {
   }
 
   return visuals[lastIndex].x;
+}
+
+function motifTranscriptGetGrandStaffFrame(currentSeconds) {
+  const state = getMotifTranscriptPlayerState();
+  if (!state.grandStaffScan || !state.grandStaffScan.enabled) {
+    return null;
+  }
+
+  const systems = Array.isArray(state.grandStaffScan.systems) ? state.grandStaffScan.systems : [];
+  if (systems.length === 0) {
+    const minX = Number(state.grandStaffScan.minX) || 12;
+    const maxX = Math.max(minX + 1, Number(state.grandStaffScan.maxX) || (minX + 1));
+    const duration = Math.max(0.001, Number(state.duration) || 0.001);
+    const clamped = Math.max(0, Math.min(duration, Number(currentSeconds) || 0));
+    return {
+      x: minX + ((clamped / duration) * (maxX - minX)),
+      top: Number(state.grandStaffScan.top) || 10,
+      bottom: Number(state.grandStaffScan.bottom) || 70,
+      systemIndex: 0
+    };
+  }
+
+  const time = Math.max(0, Number(currentSeconds) || 0);
+
+  if (time <= systems[0].startTime) {
+    return {
+      x: systems[0].minX,
+      top: systems[0].top,
+      bottom: systems[0].bottom,
+      systemIndex: 0
+    };
+  }
+
+  for (let index = 0; index < systems.length; index += 1) {
+    const system = systems[index];
+    const next = systems[index + 1] || null;
+    if (time < system.startTime) {
+      continue;
+    }
+
+    if (time <= system.endTime) {
+      const span = Math.max(0.001, system.endTime - system.startTime);
+      const progress = Math.max(0, Math.min(1, (time - system.startTime) / span));
+      return {
+        x: system.minX + ((system.maxX - system.minX) * progress),
+        top: system.top,
+        bottom: system.bottom,
+        systemIndex: index
+      };
+    }
+
+    if (next && time < next.startTime) {
+      return {
+        x: system.maxX,
+        top: system.top,
+        bottom: system.bottom,
+        systemIndex: index
+      };
+    }
+  }
+
+  const lastIndex = systems.length - 1;
+  const last = systems[lastIndex];
+  return {
+    x: last.maxX,
+    top: last.top,
+    bottom: last.bottom,
+    systemIndex: lastIndex
+  };
 }
 
 function motifTranscriptGetActiveVisualIndex(currentSeconds) {
@@ -1108,19 +1479,42 @@ function motifTranscriptUpdateSheetPlaybackVisuals(currentSeconds) {
   }
 
   const x = motifTranscriptGetScanX(currentSeconds);
+  const grandFrame = motifTranscriptGetGrandStaffFrame(currentSeconds);
+  if (grandFrame) {
+    const top = Math.max(8, (Number(grandFrame.top) || 10) - 8);
+    const bottom = (Number(grandFrame.bottom) || 70) + 8;
+    const height = Math.max(40, Math.min(120, bottom - top));
+    line.style.top = top + 'px';
+    line.style.height = height + 'px';
+    mount.scrollLeft = 0;
+    state.lastScanRowIndex = grandFrame.systemIndex;
+    line.style.transform = 'translateX(' + x + 'px)';
+    line.classList.toggle('active', state.isPlaying || currentSeconds > 0);
+    return;
+  }
+
   const activeIndex = motifTranscriptGetActiveVisualIndex(currentSeconds);
-  if (activeIndex >= 0 && state.noteVisuals[activeIndex]) {
-    const activeVisual = state.noteVisuals[activeIndex];
-    const activeBand = state.rowBands[activeVisual.rowIndex];
+  const rowVisual = (activeIndex >= 0 && state.noteVisuals[activeIndex])
+    ? state.noteVisuals[activeIndex]
+    : (state.noteVisuals[0] || null);
+
+  if (rowVisual) {
+    const staffBand = Array.isArray(state.rowStaffBands) ? state.rowStaffBands[rowVisual.rowIndex] : null;
+    const activeBand = staffBand || state.rowBands[rowVisual.rowIndex];
     if (activeBand) {
-      const rowTop = Number.isFinite(activeBand.minNoteY)
-        ? activeBand.minNoteY - 6
-        : activeBand.top + 26;
-      const rowBottom = Number.isFinite(activeBand.maxNoteY)
-        ? activeBand.maxNoteY + 14
-        : activeBand.bottom - 22;
+      const usesStaffBand = Number.isFinite(activeBand.top) && Number.isFinite(activeBand.bottom)
+        && !Number.isFinite(activeBand.minNoteY);
+      const rowTop = usesStaffBand
+        ? activeBand.top - 8
+        : (Number.isFinite(activeBand.minNoteY) ? activeBand.minNoteY - 6 : activeBand.top + 26);
+      const rowBottom = usesStaffBand
+        ? activeBand.bottom + 8
+        : (Number.isFinite(activeBand.maxNoteY) ? activeBand.maxNoteY + 14 : activeBand.bottom - 22);
+      const minHeight = usesStaffBand ? 30 : 40;
+      const maxHeight = usesStaffBand ? 52 : 68;
       const top = Math.max(8, rowTop);
-      const height = Math.max(40, Math.min(68, rowBottom - rowTop));
+      const availableHeight = Math.max(0, rowBottom - top);
+      const height = Math.max(minHeight, Math.min(maxHeight, availableHeight));
       line.style.top = top + 'px';
       line.style.height = height + 'px';
     } else {
@@ -1131,7 +1525,7 @@ function motifTranscriptUpdateSheetPlaybackVisuals(currentSeconds) {
     // Keep a stationary sheet and move only the scanline.
     mount.scrollLeft = 0;
 
-    state.lastScanRowIndex = activeVisual.rowIndex;
+    state.lastScanRowIndex = rowVisual.rowIndex;
   }
 
   const displayX = x;
@@ -1146,6 +1540,8 @@ function motifTranscriptResetSheetPlaybackVisuals() {
   state.noteVisuals = [];
   state.rowExtents = [];
   state.rowBands = [];
+  state.rowStaffBands = [];
+  state.grandStaffScan = null;
 
   const mount = document.getElementById('motifTranscriptMount');
   if (!mount) {
@@ -2188,6 +2584,15 @@ function renderMotifPage() {
 
   const hasVariations = Array.isArray(motif.variations) && motif.variations.length > 0;
   let activeVariation = hasVariations ? (motif.variations[0] || null) : null;
+  const requestedVariationKey = getRequestedMotifVariationKey();
+  if (hasVariations && requestedVariationKey) {
+    const requestedVariation = motif.variations.find((variation) => {
+      return normalizeVariationKey(variation.id || variation.label) === requestedVariationKey;
+    }) || null;
+    if (requestedVariation) {
+      activeVariation = requestedVariation;
+    }
+  }
 
   const updateVariationBadgeState = (variation) => {
     const panel = motifImageWrap ? motifImageWrap.querySelector('.motif-variation-image-panel') : null;

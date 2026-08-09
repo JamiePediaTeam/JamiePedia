@@ -5,12 +5,20 @@ const path = require('path');
 const PORT = 3000;
 
 const server = http.createServer((req, res) => {
-  // Remove leading slash and build the file path
-  let requestPath = req.url || '/';
+  // Parse URL so query strings do not become part of the local file path.
+  const rawUrl = req.url || '/';
+  let requestPath = '/';
   try {
-    requestPath = decodeURIComponent(requestPath);
+    const parsedUrl = new URL(rawUrl, 'http://localhost');
+    requestPath = decodeURIComponent(parsedUrl.pathname || '/');
   } catch (error) {
-    // Keep the original URL if it is malformed; the read will fail naturally.
+    // Fall back to best effort for malformed URLs.
+    requestPath = rawUrl.split('?')[0].split('#')[0] || '/';
+    try {
+      requestPath = decodeURIComponent(requestPath);
+    } catch (decodeError) {
+      // Keep undecoded fallback path.
+    }
   }
 
   let filePath = requestPath === '/' ? 'index.html' : requestPath.startsWith('/') ? requestPath.slice(1) : requestPath;
