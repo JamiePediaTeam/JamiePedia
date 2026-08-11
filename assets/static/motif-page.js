@@ -49,6 +49,193 @@ function normalizeVariationKey(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function normalizeInstrumentToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function getMotifTranscriptDefaultInstrumentKey() {
+  const html = document.documentElement;
+  const requested = html
+    ? String(html.getAttribute('data-transcript-instrument') || '').trim()
+    : '';
+  return requested || 'piano';
+}
+
+function createSoundfontSampler(instrumentFolder) {
+  return new window.Tone.Sampler({
+    urls: {
+      A1: 'A1.mp3',
+      C2: 'C2.mp3',
+      'D#2': 'Eb2.mp3',
+      'F#2': 'Gb2.mp3',
+      A2: 'A2.mp3',
+      C3: 'C3.mp3',
+      'D#3': 'Eb3.mp3',
+      'F#3': 'Gb3.mp3',
+      A3: 'A3.mp3',
+      C4: 'C4.mp3',
+      'D#4': 'Eb4.mp3',
+      'F#4': 'Gb4.mp3',
+      A4: 'A4.mp3',
+      C5: 'C5.mp3',
+      'D#5': 'Eb5.mp3',
+      'F#5': 'Gb5.mp3',
+      A5: 'A5.mp3'
+    },
+    release: 1,
+    baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/MusyngKite/' + instrumentFolder + '-mp3/'
+  }).toDestination();
+}
+
+function createSalamanderPianoSampler() {
+  return new window.Tone.Sampler({
+    urls: {
+      A1: 'A1.mp3',
+      C2: 'C2.mp3',
+      'D#2': 'Ds2.mp3',
+      'F#2': 'Fs2.mp3',
+      A2: 'A2.mp3',
+      C3: 'C3.mp3',
+      'D#3': 'Ds3.mp3',
+      'F#3': 'Fs3.mp3',
+      A3: 'A3.mp3',
+      C4: 'C4.mp3',
+      'D#4': 'Ds4.mp3',
+      'F#4': 'Fs4.mp3',
+      A4: 'A4.mp3',
+      C5: 'C5.mp3',
+      'D#5': 'Ds5.mp3',
+      'F#5': 'Fs5.mp3',
+      A5: 'A5.mp3'
+    },
+    release: 1,
+    baseUrl: 'https://tonejs.github.io/audio/salamander/'
+  }).toDestination();
+}
+
+function createMeowSampler() {
+  return new window.Tone.Sampler({
+    urls: {
+      C4: 'meow.mp3'
+    },
+    release: 0.9,
+    baseUrl: '../public/samples/'
+  }).toDestination();
+}
+
+function createWscPluckSampler() {
+  return new window.Tone.Sampler({
+    urls: {
+      E5: 'WSC_E5.wav'
+    },
+    release: 0.8,
+    baseUrl: '../public/samples/'
+  }).toDestination();
+}
+
+function createWoofSampler() {
+  return new window.Tone.Sampler({
+    urls: {
+      C5: 'woof.wav'
+    },
+    release: 0.9,
+    baseUrl: '../public/samples/'
+  }).toDestination();
+}
+
+function createPaisleyHornsSampler() {
+  return new window.Tone.Sampler({
+    urls: {
+      C5: 'paisley-pudge-a_c5.wav',
+      E5: 'paisley-pudge-a_a5.wav'
+    },
+    release: 0.9,
+    baseUrl: '../public/samples/'
+  }).toDestination();
+}
+
+function createWHTSampler() {
+  return new window.Tone.Sampler({
+    urls: {
+      C4: 'where-hearts-thaw_c4.wav'
+    },
+    release: 0.9,
+    baseUrl: '../public/samples/'
+  }).toDestination();
+}
+
+function createMpPianoSampler() {
+  return new window.Tone.Sampler({
+    urls: {
+      C5: 'mppiano.wav'
+    },
+    release: 0.9,
+    baseUrl: '../public/samples/'
+  }).toDestination();
+}
+function createPPPPluckSampler() {
+  return new window.Tone.Sampler({
+    urls: {
+      'G#5': 'ppppluck.wav'
+    },
+    release: 0.9,
+    baseUrl: '../public/samples/'
+  }).toDestination();
+}
+
+function getMotifTranscriptInstrumentOptions() {
+  return [
+    {
+      key: 'piano',
+      label: 'Piano',
+      create: () => createSalamanderPianoSampler()
+    },
+    {
+      key: 'meow',
+      label: 'Meow',
+      create: () => createMeowSampler()
+    },
+    {
+      key: 'woof',
+      label: 'Woof',
+      create: () => createWoofSampler()
+    },
+    {
+      key: 'wscpluck',
+      label: 'WSC Pluck',
+      create: () => createWscPluckSampler()
+    },
+    {
+      key: 'paisleyhorn',
+      label: 'Paisley Horn',
+      create: () => createPaisleyHornsSampler()
+    },
+    {
+      key: 'mpPiano',
+      label: 'Mario Paint Piano',
+      create: () => createMpPianoSampler()
+    },
+    {
+      key: 'ppppluck',
+      label: 'PPPP Pluck',
+      create: () => createPPPPluckSampler()
+    }
+  ];
+}
+
+function getMotifTranscriptInstrumentOption(key) {
+  const options = getMotifTranscriptInstrumentOptions();
+  const normalized = normalizeInstrumentToken(key);
+  return options.find((option) => {
+    const keyToken = normalizeInstrumentToken(option.key);
+    const labelToken = normalizeInstrumentToken(option.label);
+    return normalized === keyToken || normalized === labelToken;
+  }) || options[0];
+}
+
 function getRequestedMotifVariationKey() {
   try {
     const params = new URLSearchParams(window.location.search || '');
@@ -301,6 +488,14 @@ function motifTranscriptStripTempoMarks(mount) {
           wrapper.remove();
         } else {
           node.remove();
+        }
+      }
+
+      // VexFlow measure labels are emitted as numeric vf-text groups.
+      if (/^\d+$/.test(text)) {
+        const wrapper = node.closest('.vf-text');
+        if (wrapper && wrapper.classList.contains('vf-text')) {
+          wrapper.remove();
         }
       }
     });
@@ -630,6 +825,32 @@ function ensureMotifTranscriptSection(songsHeading, motifName) {
     section.appendChild(player);
   }
 
+  const instrumentWrap = document.createElement('label');
+  instrumentWrap.className = 'motif-transcript-instrument-wrap';
+
+  const instrumentLabel = document.createElement('span');
+  instrumentLabel.className = 'motif-transcript-instrument-label';
+  instrumentLabel.textContent = 'Inst';
+  instrumentWrap.appendChild(instrumentLabel);
+
+  const instrumentSelect = document.createElement('select');
+  instrumentSelect.id = 'motifTranscriptInstrumentSelect';
+  instrumentSelect.className = 'motif-transcript-instrument-select';
+  instrumentSelect.setAttribute('aria-label', 'Transcript instrument');
+  getMotifTranscriptInstrumentOptions().forEach((option) => {
+    const node = document.createElement('option');
+    node.value = option.key;
+    node.textContent = option.label;
+    instrumentSelect.appendChild(node);
+  });
+  instrumentWrap.appendChild(instrumentSelect);
+
+  if (controlDock) {
+    controlDock.appendChild(instrumentWrap);
+  } else {
+    section.appendChild(instrumentWrap);
+  }
+
   const mount = document.createElement('div');
   mount.id = 'motifTranscriptMount';
   mount.className = 'motif-transcript-mount';
@@ -682,6 +903,7 @@ function getMotifTranscriptPlayerState() {
     window.__motifTranscriptPlayerState = {
       loadedTone: false,
       synth: null,
+      instrumentKey: getMotifTranscriptInstrumentOption(getMotifTranscriptDefaultInstrumentKey()).key,
       part: null,
       duration: 0,
       offsetSeconds: 0,
@@ -689,6 +911,7 @@ function getMotifTranscriptPlayerState() {
       isPlaying: false,
       raf: null,
       boundControls: false,
+      boundInstrumentControl: false,
       boundSheetSeek: false,
       playbackEvents: [],
       events: [],
@@ -1752,6 +1975,101 @@ function motifTranscriptBindPlayerControls() {
   state.boundControls = true;
 }
 
+async function motifTranscriptSetInstrument(nextKey, options = {}) {
+  const state = getMotifTranscriptPlayerState();
+  if (!window.Tone) {
+    return false;
+  }
+
+  const instrument = getMotifTranscriptInstrumentOption(nextKey);
+  const resumeIfPlaying = options.resumeIfPlaying !== false;
+  const transport = window.Tone.getTransport();
+  const wasPlaying = state.isPlaying;
+
+  if (state.isPlaying) {
+    transport.pause();
+    state.offsetSeconds = Number(transport.seconds) || 0;
+    state.isPlaying = false;
+    motifTranscriptCancelPlayerRaf();
+    motifTranscriptUpdatePlayerButton();
+    motifTranscriptUpdatePlayerTiming(
+      state.offsetSeconds,
+      motifTranscriptGetAudibleSeconds(state.offsetSeconds)
+    );
+  }
+
+  if (state.synth) {
+    state.synth.dispose();
+    state.synth = null;
+  }
+
+  try {
+    state.synth = instrument.create();
+    state.instrumentKey = instrument.key;
+  } catch (_error) {
+    state.synth = null;
+    return false;
+  }
+
+  const instrumentSelect = document.getElementById('motifTranscriptInstrumentSelect');
+  if (instrumentSelect) {
+    instrumentSelect.value = state.instrumentKey;
+  }
+
+  if (state.synth && state.synth.loaded && typeof state.synth.loaded.then === 'function') {
+    setMotifTranscriptPlayerMessage('Loading ' + instrument.label + '...', 'muted');
+    try {
+      await state.synth.loaded;
+      setMotifTranscriptPlayerMessage('', 'muted');
+    } catch (_error) {
+      const fallback = getMotifTranscriptInstrumentOption(getMotifTranscriptDefaultInstrumentKey());
+      if (instrument.key !== fallback.key) {
+        state.synth.dispose();
+        state.synth = fallback.create();
+        state.instrumentKey = fallback.key;
+      }
+      setMotifTranscriptPlayerMessage('Could not load that instrument. Switched to default.', 'error');
+    }
+  } else {
+    setMotifTranscriptPlayerMessage('', 'muted');
+  }
+
+  if (wasPlaying && resumeIfPlaying && state.part && state.duration > 0) {
+    await window.Tone.start();
+    transport.start('+0.02', state.offsetSeconds);
+    state.isPlaying = true;
+    motifTranscriptUpdatePlayerButton();
+    motifTranscriptCancelPlayerRaf();
+    state.raf = requestAnimationFrame(motifTranscriptTick);
+  }
+
+  return true;
+}
+
+function motifTranscriptBindInstrumentControl() {
+  const state = getMotifTranscriptPlayerState();
+  if (state.boundInstrumentControl) {
+    return;
+  }
+
+  const instrumentSelect = document.getElementById('motifTranscriptInstrumentSelect');
+  if (!instrumentSelect) {
+    return;
+  }
+
+  instrumentSelect.value = state.instrumentKey;
+  instrumentSelect.addEventListener('change', async () => {
+    if (!window.Tone || state.duration <= 0) {
+      return;
+    }
+
+    const selectedKey = instrumentSelect.value;
+    await motifTranscriptSetInstrument(selectedKey, { resumeIfPlaying: true });
+  });
+
+  state.boundInstrumentControl = true;
+}
+
 async function initializeMotifTranscriptPlayback(playbackResult) {
   const wrap = document.getElementById('motifTranscriptPlayer');
   const state = getMotifTranscriptPlayerState();
@@ -1841,29 +2159,7 @@ async function initializeMotifTranscriptPlayback(playbackResult) {
     return;
   }
 
-  state.synth = new window.Tone.Sampler({
-    urls: {
-      A1: 'A1.mp3',
-      C2: 'C2.mp3',
-      'D#2': 'Ds2.mp3',
-      'F#2': 'Fs2.mp3',
-      A2: 'A2.mp3',
-      C3: 'C3.mp3',
-      'D#3': 'Ds3.mp3',
-      'F#3': 'Fs3.mp3',
-      A3: 'A3.mp3',
-      C4: 'C4.mp3',
-      'D#4': 'Ds4.mp3',
-      'F#4': 'Fs4.mp3',
-      A4: 'A4.mp3',
-      C5: 'C5.mp3',
-      'D#5': 'Ds5.mp3',
-      'F#5': 'Fs5.mp3',
-      A5: 'A5.mp3'
-    },
-    release: 1,
-    baseUrl: 'https://tonejs.github.io/audio/salamander/'
-  }).toDestination();
+  await motifTranscriptSetInstrument(state.instrumentKey || 'piano', { resumeIfPlaying: false });
 
   state.part = new window.Tone.Part((time, event) => {
     if (state.synth) {
@@ -1876,6 +2172,7 @@ async function initializeMotifTranscriptPlayback(playbackResult) {
   motifTranscriptBindSheetSeek();
   motifTranscriptResetSheetPlaybackVisuals();
   motifTranscriptBindPlayerControls();
+  motifTranscriptBindInstrumentControl();
   motifTranscriptUpdatePlayerButton();
   motifTranscriptUpdatePlayerTiming(0);
 

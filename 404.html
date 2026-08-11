@@ -3,28 +3,108 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page Not Found</title>
+    <title>JamiePedia! - 404 Paige not found</title>
+    <meta name="title" content="JamiePedia! - 404 Paige not found">
+    <meta name="description" content="The page you requested could not be found.">
+    <meta name="theme-color" content="#F05E55">
+    <link rel="icon" type="image/x-icon" href="/public/images/favicon.ico">
+    <link href="/styles.css" rel="stylesheet" type="text/css" media="all">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="/assets/static/load.js"></script>
     <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        background: #ffffff;
-        color: #111111;
-        font-family: sans-serif;
+      html {
+        background-image: url('/public/images/backgrounds/critterccii.png');
+        background-repeat: repeat;
+        background-attachment: fixed;
+        background-size: 340px auto;
       }
 
       body {
-        padding: 24px;
+        background: transparent;
       }
 
-      pre {
-        margin: 0;
-        white-space: pre-wrap;
-        font: inherit;
+      .head {
+        background-image: url('/public/images/logo-bw.png');
+      }
+
+      .not-found-layout {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .not-found-copy {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .not-found-copy h1 {
+        margin-top: 0;
+        margin-bottom: 8px;
+      }
+
+      .not-found-copy p {
+        margin-top: 0;
+      }
+
+      .not-found-image-wrap {
+        flex: 0 0 220px;
+        text-align: right;
+      }
+
+      .not-found-image {
+        width: 220px;
+        max-width: 100%;
+        height: auto;
+        border: 3px solid #351854;
+        border-radius: 6px;
+        background: #ffffff;
+      }
+
+      @media (max-width: 760px) {
+        .not-found-layout {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .not-found-image-wrap {
+          width: 100%;
+          text-align: left;
+        }
       }
     </style>
   </head>
   <body>
+    <a href="/"><div class="head"></div></a>
+    <div class="navi">
+      <span id="navi"></span>
+    </div>
+
+    <table class="table">
+      <tr>
+        <td>
+          <div class="sidebar1">
+            <span id="sidebar"></span>
+          </div>
+        </td>
+        <td>
+          <div class="bodybar" id="notFoundBody">
+            <div class="not-found-layout" id="notFoundPageContent">
+              <div class="not-found-copy">
+                <h1>404 - Paige not found</h1>
+                <p><a href="/">Go back home</a></p>
+              </div>
+              <div class="not-found-image-wrap">
+                <img class="not-found-image" src="/public/images/tetodead.png" alt="Tetodead image">
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
     <script>
       (function () {
         function getSourcePath(pathname) {
@@ -87,24 +167,27 @@
             .map(function (entry) { return entry.text; });
         }
 
-        function renderText(text, title) {
+        function renderRawText(text, title) {
           document.title = title;
           document.body.innerHTML = '';
           var pre = document.createElement('pre');
           pre.textContent = text;
+          pre.style.margin = '0';
+          pre.style.whiteSpace = 'pre-wrap';
+          pre.style.fontFamily = 'Nunito, sans-serif';
+          pre.style.padding = '24px';
           document.body.appendChild(pre);
         }
 
         var path = window.location.pathname || '';
         if (!/\/raw\/?$/i.test(path)) {
-          renderText('Page not found.', 'Page Not Found');
           return;
         }
 
         var sourcePath = getSourcePath(path);
         var slug = getSongSlug(sourcePath);
         if (!slug) {
-          renderText('Raw lyrics unavailable.', 'Raw Lyrics');
+          renderRawText('Raw lyrics unavailable.', 'Raw Lyrics');
           return;
         }
 
@@ -118,10 +201,10 @@
           })
           .then(function (text) {
             var rawLines = parseLrcRawLines(text);
-            renderText(rawLines.length > 0 ? rawLines.join('\n') : 'This song has no raw lyrics.', slug + ' raw lyrics');
+            renderRawText(rawLines.length > 0 ? rawLines.join('\n') : 'This song has no raw lyrics.', slug + ' raw lyrics');
           })
           .catch(function () {
-            renderText('This song has no raw lyrics.', slug + ' raw lyrics');
+            renderRawText('This song has no raw lyrics.', slug + ' raw lyrics');
           });
       })();
     </script>

@@ -8,7 +8,7 @@
     <creator type="composer">Composer / arranger</creator>
     <encoding>
       <software>MuseScore Studio 4.7.4</software>
-      <encoding-date>2026-08-08</encoding-date>
+      <encoding-date>2026-08-09</encoding-date>
       <supports element="accidental" type="yes"/>
       <supports element="beam" type="yes"/>
       <supports element="print" attribute="new-page" type="yes" value="yes"/>
@@ -1738,11 +1738,15 @@
           <octave>5</octave>
           </pitch>
         <duration>2</duration>
+        <tie type="start"/>
         <voice>1</voice>
         <type>16th</type>
         <stem>down</stem>
         <beam number="1">end</beam>
         <beam number="2">end</beam>
+        <notations>
+          <tied type="start"/>
+          </notations>
         </note>
       </measure>
     <measure number="8" width="215.04">
@@ -1752,12 +1756,14 @@
           <octave>5</octave>
           </pitch>
         <duration>4</duration>
+        <tie type="stop"/>
         <tie type="start"/>
         <voice>1</voice>
         <type>eighth</type>
         <stem>down</stem>
         <beam number="1">begin</beam>
         <notations>
+          <tied type="stop"/>
           <tied type="start"/>
           </notations>
         </note>

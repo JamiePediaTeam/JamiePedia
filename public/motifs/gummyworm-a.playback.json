@@ -4,7 +4,7 @@
   "instrument": "piano",
   "bpm": 79,
   "duration": 24.3038,
-  "noteCount": 100,
+  "noteCount": 99,
   "notes": [
     {
       "partId": "P1",
@@ -753,15 +753,7 @@
     {
       "partId": "P1",
       "time": 22.59494,
-      "duration": 0.18987,
-      "midi": 72,
-      "velocity": 0.709,
-      "grace": false
-    },
-    {
-      "partId": "P1",
-      "time": 22.78481,
-      "duration": 0.56962,
+      "duration": 0.75949,
       "midi": 72,
       "velocity": 0.709,
       "grace": false
@@ -1947,7 +1939,7 @@
       "velocity": 0.709,
       "grace": false,
       "attack": true,
-      "tied": false
+      "tied": true
     },
     {
       "partId": "P1",
@@ -1956,7 +1948,7 @@
       "midi": 72,
       "velocity": 0.709,
       "grace": false,
-      "attack": true,
+      "attack": false,
       "tied": true
     },
     {

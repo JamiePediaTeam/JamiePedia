@@ -28,25 +28,22 @@ const server = http.createServer((req, res) => {
   
   fs.readFile(filePath, (err, content) => {
     if (err) {
-      if (rawRouteRequested) {
-        const fallbackPath = path.join(__dirname, '404.html');
-        fs.readFile(fallbackPath, (fallbackErr, fallbackContent) => {
-          if (fallbackErr) {
-            console.error(`Error reading ${fallbackPath}:`, fallbackErr.message);
-            res.writeHead(404, { 'Content-Type': 'text/html' });
-            res.end('404 - File Not Found', 'utf-8');
-            return;
-          }
-
+      const fallbackPath = path.join(__dirname, '404.html');
+      fs.readFile(fallbackPath, (fallbackErr, fallbackContent) => {
+        if (fallbackErr) {
+          console.error(`Error reading ${fallbackPath}:`, fallbackErr.message);
           res.writeHead(404, { 'Content-Type': 'text/html' });
-          res.end(fallbackContent, 'utf-8');
-        });
-        return;
-      }
+          res.end('404 - File Not Found', 'utf-8');
+          return;
+        }
 
-      console.error(`Error reading ${filePath}:`, err.message);
-      res.writeHead(404, { 'Content-Type': 'text/html' });
-      res.end('404 - File Not Found', 'utf-8');
+        if (!rawRouteRequested) {
+          console.error(`Error reading ${filePath}:`, err.message);
+        }
+
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end(fallbackContent, 'utf-8');
+      });
     } else {
       let contentType = 'text/html';
       if (filePath.endsWith('.css')) contentType = 'text/css';
