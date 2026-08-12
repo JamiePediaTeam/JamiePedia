@@ -186,6 +186,59 @@
           return refs.filter((ref) => ref && ref.motifId);
         }
 
+        function normalizeGraphKey(value) {
+          return String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[_\s]+/g, '-')
+            .replace(/[^a-z0-9-]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        }
+
+        function getExactSongReferenceKeys(song) {
+          const keys = [];
+          if (!song) {
+            return keys;
+          }
+
+          const songId = String(song.songId || '').trim();
+          const title = String(song.title || '').trim();
+
+          if (songId) {
+            keys.push(songId);
+          }
+          if (title) {
+            keys.push(title);
+          }
+
+          return Array.from(new Set(keys));
+        }
+
+        function findSongReferenceTarget(songList, currentSong, referenceValue) {
+          const rawRef = String(referenceValue || '').trim();
+          if (!rawRef) {
+            return null;
+          }
+
+          const currentExact = String(currentSong && (currentSong.songId || currentSong.title) || '').trim();
+          const exactMatches = (songList || []).filter((candidate) => {
+            if (!candidate) {
+              return false;
+            }
+
+            const candidateKeys = getExactSongReferenceKeys(candidate);
+            const isSameExactSong = candidateKeys.some((key) => key === currentExact);
+            if (isSameExactSong) {
+              return false;
+            }
+
+            return candidateKeys.some((key) => key === rawRef);
+          });
+
+          return exactMatches[0] || null;
+        }
+
         function getMotifNodeId(motifId, variationId) {
           const baseId = String(motifId || '').trim();
           const variation = String(variationId || '').trim();
@@ -341,10 +394,60 @@
           const motifs = ensureMotifData();
           const allSongs = ensureSongData();
           const motifById = new Map(motifs.map((motif) => [motif.id, motif]));
+          const songLookup = new Map();
+
+          allSongs.forEach((song) => {
+            const normalizedSongId = normalizeGraphKey(song.songId || song.title);
+            const normalizedTitle = normalizeGraphKey(song.title);
+            if (normalizedSongId) {
+              songLookup.set(normalizedSongId, song);
+            }
+            if (normalizedTitle) {
+              songLookup.set(normalizedTitle, song);
+            }
+          });
+
+          const graphSongIds = new Set();
+          allSongs.forEach((song) => {
+            const refs = getSongMotifRefs(song);
+            refs.forEach((ref) => {
+              const normalizedRef = normalizeGraphKey(ref.motifId);
+              if (!normalizedRef) {
+                return;
+              }
+              const targetSong = songLookup.get(normalizedRef);
+              if (!targetSong) {
+                return;
+              }
+              const currentKey = normalizeGraphKey(song.songId || song.title);
+              const targetKey = normalizeGraphKey(targetSong.songId || targetSong.title);
+              if (currentKey !== targetKey && targetSong && targetSong.title) {
+                graphSongIds.add(targetKey);
+              }
+            });
+          });
 
           const graphSongs = allSongs.filter((song) => {
+            const songKey = normalizeGraphKey(song.songId || song.title);
             const refs = getSongMotifRefs(song);
-            return refs.some((ref) => motifById.has(ref.motifId));
+            if (graphSongIds.has(songKey)) {
+              return true;
+            }
+            if (refs.some((ref) => motifById.has(ref.motifId))) {
+              return true;
+            }
+
+            return refs.some((ref) => {
+              const normalizedRef = normalizeGraphKey(ref.motifId);
+              if (!normalizedRef) {
+                return false;
+              }
+              const targetSong = songLookup.get(normalizedRef);
+              if (!targetSong) {
+                return false;
+              }
+              return normalizeGraphKey(targetSong.songId || targetSong.title) !== normalizeGraphKey(song.songId || song.title);
+            });
           });
 
           if (graphSongs.length === 0) {
@@ -372,15 +475,28 @@
 
             const motifIds = connectedMotifs.map((entry) => entry.nodeId);
 
+            const referenceKeys = new Set();
+            refs.forEach((ref) => {
+              const refKey = normalizeGraphKey(ref.motifId);
+              if (refKey) {
+                referenceKeys.add(refKey);
+              }
+            });
+            const titleKeys = [song.title, song.songId || song.title].map((value) => normalizeGraphKey(value)).filter(Boolean);
+            titleKeys.forEach((key) => referenceKeys.add(key));
+
             const songNode = {
               id: 'song-' + (song.songId || song.title),
               title: song.title,
+              songKey: String(song.songId || song.title || '').trim(),
               color: song.color || '#351854',
               imageUrl: '',
               pagePath: song.path || '',
               x: 0,
               y: 0,
               connectedMotifIds: motifIds,
+              connectedSongIds: [],
+              referenceKeys: Array.from(referenceKeys),
               weight: motifIds.length,
               isSong: true
             };
@@ -423,13 +539,72 @@
 
           const songLinks = [];
           const seenSongLinks = new Set();
+          const seenSongPairs = new Set();
           const motifSongCounts = new Map();
+          const songIndexByKey = new Map();
+          const songExactIndex = new Map();
 
           songList.forEach((songNode) => {
-            (songNode.connectedMotifIds || []).forEach((motifId) => {
+            const keys = [songNode.songKey || songNode.id.replace(/^song-/, ''), songNode.title].map((value) => normalizeGraphKey(value)).filter(Boolean);
+            keys.forEach((key) => {
+              songIndexByKey.set(key, songNode);
+            });
+
+            const exactKeys = [songNode.songKey || songNode.id.replace(/^song-/, ''), songNode.title].map((value) => String(value || '').trim()).filter(Boolean);
+            exactKeys.forEach((key) => {
+              songExactIndex.set(key, songNode);
+            });
+
+            (songNode.referenceKeys || []).forEach((motifId) => {
               const current = motifSongCounts.get(motifId) || new Set();
               current.add(songNode.id);
               motifSongCounts.set(motifId, current);
+            });
+          });
+
+          const songExactKeySource = new Map();
+          allSongs.forEach((song) => {
+            const sourceIds = [String(song.songId || '').trim(), String(song.title || '').trim()].filter(Boolean);
+            sourceIds.forEach((key) => {
+              songExactKeySource.set(key, song);
+            });
+          });
+
+          songList.forEach((songNode) => {
+            const exactLookupKey = String(songNode.songKey || songNode.title || '').trim();
+            const sourceSong = songExactKeySource.get(exactLookupKey)
+              || songExactKeySource.get(String(songNode.title || '').trim())
+              || allSongs.find((candidate) => candidate.title === songNode.title && (candidate.songId || '') === (songNode.songKey || ''));
+            const refs = getSongMotifRefs(sourceSong || {});
+
+            refs.forEach((ref) => {
+              const refValue = String(ref.motifId || '').trim();
+              const targetSong = findSongReferenceTarget(allSongs, sourceSong || {}, refValue) || songExactIndex.get(refValue);
+              if (!targetSong || String(targetSong.songId || targetSong.title || '').trim() === String(songNode.songKey || songNode.title || '').trim()) {
+                return;
+              }
+
+              const targetNode = songExactIndex.get(String(targetSong.songId || targetSong.title || '').trim())
+                || songExactIndex.get(String(targetSong.title || '').trim());
+              if (!targetNode || targetNode.id === songNode.id) {
+                return;
+              }
+
+              const pairKey = [songNode.id, targetNode.id].sort().join('::');
+              if (seenSongPairs.has(pairKey)) {
+                return;
+              }
+              seenSongPairs.add(pairKey);
+              seenSongLinks.add([songNode.id, targetNode.id, 'lyrical-link'].join('::'));
+              songLinks.push({ source: songNode, target: targetNode, motifId: 'lyrical-link' });
+              if (!songNode.connectedSongIds.includes(targetNode.id)) {
+                songNode.connectedSongIds.push(targetNode.id);
+                songNode.weight += 1;
+              }
+              if (!targetNode.connectedSongIds.includes(songNode.id)) {
+                targetNode.connectedSongIds.push(songNode.id);
+                targetNode.weight += 1;
+              }
             });
           });
 
@@ -441,18 +616,30 @@
             for (let j = i + 1; j < songIds.length; j += 1) {
               const toId = songIds[j];
               const toNode = songNodes.get(toId);
-              const sharedMotifs = (fromNode.connectedMotifIds || []).filter((motifId) => (toNode.connectedMotifIds || []).includes(motifId));
+
+              const sharedMotifs = Array.from(new Set((fromNode.referenceKeys || []).filter((motifId) => (toNode.referenceKeys || []).includes(motifId))));
               if (!sharedMotifs.length) continue;
 
               const directSharedMotifs = sharedMotifs.filter((motifId) => (motifSongCounts.get(motifId)?.size || 0) <= 2);
               if (!directSharedMotifs.length) continue;
 
               const motifId = directSharedMotifs[0];
+              const pairKey = [fromId, toId].sort().join('::');
+              if (seenSongPairs.has(pairKey)) continue;
+              seenSongPairs.add(pairKey);
               const key = [fromId, toId, motifId].join('::');
               if (seenSongLinks.has(key)) continue;
               seenSongLinks.add(key);
 
               songLinks.push({ source: fromNode, target: toNode, motifId });
+              if (!fromNode.connectedSongIds.includes(toId)) {
+                fromNode.connectedSongIds.push(toId);
+                fromNode.weight += 1;
+              }
+              if (!toNode.connectedSongIds.includes(fromId)) {
+                toNode.connectedSongIds.push(fromId);
+                toNode.weight += 1;
+              }
             }
           }
           const weightMax = Math.max(1, ...motifList.map((motif) => motif.weight));
@@ -471,7 +658,34 @@
             motifGroups.get(groupKey).push(motifNode);
           });
 
+          const isolatedSongNodes = songList.filter((songNode) => !songNode.connectedMotifIds.length && !songNode.connectedSongIds.length);
+          isolatedSongNodes.forEach((songNode, index) => {
+            const total = Math.max(1, isolatedSongNodes.length);
+            const angle = (index / total) * Math.PI * 2 - Math.PI / 2;
+            const orbitRadius = 220 + (index % 6) * 56;
+            const pseudoCenterX = centerX + Math.cos(angle) * orbitRadius * 0.9;
+            const pseudoCenterY = centerY + 180 + Math.sin(angle) * orbitRadius * 0.7;
+            songNode.groupKey = 'isolated-song-' + index;
+            songNode.groupCenterX = pseudoCenterX;
+            songNode.groupCenterY = pseudoCenterY;
+            songNode.x = pseudoCenterX;
+            songNode.y = pseudoCenterY;
+          });
+
           const groupCenters = new Map();
+          isolatedSongNodes.forEach((songNode) => {
+            groupCenters.set(songNode.groupKey, { x: songNode.groupCenterX, y: songNode.groupCenterY });
+          });
+          motifList.forEach((motifNode) => {
+            if (!motifNode.groupKey) {
+              return;
+            }
+            if (!groupCenters.has(motifNode.groupKey)) {
+              groupCenters.set(motifNode.groupKey, { x: motifNode.x, y: motifNode.y });
+            }
+            motifNode.groupCenterX = groupCenters.get(motifNode.groupKey).x;
+            motifNode.groupCenterY = groupCenters.get(motifNode.groupKey).y;
+          });
           const orderedGroups = Array.from(motifGroups.entries());
           orderedGroups.forEach(([groupKey, groupMotifs], groupIndex) => {
             const totalGroups = Math.max(1, orderedGroups.length);
@@ -536,6 +750,29 @@
               }
             }
 
+            (songLinks || []).forEach(({ source, target }) => {
+              if (!source || !target) {
+                return;
+              }
+
+              const dx = target.x - source.x;
+              const dy = target.y - source.y;
+              const distance = Math.hypot(dx, dy) || 1;
+              const desiredDistance = 170;
+              const springStrength = 0.012;
+              const delta = distance - desiredDistance;
+
+              if (Math.abs(delta) > 2) {
+                const nx = dx / distance;
+                const ny = dy / distance;
+                const offset = delta * springStrength * 0.5;
+                source.x += nx * offset;
+                source.y += ny * offset;
+                target.x -= nx * offset;
+                target.y -= ny * offset;
+              }
+            });
+
             motifList.forEach((motifNode) => {
               const groupCenter = groupCenters.get(motifNode.groupKey) || { x: centerX, y: centerY };
               const centerPull = 0.05 + (motifNode.weight / Math.max(1, weightMax)) * 0.18;
@@ -568,12 +805,32 @@
             });
 
             songList.forEach((songNode) => {
+              if (!songNode.connectedMotifIds.length && !songNode.connectedSongIds.length) {
+                const groupCenter = groupCenters.get(songNode.groupKey) || { x: songNode.groupCenterX ?? centerX, y: songNode.groupCenterY ?? centerY };
+                const isolatedPull = 0.16;
+                const downwardBias = Math.max(0, groupCenter.y + 80 - songNode.y) * 0.08;
+                songNode.x += (groupCenter.x - songNode.x) * isolatedPull;
+                songNode.y += (groupCenter.y - songNode.y) * isolatedPull + downwardBias;
+                return;
+              }
+
+              const connectedSongPoints = (songNode.connectedSongIds || [])
+                .map((songId) => songNodes.get(songId))
+                .filter(Boolean)
+                .map((connectedSong) => ({ x: connectedSong.x, y: connectedSong.y }));
+
+              if (!songNode.connectedMotifIds.length && connectedSongPoints.length) {
+                const target = average(connectedSongPoints);
+                const pull = 0.22;
+                songNode.x += (target.x - songNode.x) * pull;
+                songNode.y += (target.y - songNode.y) * pull;
+                return;
+              }
+
               const motifPoints = songNode.connectedMotifIds
                 .map((motifId) => motifNodes.get(motifId))
                 .filter(Boolean)
                 .map((motifNode) => ({ x: motifNode.x, y: motifNode.y }));
-
-              if (!motifPoints.length) return;
 
               const target = average(motifPoints);
               const pull = 0.18 + songNode.weight * 0.06;
