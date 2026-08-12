@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JamiePedia! - Motif Map</title>
+    <meta name="title" content="JamiePedia! - Motif Map">
+    <meta name="description" content="A visual motif network connecting recurring motifs across JamiePedia.">
+    <meta name="theme-color" content="#F05E55">
+    <link rel="icon" type="image/x-icon" href="public/images/favicon.ico">
+    <link href="styles.css" rel="stylesheet" type="text/css" media="all">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="assets/static/load.js"></script>
+    <style>
+      .motif-map-wrap {
+        width: 100%;
+        min-height: 900px;
+        background: rgba(255, 255, 255, 0.6);
+        border: 3px solid #351854;
+        border-radius: 5px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .motif-map-svg {
+        display: block;
+        width: 100%;
+        height: 900px;
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .motif-map-edge {
+        stroke: rgba(53, 24, 84, 0.38);
+        stroke-width: 1.1;
+        fill: none;
+        transition: stroke-width 0.18s ease, stroke 0.18s ease, opacity 0.18s ease;
+      }
+
+      .motif-map-edge--active {
+        stroke: rgba(53, 24, 84, 0.9);
+        stroke-width: 2.6;
+        opacity: 1;
+      }
+
+      .motif-map-node-group {
+        cursor: pointer;
+        transform-box: fill-box;
+        transform-origin: center;
+        transition: transform 0.18s ease, opacity 0.18s ease, filter 0.18s ease;
+      }
+
+      .motif-map-song-node {
+        fill: #f0f0f0;
+        stroke: rgba(53, 24, 84, 0.8);
+        stroke-width: 1.4;
+        transition: stroke-width 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
+        cursor: pointer;
+      }
+
+      .motif-map-motif-node {
+        stroke: rgba(16, 16, 16, 0.75);
+        stroke-width: 1.8;
+        transition: stroke-width 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
+        cursor: pointer;
+      }
+
+      .motif-map-node-image {
+        pointer-events: none;
+        transform-box: fill-box;
+        transform-origin: center;
+        transition: transform 0.18s ease, opacity 0.18s ease;
+      }
+
+      .motif-map-node-group.motif-map-node--active {
+        opacity: 1;
+        filter: drop-shadow(0 0 5px rgba(53, 24, 84, 0.25));
+        transform: scale(1.08);
+      }
+
+      .motif-map-node-group.motif-map-node--active .motif-map-song-node,
+      .motif-map-node-group.motif-map-node--active .motif-map-motif-node {
+        stroke-width: 2.8;
+      }
+
+      .motif-map-label,
+      .motif-map-song-label {
+        font-size: 11px;
+        fill: rgba(18, 18, 18, 0.9);
+        font-weight: 700;
+        paint-order: stroke;
+        stroke: rgba(255, 255, 255, 0.7);
+        stroke-width: 1.6px;
+        stroke-linejoin: round;
+        font-family: "Nunito", sans-serif;
+        dominant-baseline: middle;
+        transition: font-size 0.18s ease, fill 0.18s ease, stroke-width 0.18s ease;
+        cursor: pointer;
+      }
+
+      .motif-map-label--active,
+      .motif-map-song-label--active {
+        font-size: 13px;
+        fill: rgba(18, 18, 18, 1);
+      }
+
+      .motif-map-legend {
+        margin-top: 12px;
+        color: #2d2d2d;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="./"><div class="head"></div></a>
+    <div class="navi">
+      <span id="navi"></span>
+    </div>
+
+    <table class="table">
+      <tr>
+        <td>
+          <div class="sidebar1">
+            <span id="sidebar"></span>
+          </div>
+        </td>
+        <td>
+          <div class="bodybar">
+            <h1>Motif Map</h1>
+            <div id="motifMapWrap" class="motif-map-wrap"></div>
+            <div class="motif-map-legend">
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <script src="assets/static/csv-data.js"></script>
+    <script>
+      (function () {
+        const root = document.getElementById('motifMapWrap');
+        if (!root) return;
+
+        const CANVAS_WIDTH = 1800;
+        const CANVAS_HEIGHT = 1100;
+        const PADDING = 150;
+
+        function clamp(value, min, max) {
+          return Math.min(Math.max(value, min), max);
+        }
+
+        function average(values) {
+          if (!values.length) {
+            return { x: 0, y: 0 };
+          }
+          const total = values.reduce((acc, point) => {
+            acc.x += point.x;
+            acc.y += point.y;
+            return acc;
+          }, { x: 0, y: 0 });
+          return {
+            x: total.x / values.length,
+            y: total.y / values.length
+          };
+        }
+
+        function ensureMotifData() {
+          if (!window.MotifData || !Array.isArray(window.MotifData.allMotifs)) {
+            return [];
+          }
+          return window.MotifData.allMotifs;
+        }
+
+        function ensureSongData() {
+          if (!window.SongData || !Array.isArray(window.SongData.allSongs)) {
+            return [];
+          }
+          return window.SongData.allSongs;
+        }
+
+        function getSongMotifRefs(song) {
+          const refs = [];
+          if (Array.isArray(song.motifRefs)) refs.push(...song.motifRefs);
+          if (Array.isArray(song.sampleRefs)) refs.push(...song.sampleRefs);
+          if (Array.isArray(song.lyricalRefs)) refs.push(...song.lyricalRefs);
+          return refs.filter((ref) => ref && ref.motifId);
+        }
+
+        function getMotifNodeId(motifId, variationId) {
+          const baseId = String(motifId || '').trim();
+          const variation = String(variationId || '').trim();
+          if (!baseId) {
+            return '';
+          }
+          if (!variation) {
+            return baseId;
+          }
+          return baseId + ':' + variation.toUpperCase();
+        }
+
+        function getMotifNodeMeta(motifNodeId) {
+          const text = String(motifNodeId || '');
+          const dividerIndex = text.lastIndexOf(':');
+          if (dividerIndex < 0) {
+            return { baseId: text, variationId: '' };
+          }
+          return {
+            baseId: text.slice(0, dividerIndex),
+            variationId: text.slice(dividerIndex + 1)
+          };
+        }
+
+        function wrapLabelText(title) {
+          const text = String(title || '').trim();
+          if (!text) {
+            return [''];
+          }
+
+          const words = text.split(/\s+/);
+          const lines = [];
+          let current = '';
+
+          words.forEach((word) => {
+            const candidate = current ? (current + ' ' + word) : word;
+            if (candidate.length <= 18) {
+              current = candidate;
+              return;
+            }
+
+            if (current) {
+              lines.push(current);
+            }
+            current = word.length <= 18 ? word : word.slice(0, 18);
+          });
+
+          if (current) {
+            lines.push(current);
+          }
+
+          return lines.length ? lines : [''];
+        }
+
+        function getLabelPosition(node, radius, labelText) {
+          const lines = Array.isArray(labelText) ? labelText : [String(labelText || '').trim() || ''];
+          const width = Math.max(26, Math.max(...lines.map((line) => line.length)) * 6.2);
+          const height = 12 * Math.max(1, lines.length);
+          return {
+            x: node.x - width / 2,
+            y: node.y + radius + 18,
+            width,
+            height,
+            lines
+          };
+        }
+
+        function getNodeRadius(node, maxWeight) {
+          if (node.isSong) {
+            return 7 + Math.min(8, node.weight * 1.5);
+          }
+          return 22 + (node.weight / Math.max(1, maxWeight)) * 18;
+        }
+
+        function resolveAssetUrl(rawValue) {
+          const text = String(rawValue || '').trim();
+          if (!text) {
+            return '';
+          }
+
+          try {
+            return new URL(text, window.location.href).href;
+          } catch (error) {
+            return text;
+          }
+        }
+
+        function resolveMotifImageUrl(motif) {
+          if (!motif) {
+            return '';
+          }
+
+          const preferred = motif.image || motif.coverArt || motif.art || '';
+          return resolveAssetUrl(preferred);
+        }
+
+        function extractAlbumArtFromHtml(htmlText) {
+          if (!htmlText) {
+            return '';
+          }
+
+          try {
+            const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+            const candidates = Array.from(doc.querySelectorAll('img'));
+            const preferred = candidates.find((img) => {
+              const src = String(img.getAttribute('src') || '').trim();
+              return /\/public\/images\/cover-art\//i.test(src) || /cover-art\//i.test(src);
+            }) || candidates[0];
+
+            if (!preferred) {
+              return '';
+            }
+
+            const src = String(preferred.getAttribute('src') || preferred.getAttribute('data-src') || '').trim();
+            return src ? resolveAssetUrl(src) : '';
+          } catch (error) {
+            return '';
+          }
+        }
+
+        async function resolveSongImageUrl(song) {
+          if (!song) {
+            return '';
+          }
+
+          const explicit = [song.imageUrl, song.coverArt, song.albumArt, song.art, song.image]
+            .filter((value) => Boolean(value))
+            .map((value) => resolveAssetUrl(value))
+            .find(Boolean);
+          if (explicit) {
+            return explicit;
+          }
+
+          const pagePath = String(song.pagePath || song.path || '').trim();
+          if (!pagePath) {
+            return '';
+          }
+
+          try {
+            const response = await fetch(new URL(pagePath, window.location.href).href, { cache: 'force-cache' });
+            if (!response.ok) {
+              return '';
+            }
+
+            const html = await response.text();
+            return extractAlbumArtFromHtml(html);
+          } catch (error) {
+            return '';
+          }
+        }
+
+        function buildGraph() {
+          const motifs = ensureMotifData();
+          const allSongs = ensureSongData();
+          const motifById = new Map(motifs.map((motif) => [motif.id, motif]));
+
+          const graphSongs = allSongs.filter((song) => {
+            const refs = getSongMotifRefs(song);
+            return refs.some((ref) => motifById.has(ref.motifId));
+          });
+
+          if (graphSongs.length === 0) {
+            return { motifs: [], songs: [], motifEdges: [], songEdges: [] };
+          }
+
+          const motifNodes = new Map();
+          const songNodes = new Map();
+          const songEdges = [];
+
+          graphSongs.forEach((song) => {
+            const refs = getSongMotifRefs(song);
+            const connectedMotifs = refs
+              .map((ref) => {
+                const motifId = ref.motifId;
+                const nodeId = getMotifNodeId(motifId, ref.variationId);
+                return {
+                  motifId,
+                  nodeId,
+                  variationId: ref.variationId || ''
+                };
+              })
+              .filter((entry) => motifById.has(entry.motifId))
+              .filter((entry, index, all) => all.findIndex((item) => item.nodeId === entry.nodeId) === index);
+
+            const motifIds = connectedMotifs.map((entry) => entry.nodeId);
+
+            const songNode = {
+              id: 'song-' + (song.songId || song.title),
+              title: song.title,
+              color: song.color || '#351854',
+              imageUrl: '',
+              pagePath: song.path || '',
+              x: 0,
+              y: 0,
+              connectedMotifIds: motifIds,
+              weight: motifIds.length,
+              isSong: true
+            };
+            songNodes.set(songNode.id, songNode);
+
+            for (let i = 0; i < connectedMotifs.length; i += 1) {
+              const entry = connectedMotifs[i];
+              const leftId = entry.nodeId;
+              if (!motifNodes.has(leftId)) {
+                const motif = motifById.get(entry.motifId) || { id: entry.motifId, name: entry.motifId, color: '#ef8a85' };
+                motifNodes.set(leftId, {
+                  id: leftId,
+                  baseId: entry.motifId,
+                  variationId: entry.variationId || '',
+                  groupKey: motif.variationGroup || motif.id || entry.motifId,
+                  title: entry.variationId ? (motif.name + ' (' + entry.variationId + ')') : (motif.name || entry.motifId),
+                  color: motif.color || '#ef8a85',
+                  imageUrl: resolveMotifImageUrl(motif),
+                  pagePath: motif.pageSlug ? ('motifs/' + motif.pageSlug + '.html') : ('motifs/' + (motif.id || entry.motifId) + '.html'),
+                  x: 0,
+                  y: 0,
+                  linkedSongIds: new Set(),
+                  isSong: false,
+                  weight: 0
+                });
+              }
+
+              const leftNode = motifNodes.get(leftId);
+              leftNode.linkedSongIds.add(songNode.id);
+              leftNode.weight += 1;
+            }
+
+            connectedMotifs.forEach((entry) => {
+              songEdges.push({ source: songNode, target: entry.nodeId });
+            });
+          });
+
+          const motifList = Array.from(motifNodes.values());
+          const songList = Array.from(songNodes.values());
+
+          const songLinks = [];
+          const seenSongLinks = new Set();
+          const motifSongCounts = new Map();
+
+          songList.forEach((songNode) => {
+            (songNode.connectedMotifIds || []).forEach((motifId) => {
+              const current = motifSongCounts.get(motifId) || new Set();
+              current.add(songNode.id);
+              motifSongCounts.set(motifId, current);
+            });
+          });
+
+          const songIds = Array.from(songNodes.keys());
+          for (let i = 0; i < songIds.length; i += 1) {
+            const fromId = songIds[i];
+            const fromNode = songNodes.get(fromId);
+
+            for (let j = i + 1; j < songIds.length; j += 1) {
+              const toId = songIds[j];
+              const toNode = songNodes.get(toId);
+              const sharedMotifs = (fromNode.connectedMotifIds || []).filter((motifId) => (toNode.connectedMotifIds || []).includes(motifId));
+              if (!sharedMotifs.length) continue;
+
+              const directSharedMotifs = sharedMotifs.filter((motifId) => (motifSongCounts.get(motifId)?.size || 0) <= 2);
+              if (!directSharedMotifs.length) continue;
+
+              const motifId = directSharedMotifs[0];
+              const key = [fromId, toId, motifId].join('::');
+              if (seenSongLinks.has(key)) continue;
+              seenSongLinks.add(key);
+
+              songLinks.push({ source: fromNode, target: toNode, motifId });
+            }
+          }
+          const weightMax = Math.max(1, ...motifList.map((motif) => motif.weight));
+          const centerX = CANVAS_WIDTH / 2;
+          const centerY = CANVAS_HEIGHT / 2;
+
+          const motifGroups = new Map();
+          motifList.forEach((motifNode) => {
+            const nodeMeta = getMotifNodeMeta(motifNode.id);
+            const sourceMotif = motifById.get(nodeMeta.baseId) || {};
+            const groupKey = sourceMotif.variationGroup || sourceMotif.id || nodeMeta.baseId;
+            motifNode.groupKey = groupKey;
+            if (!motifGroups.has(groupKey)) {
+              motifGroups.set(groupKey, []);
+            }
+            motifGroups.get(groupKey).push(motifNode);
+          });
+
+          const groupCenters = new Map();
+          const orderedGroups = Array.from(motifGroups.entries());
+          orderedGroups.forEach(([groupKey, groupMotifs], groupIndex) => {
+            const totalGroups = Math.max(1, orderedGroups.length);
+            const baseAngle = (groupIndex / totalGroups) * Math.PI * 2 - Math.PI / 2;
+            const seed = Array.from(groupKey).reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+            const orbitRadius = 260 + (seed % 11) * 22 + Math.max(0, groupMotifs.length - 1) * 24;
+            const groupCenterX = centerX + Math.cos(baseAngle) * orbitRadius;
+            const groupCenterY = centerY + Math.sin(baseAngle) * orbitRadius;
+            groupCenters.set(groupKey, { x: groupCenterX, y: groupCenterY });
+
+            groupMotifs.forEach((motifNode, itemIndex) => {
+              const localAngle = baseAngle + (itemIndex - (groupMotifs.length - 1) / 2) * 0.9;
+              const spread = 60 + ((itemIndex % 3) * 26) + groupMotifs.length * 16;
+              motifNode.x = groupCenterX + Math.cos(localAngle) * spread;
+              motifNode.y = groupCenterY + Math.sin(localAngle) * spread;
+              motifNode.groupCenterX = groupCenterX;
+              motifNode.groupCenterY = groupCenterY;
+            });
+          });
+
+          motifList.forEach((motifNode) => {
+            const motifSongs = Array.from(motifNode.linkedSongIds || [])
+              .map((songId) => songNodes.get(songId))
+              .filter(Boolean);
+
+            motifSongs.forEach((songNode, index) => {
+              const angle = (index / Math.max(1, motifSongs.length + 1)) * Math.PI * 2 + (motifNode.x > centerX ? 0.5 : -0.5);
+              const orbitRadius = 160 + (index % 4) * 38;
+              songNode.x = motifNode.x + Math.cos(angle) * orbitRadius;
+              songNode.y = motifNode.y + Math.sin(angle) * orbitRadius;
+            });
+          });
+
+          for (let iteration = 0; iteration < 420; iteration += 1) {
+            const allNodes = [...motifList, ...songList];
+
+            for (let i = 0; i < allNodes.length; i += 1) {
+              for (let j = i + 1; j < allNodes.length; j += 1) {
+                const a = allNodes[i];
+                const b = allNodes[j];
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const distance = Math.hypot(dx, dy) || 0.0001;
+                const aRadius = getNodeRadius(a, weightMax);
+                const bRadius = getNodeRadius(b, weightMax);
+                const baseMinimum = (a.isSong || b.isSong) ? 100 : 125;
+                const labelPadding = ((a.isSong ? 12 : 22) + (b.isSong ? 12 : 22));
+                const desiredGap = baseMinimum + aRadius + bRadius + labelPadding;
+
+                if (distance < desiredGap) {
+                  const nx = dx / distance;
+                  const ny = dy / distance;
+                  const adjustment = (desiredGap - distance) / 2;
+                  const aWeight = a.isSong ? 1.2 : 2.5;
+                  const bWeight = b.isSong ? 1.2 : 2.5;
+
+                  a.x -= nx * adjustment * (bWeight / (aWeight + bWeight));
+                  a.y -= ny * adjustment * (bWeight / (aWeight + bWeight));
+                  b.x += nx * adjustment * (aWeight / (aWeight + bWeight));
+                  b.y += ny * adjustment * (aWeight / (aWeight + bWeight));
+                }
+              }
+            }
+
+            motifList.forEach((motifNode) => {
+              const groupCenter = groupCenters.get(motifNode.groupKey) || { x: centerX, y: centerY };
+              const centerPull = 0.05 + (motifNode.weight / Math.max(1, weightMax)) * 0.18;
+              motifNode.x += (groupCenter.x - motifNode.x) * centerPull;
+              motifNode.y += (groupCenter.y - motifNode.y) * centerPull;
+
+              const dxFromCenter = motifNode.x - centerX;
+              const dyFromCenter = motifNode.y - centerY;
+              const distanceFromCenter = Math.hypot(dxFromCenter, dyFromCenter) || 1;
+              const outwardStrength = Math.max(0, 1 - distanceFromCenter / 560);
+              if (outwardStrength > 0) {
+                motifNode.x += (dxFromCenter / distanceFromCenter) * outwardStrength * 20;
+                motifNode.y += (dyFromCenter / distanceFromCenter) * outwardStrength * 20;
+              }
+
+              motifNode.x += (centerX - motifNode.x) * 0.01;
+              motifNode.y += (centerY - motifNode.y) * 0.01;
+
+              const songPoints = Array.from(motifNode.linkedSongIds || [])
+                .map((songId) => songNodes.get(songId))
+                .filter(Boolean)
+                .map((songNode) => ({ x: songNode.x, y: songNode.y }));
+
+              if (songPoints.length) {
+                const songCenter = average(songPoints);
+                motifNode.x += (songCenter.x - motifNode.x) * (0.12 + (motifNode.weight / Math.max(1, weightMax)) * 0.14);
+                motifNode.y += (songCenter.y - motifNode.y) * (0.12 + (motifNode.weight / Math.max(1, weightMax)) * 0.14);
+              }
+
+            });
+
+            songList.forEach((songNode) => {
+              const motifPoints = songNode.connectedMotifIds
+                .map((motifId) => motifNodes.get(motifId))
+                .filter(Boolean)
+                .map((motifNode) => ({ x: motifNode.x, y: motifNode.y }));
+
+              if (!motifPoints.length) return;
+
+              const target = average(motifPoints);
+              const pull = 0.18 + songNode.weight * 0.06;
+              songNode.x += (target.x - songNode.x) * pull;
+              songNode.y += (target.y - songNode.y) * pull;
+            });
+
+            motifList.forEach((motifNode) => {
+              motifNode.x = clamp(motifNode.x, PADDING, CANVAS_WIDTH - PADDING);
+              motifNode.y = clamp(motifNode.y, PADDING, CANVAS_HEIGHT - PADDING);
+            });
+
+            songList.forEach((songNode) => {
+              songNode.x = clamp(songNode.x, 90, CANVAS_WIDTH - 90);
+              songNode.y = clamp(songNode.y, 90, CANVAS_HEIGHT - 90);
+            });
+          }
+
+          return {
+            motifs: motifList,
+            songs: songList,
+            songEdges,
+            songLinks
+          };
+        }
+
+        async function hydrateGraphImages(graph) {
+          if (!graph || !Array.isArray(graph.songs)) {
+            return graph;
+          }
+
+          const [songResults, motifResults] = await Promise.all([
+            Promise.all(graph.songs.map(async (songNode) => {
+              const resolved = await resolveSongImageUrl(songNode);
+              if (resolved) {
+                songNode.imageUrl = resolved;
+              }
+              return songNode;
+            })),
+            Promise.all(graph.motifs.map(async (motifNode) => {
+              if (!motifNode.imageUrl) {
+                const fallback = resolveMotifImageUrl({ image: motifNode.imageUrl || motifNode.image || null });
+                if (fallback) {
+                  motifNode.imageUrl = fallback;
+                }
+              }
+              return motifNode;
+            }))
+          ]);
+
+          return {
+            ...graph,
+            songs: songResults,
+            motifs: motifResults
+          };
+        }
+
+        function attachNodeImage(container, node, circle, baseColor) {
+          const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          group.setAttribute('class', 'motif-map-node-group');
+          group.dataset.nodeId = node.id;
+          group.appendChild(circle);
+
+          const imageUrl = String(node.imageUrl || '').trim();
+          if (!imageUrl) {
+            circle.setAttribute('fill', baseColor);
+            container.appendChild(group);
+            return group;
+          }
+
+          const defs = container.ownerSVGElement.querySelector('defs');
+          const clipId = 'motif-map-clip-' + String(node.id).replace(/[^a-zA-Z0-9_-]/g, '-');
+
+          let clipPath = defs ? defs.querySelector('#' + clipId) : null;
+          if (!clipPath) {
+            clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+            clipPath.setAttribute('id', clipId);
+            const clipCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            clipCircle.setAttribute('cx', circle.getAttribute('cx'));
+            clipCircle.setAttribute('cy', circle.getAttribute('cy'));
+            clipCircle.setAttribute('r', circle.getAttribute('r'));
+            clipPath.appendChild(clipCircle);
+            defs.appendChild(clipPath);
+          }
+
+          const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+          const cx = Number(circle.getAttribute('cx'));
+          const cy = Number(circle.getAttribute('cy'));
+          const radius = Number(circle.getAttribute('r'));
+          img.setAttribute('href', imageUrl);
+          img.setAttribute('x', String(cx - radius));
+          img.setAttribute('y', String(cy - radius));
+          img.setAttribute('width', String(radius * 2));
+          img.setAttribute('height', String(radius * 2));
+          img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+          img.setAttribute('clip-path', 'url(#' + clipId + ')');
+          img.setAttribute('class', 'motif-map-node-image');
+          img.dataset.nodeId = node.id;
+          img.style.pointerEvents = 'none';
+
+          circle.setAttribute('fill', 'transparent');
+          group.appendChild(img);
+          container.appendChild(group);
+          return group;
+        }
+
+        function renderGraph(graph) {
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('viewBox', `0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`);
+          svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          svg.classList.add('motif-map-svg');
+
+          const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+          svg.appendChild(defs);
+
+          const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          bg.setAttribute('x', '0');
+          bg.setAttribute('y', '0');
+          bg.setAttribute('width', CANVAS_WIDTH);
+          bg.setAttribute('height', CANVAS_HEIGHT);
+          bg.setAttribute('fill', 'rgba(255,255,255,0.05)');
+          svg.appendChild(bg);
+
+          const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          svg.appendChild(contentGroup);
+
+          const allNodePoints = [...graph.motifs, ...graph.songs].map((node) => {
+            const radius = node.isSong ? (7 + Math.min(8, node.weight * 1.5)) : (22 + (node.weight / Math.max(1, graph.songs.length)) * 18);
+            return {
+              minX: node.x - radius,
+              minY: node.y - radius,
+              maxX: node.x + radius,
+              maxY: node.y + radius
+            };
+          });
+          const bounds = allNodePoints.reduce((acc, point) => {
+            acc.minX = Math.min(acc.minX, point.minX);
+            acc.minY = Math.min(acc.minY, point.minY);
+            acc.maxX = Math.max(acc.maxX, point.maxX);
+            acc.maxY = Math.max(acc.maxY, point.maxY);
+            return acc;
+          }, { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+
+          const bubble = 40;
+          const graphWidth = Math.max(bounds.maxX - bounds.minX, 1);
+          const graphHeight = Math.max(bounds.maxY - bounds.minY, 1);
+          const viewBoxLeft = bounds.minX - bubble;
+          const viewBoxTop = bounds.minY - bubble;
+          const viewBoxWidth = graphWidth + bubble * 2;
+          const viewBoxHeight = graphHeight + bubble * 2;
+
+          svg.setAttribute('viewBox', `${viewBoxLeft} ${viewBoxTop} ${viewBoxWidth} ${viewBoxHeight}`);
+
+          const edges = [];
+          graph.songEdges.forEach(({ source, target }) => {
+            const motifNode = graph.motifs.find((entry) => entry.id === target);
+            if (motifNode) {
+              edges.push({ source, target: motifNode });
+            }
+          });
+          (graph.songLinks || []).forEach(({ source, target }) => {
+            edges.push({ source, target });
+          });
+
+          const lineElements = [];
+          edges.forEach(({ source, target }) => {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', String(source.x));
+            line.setAttribute('y1', String(source.y));
+            line.setAttribute('x2', String(target.x));
+            line.setAttribute('y2', String(target.y));
+            line.setAttribute('class', 'motif-map-edge');
+            line.dataset.sourceId = source.id;
+            line.dataset.targetId = target.id;
+            lineElements.push(line);
+            contentGroup.appendChild(line);
+          });
+
+          const nodeMap = new Map();
+          const activateNode = (nodeId, isActive) => {
+            const activeClass = 'motif-map-node--active';
+            const activeLineClass = 'motif-map-edge--active';
+
+            svg.querySelectorAll('.motif-map-edge').forEach((line) => {
+              const matches = (line.dataset.sourceId === nodeId || line.dataset.targetId === nodeId);
+              line.classList.toggle(activeLineClass, Boolean(isActive && matches));
+            });
+
+            svg.querySelectorAll('.motif-map-node-group').forEach((group) => {
+              const matches = group.dataset.nodeId === nodeId;
+              group.classList.toggle(activeClass, Boolean(isActive && matches));
+            });
+
+            svg.querySelectorAll('.motif-map-label, .motif-map-song-label').forEach((label) => {
+              const matches = label.dataset.nodeId === nodeId;
+              label.classList.toggle('motif-map-label--active', Boolean(isActive && matches && label.classList.contains('motif-map-label')));
+              label.classList.toggle('motif-map-song-label--active', Boolean(isActive && matches && label.classList.contains('motif-map-song-label')));
+            });
+          };
+
+          const allNodes = [...graph.motifs, ...graph.songs];
+          const getNodeById = (nodeId) => allNodes.find((node) => node.id === nodeId) || null;
+          const navigateToNode = (nodeId) => {
+            const targetNode = getNodeById(nodeId);
+            if (!targetNode || !targetNode.pagePath) {
+              return;
+            }
+            window.location.assign(targetNode.pagePath);
+          };
+
+          graph.motifs.forEach((motifNode) => {
+            const radius = 22 + (motifNode.weight / Math.max(1, graph.songs.length)) * 18;
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            nodeMap.set(motifNode.id, circle);
+            circle.setAttribute('cx', String(motifNode.x));
+            circle.setAttribute('cy', String(motifNode.y));
+            circle.setAttribute('r', String(radius));
+            circle.setAttribute('fill', motifNode.color || '#ef8a85');
+            circle.setAttribute('class', 'motif-map-motif-node motif-map-node');
+            circle.dataset.nodeId = motifNode.id;
+
+            const group = attachNodeImage(contentGroup, motifNode, circle, motifNode.color || '#ef8a85');
+            group.dataset.nodeId = motifNode.id;
+            group.addEventListener('mouseenter', () => activateNode(motifNode.id, true));
+            group.addEventListener('mouseleave', () => activateNode(motifNode.id, false));
+            group.addEventListener('click', () => navigateToNode(motifNode.id));
+          });
+
+          graph.songs.forEach((songNode) => {
+            const radius = 7 + Math.min(8, songNode.weight * 1.5);
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            nodeMap.set(songNode.id, circle);
+            circle.setAttribute('cx', String(songNode.x));
+            circle.setAttribute('cy', String(songNode.y));
+            circle.setAttribute('r', String(radius));
+            circle.setAttribute('fill', songNode.color || '#351854');
+            circle.setAttribute('class', 'motif-map-song-node motif-map-node');
+            circle.dataset.nodeId = songNode.id;
+
+            const group = attachNodeImage(contentGroup, songNode, circle, songNode.color || '#351854');
+            group.dataset.nodeId = songNode.id;
+            group.addEventListener('mouseenter', () => activateNode(songNode.id, true));
+            group.addEventListener('mouseleave', () => activateNode(songNode.id, false));
+            group.addEventListener('click', () => navigateToNode(songNode.id));
+          });
+
+          graph.motifs.forEach((motifNode) => {
+            const labelText = wrapLabelText(motifNode.title || motifNode.id);
+            const labelPosition = getLabelPosition(motifNode, 22 + (motifNode.weight / Math.max(1, graph.songs.length)) * 18, labelText);
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', String(labelPosition.x + labelPosition.width / 2));
+            text.setAttribute('y', String(labelPosition.y));
+            text.setAttribute('class', 'motif-map-label');
+            text.setAttribute('font-weight', '700');
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            text.style.fontWeight = '700';
+            text.dataset.nodeId = motifNode.id;
+
+            labelText.forEach((line, lineIndex) => {
+              const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+              tspan.setAttribute('x', String(labelPosition.x + labelPosition.width / 2));
+              tspan.setAttribute('dy', lineIndex === 0 ? '0' : '12');
+              tspan.textContent = line;
+              text.appendChild(tspan);
+            });
+
+            text.addEventListener('mouseenter', () => activateNode(motifNode.id, true));
+            text.addEventListener('mouseleave', () => activateNode(motifNode.id, false));
+            text.addEventListener('click', () => navigateToNode(motifNode.id));
+            contentGroup.appendChild(text);
+          });
+
+          graph.songs.forEach((songNode) => {
+            const labelText = wrapLabelText(songNode.title);
+            const radius = 7 + Math.min(8, songNode.weight * 1.5);
+            const labelPosition = getLabelPosition(songNode, radius, labelText);
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', String(labelPosition.x + labelPosition.width / 2));
+            label.setAttribute('y', String(labelPosition.y));
+            label.setAttribute('class', 'motif-map-song-label');
+            label.setAttribute('font-weight', '700');
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('dominant-baseline', 'middle');
+            label.style.fontWeight = '700';
+            label.dataset.nodeId = songNode.id;
+
+            labelText.forEach((line, lineIndex) => {
+              const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+              tspan.setAttribute('x', String(labelPosition.x + labelPosition.width / 2));
+              tspan.setAttribute('dy', lineIndex === 0 ? '0' : '12');
+              tspan.textContent = line;
+              label.appendChild(tspan);
+            });
+
+            label.addEventListener('mouseenter', () => activateNode(songNode.id, true));
+            label.addEventListener('mouseleave', () => activateNode(songNode.id, false));
+            label.addEventListener('click', () => navigateToNode(songNode.id));
+            contentGroup.appendChild(label);
+          });
+
+          root.innerHTML = '';
+          root.appendChild(svg);
+        }
+
+        (async function () {
+          const graph = buildGraph();
+          const hydratedGraph = await hydrateGraphImages(graph);
+          renderGraph(hydratedGraph);
+        }());
+      }());
+    </script>
+  </body>
+</html>
