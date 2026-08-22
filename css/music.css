@@ -67,10 +67,10 @@ html {
   justify-content: center;
   background: linear-gradient(
     to bottom right,
-    var(--variation-color, var(--theme-color-variation_base)),
+    var(--variation-color, var(--theme-color-background_base)),
     var(--theme-color-surface_tint_card)
   );
-  color: color-mix(in srgb, var(--variation-color, var(--theme-color-variation_base)) 80%, var(--theme-color-surface_tint_card));
+  color: color-mix(in srgb, var(--variation-color, var(--theme-color-background_base)) 80%, var(--theme-color-surface_tint_card));
   font-weight: 800;
   font-size: 1.25rem;
   letter-spacing: 0.02em;

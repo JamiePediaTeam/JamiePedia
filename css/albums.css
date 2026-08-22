@@ -118,7 +118,7 @@ html {
 .album-nav-buttons a {
   flex: 1;
   padding: 5px;
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   color: var(--theme-color-link_default);
   border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;

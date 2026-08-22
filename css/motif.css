@@ -231,10 +231,10 @@ html {
   border: none;
   width: 100%;
   cursor: pointer;
-  color: color-mix(in srgb, var(--variation-color, var(--theme-color-variation_base)) 80%, var(--theme-color-surface_tint_card));
+  color: color-mix(in srgb, var(--variation-color, var(--theme-color-background_base)) 80%, var(--theme-color-surface_tint_card));
   background: linear-gradient(
     to bottom right,
-    var(--variation-color, var(--theme-color-variation_base)),
+    var(--variation-color, var(--theme-color-background_base)),
     var(--theme-color-surface_tint_card)
   );
   font-size: 1.25rem;

@@ -90,7 +90,7 @@ html {
   border: none;
   font-size: 1em;
   color: var(--theme-color-text_base_black);
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   font-weight: 500;
   border: 3px solid var(--theme-color-text_base_black);
   border-bottom: 0px solid var(--theme-color-transparent_value);
@@ -214,7 +214,7 @@ html {
   border: none;
   font-size: 0.95em;
   color: var(--theme-color-text_base_black);
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   font-weight: 500;
   border: 3px solid var(--theme-color-border_segment);
   border-bottom: 0px solid var(--theme-color-transparent_value);
@@ -287,7 +287,7 @@ html {
 .song-nav-buttons button {
   flex: 1;
   padding: 5px;
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   color: var(--theme-color-link_default);
   border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
@@ -310,7 +310,7 @@ html {
 .song-nav-buttons a {
   flex: 1;
   padding: 5px;
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   color: var(--theme-color-link_default);
   border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
@@ -386,7 +386,7 @@ html {
   padding: 2px 10px;
   height: auto;
   cursor: pointer;
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   font-size: 0.75em;
   color: var(--theme-color-text_base_black);
   font-weight: 500;
@@ -955,7 +955,7 @@ html {
   border: none;
   font-size: 1em;
   color: var(--theme-color-text_base_black);
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   font-weight: 500;
   border: 3px solid var(--theme-color-text_base_black);
   border-bottom: 0px solid var(--theme-color-transparent_value);

@@ -64,13 +64,13 @@ h1 {
   padding: 10px;
   background-image: url(public/images/logo.png);
   background-size: auto;
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
 }
 .navi {
   margin-top: 20px;
   margin-left: auto;
   margin-right: auto;
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
   height: 20px;
@@ -82,7 +82,7 @@ h1 {
   margin-top: 175px;
   margin-left: auto;
   margin-right: auto;
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
   width: 800px;
@@ -93,7 +93,7 @@ h1 {
   margin-top: 20px;
   margin-left: auto;
   margin-right: auto;
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
   width: 800px;
@@ -101,7 +101,7 @@ h1 {
   padding: 10px;
 }
 .bodybar {
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
   padding: 10px;
@@ -125,7 +125,7 @@ h1 {
   margin-bottom: 30px;
   margin-left: auto;
   margin-right: auto;
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
   height: 20px;
@@ -134,7 +134,7 @@ h1 {
   padding: 10px;
 }
 .sidebar1 {
-  background-color: var(--theme-color-variation_base);
+  background-color: var(--theme-color-background_base);
   border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
   padding: 10px;
