@@ -1,3 +1,8 @@
+html {
+  background-attachment: fixed;
+  background-color: var(--theme-color-keyword_white);
+}
+
 .song-container {
   display: flex;
   gap: 30px;
@@ -40,7 +45,7 @@
 
 .song-subtitle {
   font-size: 1.1em;
-  color: #666;
+  color: var(--theme-color-text_muted);
   margin-bottom: 20px;
 }
 
@@ -50,7 +55,7 @@
   margin-top: -4px;
   margin-bottom: 15px;
   padding-bottom: 10px;
-  border-bottom: 2px solid #999;
+  border-bottom: 2px solid var(--theme-color-border_segment);
 }
 
 .song-length.hide-border {
@@ -84,23 +89,23 @@
   background: none;
   border: none;
   font-size: 1em;
-  color: #000;
-  background-color: #FFFFFF;
+  color: var(--theme-color-text_base_black);
+  background-color: var(--theme-color-variation_base);
   font-weight: 500;
-  border: 3px solid #000;
-  border-bottom: 0px solid transparent;
+  border: 3px solid var(--theme-color-text_base_black);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
   border-radius: 4px 4px 0px 0px;
 }
 
 .song-tab:hover {
-  color: #68BDE7;
+  color: var(--theme-color-accent_hover);
 }
 
 .song-tab.active {
   padding: 4px 16px;
-  color: #ef8a85;
-  border: 3px solid #ef8a85;
-  border-bottom: 0px solid transparent;
+  color: var(--theme-color-link_default);
+  border: 3px solid var(--theme-color-link_default);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
   font-weight: bold;
 }
 
@@ -119,8 +124,8 @@
 .lyrics-content h1.song-markdown-h1 {
   margin: 0 0 14px 0;
   padding-bottom: 10px;
-  border-bottom: 2px solid #999;
-  color: #351854;
+  border-bottom: 2px solid var(--theme-color-border_segment);
+  color: var(--theme-color-brand_frame);
   font-family: "Nunito", sans-serif;
   font-size: 2em;
   line-height: 1.1;
@@ -130,7 +135,7 @@
 .song-content h2.song-markdown-h2,
 .lyrics-content h2.song-markdown-h2 {
   margin: 18px 0 10px 0;
-  color: #351854;
+  color: var(--theme-color-brand_frame);
   font-size: 1.45em;
   line-height: 1.2;
 }
@@ -138,7 +143,7 @@
 .song-content h3.song-markdown-h3,
 .lyrics-content h3.song-markdown-h3 {
   margin: 16px 0 8px 0;
-  color: #351854;
+  color: var(--theme-color-brand_frame);
   font-size: 1.2em;
   line-height: 1.25;
 }
@@ -155,16 +160,16 @@
 .lyrics-content blockquote {
   margin: 10px 0;
   padding: 8px 12px;
-  border-left: 3px solid #999;
-  background: #fafafa;
+  border-left: 3px solid var(--theme-color-border_segment);
+  background: var(--theme-color-surface_tint_card);
 }
 
 .song-markdown-code {
   margin: 10px 0;
   padding: 10px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid var(--theme-color-border_pill);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--theme-color-surface_tint_card);
   overflow-x: auto;
 }
 
@@ -176,14 +181,14 @@
 
 .song-markdown-hr {
   border: 0;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid var(--theme-color-border_pill);
   margin: 14px 0;
 }
 
 .lyrics-subtabs-container {
   margin: -10px 0 20px 0;
   padding: 0;
-  border-bottom: 2px solid #999;
+  border-bottom: 2px solid var(--theme-color-border_segment);
   padding-top: 10px;
   display: none;
 }
@@ -208,24 +213,24 @@
   background: none;
   border: none;
   font-size: 0.95em;
-  color: #000;
-  background-color: #FFFFFF;
+  color: var(--theme-color-text_base_black);
+  background-color: var(--theme-color-variation_base);
   font-weight: 500;
-  border: 3px solid #999;
-  border-bottom: 0px solid transparent;
+  border: 3px solid var(--theme-color-border_segment);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
   border-radius: 4px 4px 0px 0px;
   transition: color 0.2s ease;
 }
 
 .lyrics-subtab:hover {
-  color: #68BDE7;
+  color: var(--theme-color-accent_hover);
 }
 
 .lyrics-subtab.active {
   padding: 4px 16px;
-  color: #ef8a85;
-  border: 3px solid #ef8a85;
-  border-bottom: 0px solid transparent;
+  color: var(--theme-color-link_default);
+  border: 3px solid var(--theme-color-link_default);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
   font-weight: bold;
 }
 
@@ -247,8 +252,8 @@
   align-items: center;
   justify-content: center;
   font-size: 0.9em;
-  color: #999;
-  border: 2px solid #351854;
+  color: var(--theme-color-border_segment);
+  border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
   box-sizing: border-box;
   overflow: hidden;
@@ -266,7 +271,7 @@
   font-family: "Nunito", sans-serif;
   padding-top: 4px;
   font-size: 0.75em;
-  color: #000;
+  color: var(--theme-color-text_base_black);
   font-weight: 500;
   border-top: none;
   display: inline-block;
@@ -282,9 +287,9 @@
 .song-nav-buttons button {
   flex: 1;
   padding: 5px;
-  background-color: #FFFFFF;
-  color: #ef8a85;
-  border: 3px solid #351854;
+  background-color: var(--theme-color-variation_base);
+  color: var(--theme-color-link_default);
+  border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
@@ -292,22 +297,22 @@
 }
 
 .song-nav-buttons button:hover {
-  color: #68BDE7;
+  color: var(--theme-color-accent_hover);
 }
 
 .song-nav-buttons button:disabled {
-  background-color: #ccc;
-  border-color: #999;
-  color: #666;
+  background-color: var(--theme-color-border_pill);
+  border-color: var(--theme-color-border_segment);
+  color: var(--theme-color-text_muted);
   cursor: not-allowed;
 }
 
 .song-nav-buttons a {
   flex: 1;
   padding: 5px;
-  background-color: #FFFFFF;
-  color: #ef8a85;
-  border: 3px solid #351854;
+  background-color: var(--theme-color-variation_base);
+  color: var(--theme-color-link_default);
+  border: 3px solid var(--theme-color-brand_frame);
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
@@ -319,13 +324,13 @@
 }
 
 .song-nav-buttons a:hover {
-  color: #68BDE7;
+  color: var(--theme-color-accent_hover);
 }
 
 .song-info-block {
   margin-bottom: 20px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--theme-color-border_card_soft);
 }
 
 .song-info-block:last-child {
@@ -340,7 +345,7 @@
 
 .song-info-content {
   font-size: 0.9em;
-  color: #555;
+  color: var(--theme-color-text_info);
   line-height: 1.5;
 }
 
@@ -351,7 +356,7 @@
 }
 
 .song-links a {
-  color: #F05E55;
+  color: var(--theme-color-meta_theme_color);
   text-decoration: none;
   font-size: 0.9em;
 }
@@ -381,24 +386,24 @@
   padding: 2px 10px;
   height: auto;
   cursor: pointer;
-  background-color: #FFFFFF;
+  background-color: var(--theme-color-variation_base);
   font-size: 0.75em;
-  color: #000;
+  color: var(--theme-color-text_base_black);
   font-weight: 500;
-  border: 2px solid #000;
+  border: 2px solid var(--theme-color-text_base_black);
   border-bottom: none;
   border-radius: 4px 4px 0px 0px;
   display: inline-block;
 }
 
 .album-tab:hover {
-  color: #68BDE7;
+  color: var(--theme-color-accent_hover);
 }
 
 .album-tab.active {
   padding: 3px 10px;
-  color: #ef8a85;
-  border: 2px solid #ef8a85;
+  color: var(--theme-color-link_default);
+  border: 2px solid var(--theme-color-link_default);
   border-bottom: none;
   font-weight: bold;
 }
@@ -427,14 +432,14 @@
 .song-motifs-shell {
   border: none;
   border-radius: 0;
-  background: transparent;
+  background: var(--theme-color-transparent_value);
   padding: 0;
 }
 
 .song-motifs-title {
   margin: 0 0 10px;
   font-size: 1.15em;
-  border-bottom: 1px solid #bdbdbd;
+  border-bottom: 1px solid var(--theme-color-border_input);
   padding-bottom: 6px;
 }
 
@@ -444,7 +449,7 @@
   border-radius: 6px;
   overflow: hidden;
   margin: 0 0 12px;
-  background: #111;
+  background: var(--theme-color-text_primary);
 }
 
 #songMotifPlayerHost {
@@ -464,7 +469,7 @@
 .song-motif-volume-label {
   display: block;
   margin-bottom: 6px;
-  color: #222;
+  color: var(--theme-color-text_primary);
   font-size: 0.8em;
   font-weight: 700;
   text-align: center;
@@ -478,9 +483,9 @@
 .song-karaoke-wrap {
   width: min(540px, 100%);
   margin: 0 auto 14px;
-  border: 1px solid #cfcfcf;
+  border: 1px solid var(--theme-color-border_pill);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--theme-color-surface_tint_card);
   padding: 8px 10px;
   box-sizing: border-box;
   --karaoke-line-height: 1.34rem;
@@ -521,41 +526,41 @@
 }
 
 .song-karaoke-lyric-ref {
-  color: var(--lyric-ref-color, #ef8a85);
+  color: var(--lyric-ref-color, var(--theme-color-link_default));
 }
 
 .song-karaoke-line-prev {
   transform: translateY(var(--karaoke-prev-y));
   font-size: 0.9em;
-  color: #6f6f6f;
+  color: var(--theme-color-text_muted);
   font-weight: 600;
 }
 
 .song-karaoke-line-current {
   transform: translateY(var(--karaoke-current-y));
   font-size: 1em;
-  color: #111;
+  color: var(--theme-color-text_primary);
   font-weight: 800;
 }
 
 .song-karaoke-line-next {
   transform: translateY(var(--karaoke-next-y));
   font-size: 0.9em;
-  color: #2b2b2b;
+  color: var(--theme-color-text_karaoke_next);
   font-weight: 600;
 }
 
 .song-karaoke-layer-entering .song-karaoke-line-prev {
   transform: translateY(var(--karaoke-current-y));
   font-size: 1em;
-  color: #111;
+  color: var(--theme-color-text_primary);
   font-weight: 800;
 }
 
 .song-karaoke-layer-entering .song-karaoke-line-current {
   transform: translateY(var(--karaoke-next-y));
   font-size: 0.9em;
-  color: #2b2b2b;
+  color: var(--theme-color-text_karaoke_next);
   font-weight: 600;
 }
 
@@ -592,14 +597,14 @@
     transform: translateY(var(--karaoke-current-y));
     font-size: 1em;
     line-height: var(--karaoke-line-height);
-    color: #111;
+    color: var(--theme-color-text_primary);
     font-weight: 800;
   }
   100% {
     transform: translateY(var(--karaoke-prev-y));
     font-size: 0.9em;
     line-height: var(--karaoke-line-height);
-    color: #6f6f6f;
+    color: var(--theme-color-text_muted);
     font-weight: 600;
   }
 }
@@ -609,14 +614,14 @@
     transform: translateY(var(--karaoke-next-y));
     font-size: 0.9em;
     line-height: var(--karaoke-line-height);
-    color: #2b2b2b;
+    color: var(--theme-color-text_karaoke_next);
     font-weight: 600;
   }
   100% {
     transform: translateY(var(--karaoke-current-y));
     font-size: 1em;
     line-height: var(--karaoke-line-height);
-    color: #111;
+    color: var(--theme-color-text_primary);
     font-weight: 800;
   }
 }
@@ -627,14 +632,14 @@
     opacity: 0;
     font-size: 0.86em;
     line-height: var(--karaoke-line-height);
-    color: #4f4f4f;
+    color: var(--theme-color-text_transcript_muted);
   }
   100% {
     transform: translateY(var(--karaoke-next-y));
     opacity: 1;
     font-size: 0.9em;
     line-height: var(--karaoke-line-height);
-    color: #2b2b2b;
+    color: var(--theme-color-text_karaoke_next);
   }
 }
 
@@ -658,8 +663,8 @@
   height: 36px;
   border: none;
   border-radius: 4px;
-  background: #f0f0f0;
-  color: #111;
+  background: var(--theme-color-border_card_soft);
+  color: var(--theme-color-text_primary);
   font-weight: 700;
   cursor: pointer;
   z-index: 2;
@@ -673,7 +678,7 @@
 .song-motif-time-labels {
   display: flex;
   justify-content: space-between;
-  color: #222;
+  color: var(--theme-color-text_primary);
   font-size: 0.72em;
   letter-spacing: 0.02em;
   margin-bottom: 4px;
@@ -683,7 +688,7 @@
   width: 100%;
   height: 10px;
   border-radius: 999px;
-  background: #d3d3d3;
+  background: var(--theme-color-surface_track);
   overflow: hidden;
   position: relative;
   cursor: pointer;
@@ -692,7 +697,7 @@
 .song-motif-main-progress {
   width: 0;
   height: 100%;
-  background: #ef8a85;
+  background: var(--theme-color-link_default);
 }
 
 .song-motif-rows {
@@ -706,7 +711,7 @@
 
 .song-motif-label-link {
   text-decoration: none;
-  color: #222;
+  color: var(--theme-color-text_primary);
   font-weight: 700;
   font-size: 0.84em;
   line-height: 1.2;
@@ -716,11 +721,11 @@
 }
 
 .song-motif-label-link:hover {
-  color: #68BDE7;
+  color: var(--theme-color-accent_hover);
 }
 
 .song-motif-label-text:hover {
-  color: #222;
+  color: var(--theme-color-text_primary);
 }
 
 .song-motif-track {
@@ -728,7 +733,7 @@
   width: 100%;
   height: 10px;
   border-radius: 999px;
-  background: #d3d3d3;
+  background: var(--theme-color-surface_track);
 }
 
 .song-motif-segment {
@@ -742,12 +747,12 @@
 }
 
 .song-motif-segment.white-segment {
-  border: 1px solid #8e8e8e;
+  border: 1px solid var(--theme-color-border_segment);
   box-sizing: border-box;
 }
 
 .song-motif-segment.definition {
-  box-shadow: inset 0 0 0 2px #1f1f1f;
+  box-shadow: inset 0 0 0 2px var(--theme-color-text_primary);
 }
 
 .song-motif-list-title {
@@ -773,7 +778,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid #c8c8c8;
+  border: 1px solid var(--theme-color-border_pill);
   border-radius: 999px;
   padding: 5px 10px;
   font-size: 0.82em;
@@ -782,7 +787,7 @@
   opacity: 0.45;
   transition: opacity 0.15s ease, filter 0.15s ease;
   text-decoration: none;
-  color: #222;
+  color: var(--theme-color-text_primary);
 }
 
 .song-motif-legend-item.active {
@@ -791,30 +796,30 @@
 }
 
 .song-motif-legend-item:hover {
-  color: #68BDE7;
+  color: var(--theme-color-accent_hover);
 }
 
 .song-motif-swatch {
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  border: 1px solid #8e8e8e;
+  border: 1px solid var(--theme-color-border_segment);
 }
 
 .song-motif-empty {
-  border: 2px dashed #a09aa7;
+  border: 2px dashed var(--theme-color-border_empty_state);
   border-radius: 6px;
   padding: 10px;
-  color: #666;
-  background: #fafafa;
+  color: var(--theme-color-text_muted);
+  background: var(--theme-color-surface_tint_card);
 }
 
 .song-empty-box {
-  border: 2px dashed #a09aa7;
+  border: 2px dashed var(--theme-color-border_empty_state);
   border-radius: 6px;
   padding: 10px;
-  color: #666;
-  background: #fafafa;
+  color: var(--theme-color-text_muted);
+  background: var(--theme-color-surface_tint_card);
 }
 
 @media (max-width: 900px) {
@@ -837,7 +842,7 @@
   display: inline-block;
   vertical-align: super;
   font-size: 0.8em;
-  color: #F05E55;
+  color: var(--theme-color-meta_theme_color);
   text-decoration: none;
   cursor: pointer;
   position: relative;
@@ -845,7 +850,7 @@
 }
 
 .ref-tag:hover {
-  color: #d94a40;
+  color: var(--theme-color-accent_hover);
   text-decoration: underline;
 }
 
@@ -856,8 +861,8 @@
   bottom: 131%;
   left: 50%;
   transform: translateX(-50%);
-  background-color: white;
-  color: #333;
+  background-color: var(--theme-color-keyword_white);
+  color: var(--theme-color-text_karaoke_next);
   padding: 14px 16px;
   font-size: 0.95em;
   font-weight: normal;
@@ -868,8 +873,8 @@
   pointer-events: none;
   min-width: 300px;
   white-space: normal;
-  border: 1px solid #ccc;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--theme-color-border_pill);
+  box-shadow: 0 2px 8px var(--theme-color-shadow_soft);
   line-height: 1.5;
   overflow-wrap: break-word;
 }
@@ -882,9 +887,9 @@
   margin-left: -15px;
   width: 0;
   height: 0;
-  border-left: 15px solid transparent;
-  border-right: 15px solid transparent;
-  border-top: 15px solid #d9d9d9;
+  border-left: 15px solid var(--theme-color-transparent_value);
+  border-right: 15px solid var(--theme-color-transparent_value);
+  border-top: 15px solid var(--theme-color-border_pill);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s, visibility 0.2s;
@@ -901,7 +906,7 @@
 .references-section {
   margin-top: 30px;
   padding-top: 20px;
-  border-top: 2px solid #ddd;
+  border-top: 2px solid var(--theme-color-border_pill);
 }
 
 .references-section h3 {
@@ -927,7 +932,7 @@
 }
 
 .ref-back-link a {
-  color: #F05E55;
+  color: var(--theme-color-meta_theme_color);
   text-decoration: none;
   font-weight: bold;
 }
@@ -949,22 +954,22 @@
   background: none;
   border: none;
   font-size: 1em;
-  color: #000;
-  background-color: #FFFFFF;
+  color: var(--theme-color-text_base_black);
+  background-color: var(--theme-color-variation_base);
   font-weight: 500;
-  border: 3px solid #000;
-  border-bottom: 0px solid transparent;
+  border: 3px solid var(--theme-color-text_base_black);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
   border-radius: 4px 4px 0px 0px;
 }
 
 .version-tab:hover {
-  color: #68BDE7;
+  color: var(--theme-color-accent_hover);
 }
 
 .version-tab.active {
   padding: 4px 16px;
-  color: #ef8a85;
-  border: 3px solid #ef8a85;
-  border-bottom: 0px solid transparent;
+  color: var(--theme-color-link_default);
+  border: 3px solid var(--theme-color-link_default);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
   font-weight: bold;
 }

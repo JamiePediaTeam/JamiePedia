@@ -627,7 +627,28 @@ function renderTextParagraphs(text) {
 }
 
 function renderSummaryParagraphs(text) {
-  return renderMarkdownText(text);
+  const encoded = String(text || '').replace(/^[ \t]+/gm, (leadingWhitespace) => {
+    let tabCount = 0;
+    let spaceCount = 0;
+
+    for (let index = 0; index < leadingWhitespace.length; index += 1) {
+      if (leadingWhitespace[index] === '\t') {
+        tabCount += 1;
+      } else {
+        spaceCount += 1;
+      }
+    }
+
+    return '@@JPINDENT:' + tabCount + ':' + spaceCount + '@@';
+  });
+
+  const html = renderMarkdownText(encoded);
+
+  return String(html || '').replace(/@@JPINDENT:(\d+):(\d+)@@/g, (_match, tabs, spaces) => {
+    const tabIndent = '&nbsp;'.repeat(Number(tabs || 0) * 4);
+    const spaceIndent = '&nbsp;'.repeat(Number(spaces || 0));
+    return tabIndent + spaceIndent;
+  });
 }
 
 function songLyricsFallbackParseTimestamp(value) {
@@ -1098,7 +1119,7 @@ function initializeReferences() {
         e.preventDefault();
         refElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
         // Highlight the reference briefly
-        refElement.style.backgroundColor = 'rgba(240, 94, 85, 0.1)';
+        refElement.style.backgroundColor = 'color-mix(in srgb, var(--theme-color-meta_theme_color) 10%, transparent)';
         setTimeout(() => {
           refElement.style.backgroundColor = '';
         }, 2000);

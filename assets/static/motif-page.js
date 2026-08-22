@@ -635,6 +635,9 @@ function motifTranscriptFitToColumn(mount) {
         }
       }
 
+      // Ensure notation follows the active theme instead of hardcoded black.
+      motifTranscriptApplyThemeInk(mount);
+
       mount.style.height = scaledHeight + 'px';
       return true;
     }
@@ -758,6 +761,64 @@ function motifTranscriptSchedulePostRenderFit(mount) {
       }
       motifTranscriptFitToColumn(mount);
     }, delayMs);
+  });
+}
+
+function motifTranscriptIsBlackColor(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized || normalized === 'none') {
+    return false;
+  }
+
+  return normalized === '#000'
+    || normalized === '#000000'
+    || normalized === 'black'
+    || normalized === 'rgb(0,0,0)'
+    || normalized === 'rgb(0, 0, 0)'
+    || normalized === 'rgba(0,0,0,1)'
+    || normalized === 'rgba(0, 0, 0, 1)';
+}
+
+function motifTranscriptApplyThemeInk(mount) {
+  if (!mount) {
+    return;
+  }
+
+  const rootStyle = window.getComputedStyle(document.documentElement);
+  const transcriptColor = String(
+    rootStyle.getPropertyValue('--theme-color-text_base_black') || '#000000'
+  ).trim() || '#000000';
+
+  mount.style.color = transcriptColor;
+
+  const svgList = mount.querySelectorAll('svg');
+  svgList.forEach((svg) => {
+    svg.style.color = transcriptColor;
+
+    const nodes = svg.querySelectorAll('[fill],[stroke],[style],text,path,line,rect,circle,ellipse,polygon,polyline');
+    nodes.forEach((node) => {
+      const fill = node.getAttribute('fill');
+      const stroke = node.getAttribute('stroke');
+      const inlineStyle = node.getAttribute('style');
+
+      if (motifTranscriptIsBlackColor(fill)) {
+        node.setAttribute('fill', transcriptColor);
+      }
+
+      if (motifTranscriptIsBlackColor(stroke)) {
+        node.setAttribute('stroke', transcriptColor);
+      }
+
+      if (inlineStyle) {
+        const replacedStyle = inlineStyle
+          .replace(/fill\s*:\s*(#000000|#000|black|rgb\(0\s*,\s*0\s*,\s*0\)|rgba\(0\s*,\s*0\s*,\s*0\s*,\s*1\))/gi, 'fill: ' + transcriptColor)
+          .replace(/stroke\s*:\s*(#000000|#000|black|rgb\(0\s*,\s*0\s*,\s*0\)|rgba\(0\s*,\s*0\s*,\s*0\s*,\s*1\))/gi, 'stroke: ' + transcriptColor);
+
+        if (replacedStyle !== inlineStyle) {
+          node.setAttribute('style', replacedStyle);
+        }
+      }
+    });
   });
 }
 
@@ -2282,6 +2343,7 @@ async function renderMotifTranscriptFallback(xmlText, mount) {
     await osmd.load(xmlText);
     osmd.render();
     motifTranscriptStripTempoMarks(mount);
+    motifTranscriptApplyThemeInk(mount);
     motifTranscriptSchedulePostRenderFit(mount);
     return true;
   } catch (_error) {
@@ -2357,6 +2419,7 @@ async function renderMotifTranscript(motif, motifPageId, songsHeading, variation
 
     new RendererCtor(xmlResult.xmlText, host);
     motifTranscriptStripTempoMarks(mount);
+    motifTranscriptApplyThemeInk(mount);
     motifTranscriptSchedulePostRenderFit(mount);
     motifTranscriptBuildNoteVisuals();
     motifTranscriptUpdateSheetPlaybackVisuals(0);

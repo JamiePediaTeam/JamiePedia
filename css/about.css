@@ -1,3 +1,8 @@
+html {
+  background-attachment: fixed;
+  background-color: var(--theme-color-keyword_white);
+}
+
 .about-page {
   max-width: 900px;
   margin: 0 auto;
@@ -7,7 +12,7 @@
 
 .about-intro {
   margin: 0 0 26px 0;
-  color: #222;
+  color: var(--theme-color-text_primary);
   font-size: 1.02em;
   line-height: 1.55;
 }
@@ -38,9 +43,9 @@
   aspect-ratio: 1;
   object-fit: cover;
   display: block;
-  border: 2px solid #351854;
+  border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
-  background: #f9f7f5;
+  background: var(--theme-color-surface_tint_card);
 }
 
 .contributor-content {
@@ -51,8 +56,8 @@
 .contributor-name {
   margin: 0 0 10px 0;
   padding-bottom: 8px;
-  border-bottom: 2px solid #999;
-  color: #351854;
+  border-bottom: 2px solid var(--theme-color-border_segment);
+  color: var(--theme-color-brand_frame);
   font-family: "Nunito", sans-serif;
   font-size: 2em;
   font-weight: 700;
@@ -61,7 +66,7 @@
 
 .contributor-description {
   margin: 0;
-  color: #151515;
+  color: var(--theme-color-text_primary);
   line-height: 1.6;
 }
 

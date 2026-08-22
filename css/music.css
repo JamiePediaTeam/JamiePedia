@@ -1,4 +1,6 @@
 html {
+  background-attachment: fixed;
+  background-color: var(--theme-color-keyword_white);
   overflow-y: scroll;
 }
 
@@ -20,13 +22,13 @@ html {
   aspect-ratio: 1;
   object-fit: contain;
   border-radius: 4px;
-  border: 2px solid #351854;
+  border: 2px solid var(--theme-color-brand_frame);
   display: block;
-  background-color: #f9f7f5;
+  background-color: var(--theme-color-surface_tint_card);
 }
 
 .motif-variation-cover {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--motif-icon-color, #ef8a85) 30%, #ffffff), #f9f7f5);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--motif-icon-color, var(--theme-color-link_default)) 30%, var(--theme-color-surface_tint_card)), var(--theme-color-surface_tint_card));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -36,14 +38,14 @@ html {
 .motif-variation-cover-panel {
   display: grid;
   grid-template-columns: 1fr 34%;
-  border: 2px solid #351854;
+  border: 2px solid var(--theme-color-brand_frame);
   overflow: hidden;
-  background: #000000;
+  background: var(--theme-color-text_base_black);
 }
 
 .motif-variation-cover-art-wrap {
   min-width: 0;
-  border-right: 2px solid #351854;
+  border-right: 2px solid var(--theme-color-brand_frame);
 }
 
 .motif-variation-cover-art {
@@ -56,7 +58,7 @@ html {
 .motif-variation-cover-side {
   display: grid;
   grid-template-rows: repeat(2, 1fr);
-  background: #000000;
+  background: var(--theme-color-text_base_black);
 }
 
 .motif-variation-cover-badge {
@@ -65,29 +67,29 @@ html {
   justify-content: center;
   background: linear-gradient(
     to bottom right,
-    var(--variation-color, #9ec7cd),
-    #ffffff
+    var(--variation-color, var(--theme-color-variation_base)),
+    var(--theme-color-surface_tint_card)
   );
-  color: color-mix(in srgb, var(--variation-color, #9ec7cd) 80%, #ffffff);
+  color: color-mix(in srgb, var(--variation-color, var(--theme-color-variation_base)) 80%, var(--theme-color-surface_tint_card));
   font-weight: 800;
   font-size: 1.25rem;
   letter-spacing: 0.02em;
   text-shadow:
-    -1px 0 #000000,
-    1px 0 #000000,
-    0 -1px #000000,
-    0 1px #000000;
+    -1px 0 var(--theme-color-text_base_black),
+    1px 0 var(--theme-color-text_base_black),
+    0 -1px var(--theme-color-text_base_black),
+    0 1px var(--theme-color-text_base_black);
 }
 
 .motif-variation-cover-badge + .motif-variation-cover-badge {
-  border-top: 2px solid #351854;
+  border-top: 2px solid var(--theme-color-brand_frame);
 }
 
 .motif-variation-cover .motif-variation-base {
   font-weight: 900;
   font-size: 2.2em;
   letter-spacing: 0.03em;
-  color: #1f1f1f;
+  color: var(--theme-color-text_primary);
 }
 
 .motif-variation-cover .motif-variation-badge-list {
@@ -103,9 +105,9 @@ html {
   height: 24px;
   padding: 0 6px;
   border-radius: 4px;
-  border: 2px solid #351854;
-  background: #ffffff;
-  color: #111111;
+  border: 2px solid var(--theme-color-brand_frame);
+  background: var(--theme-color-surface_tint_card);
+  color: var(--theme-color-text_primary);
   font-weight: 900;
   font-size: 0.9em;
   line-height: 20px;
@@ -116,7 +118,7 @@ html {
   margin-top: 12px;
   font-size: 14px;
   font-weight: 600;
-  color: #ef8a85;
+  color: var(--theme-color-link_default);
   word-wrap: break-word;
   text-decoration: none;
   display: block;
@@ -125,7 +127,7 @@ html {
 .album-subtitle {
   margin-top: -5px;
   font-size: 12px;
-  color: #666;
+  color: var(--theme-color-text_muted);
   font-weight: 400;
   display: block;
 }

@@ -1,3 +1,8 @@
+html {
+  background-attachment: fixed;
+  background-color: var(--theme-color-keyword_white);
+}
+
 .motif-layout {
   display: flex;
   gap: 24px;
@@ -14,7 +19,7 @@
   font-size: 2.5em;
   line-height: 1.0;
   padding-bottom: 10px;
-  border-bottom: 2px solid #999;
+  border-bottom: 2px solid var(--theme-color-border_segment);
 }
 
 .motif-overview {
@@ -36,13 +41,13 @@
 .motif-summary-title {
   margin: 0 0 8px;
   font-size: 1.05em;
-  color: #2a2a2a;
+  color: var(--theme-color-text_primary);
 }
 
 .motif-summary-content {
   font-size: 0.86em;
   line-height: 1.45;
-  color: #222222;
+  color: var(--theme-color-text_primary);
 }
 
 .motif-summary-content p {
@@ -50,11 +55,11 @@
 }
 
 .motif-empty-box {
-  border: 2px dashed #a09aa7;
+  border: 2px dashed var(--theme-color-border_empty_state);
   border-radius: 6px;
   padding: 10px;
-  color: #666666;
-  background: #fafafa;
+  color: var(--theme-color-text_muted);
+  background: var(--theme-color-surface_tint_card);
 }
 
 .motif-overview-meta {
@@ -65,7 +70,7 @@
   border: none;
   border-radius: 0;
   padding: 0;
-  background: transparent;
+  background: var(--theme-color-transparent_value);
 }
 
 .motif-transcript-control-dock {
@@ -79,7 +84,7 @@
 .motif-transcript-control-label {
   display: none;
   margin: 0 0 4px;
-  color: #3a3a3a;
+  color: var(--theme-color-text_karaoke_next);
   font-size: 0.72em;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -95,19 +100,19 @@
 
 .motif-transcript-instrument-label {
   display: none;
-  color: #333333;
+  color: var(--theme-color-text_karaoke_next);
   font-size: 0.68em;
   font-weight: 700;
   flex: 0 0 auto;
 }
 
 .motif-transcript-instrument-select {
-  border: 1px solid #b8b8b8;
+  border: 1px solid var(--theme-color-border_input);
   border-radius: 6px;
   padding: 3px 5px;
   font-size: 0.72em;
-  background: #ffffff;
-  color: #1c1c1c;
+  background: var(--theme-color-surface_tint_card);
+  color: var(--theme-color-text_primary);
   width: 100%;
   min-width: 78px;
   max-width: 118px;
@@ -126,7 +131,7 @@
 .motif-volume-label {
   display: block;
   margin-bottom: 6px;
-  color: #222222;
+  color: var(--theme-color-text_primary);
   font-size: 0.72em;
   font-weight: 700;
   text-align: center;
@@ -141,14 +146,14 @@
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
-  border: 2px solid #351854;
+  border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
-  background: #f9f7f5;
+  background: var(--theme-color-surface_tint_card);
 }
 
 .motif-first-appears {
   margin-top: 10px;
-  border-top: 1px solid #d9d9d9;
+  border-top: 1px solid var(--theme-color-border_pill);
   padding-top: 8px;
 }
 
@@ -156,33 +161,33 @@
   margin: 0 0 4px;
   font-size: 0.78em;
   font-weight: 700;
-  color: #333333;
+  color: var(--theme-color-text_karaoke_next);
 }
 
 .motif-first-appears-value {
   font-size: 0.8em;
-  color: #202020;
+  color: var(--theme-color-text_primary);
   min-height: 1.2em;
 }
 
 .motif-first-appears-value a {
-  color: #202020;
+  color: var(--theme-color-text_primary);
   text-decoration: none;
-  border-bottom: 1px solid #9a9a9a;
+  border-bottom: 1px solid var(--theme-color-border_segment);
 }
 
 .motif-first-appears-value a:hover {
-  color: #68BDE7;
-  border-bottom-color: #68BDE7;
+  color: var(--theme-color-accent_hover);
+  border-bottom-color: var(--theme-color-accent_hover);
 }
 
 .motif-variation-icon {
   width: 100%;
   aspect-ratio: 1;
-  border: 2px solid #351854;
+  border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--motif-icon-color, #ef8a85) 30%, #ffffff), #f9f7f5);
-  color: #1f1f1f;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--motif-icon-color, var(--theme-color-link_default)) 30%, var(--theme-color-surface_tint_card)), var(--theme-color-surface_tint_card));
+  color: var(--theme-color-text_primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -195,16 +200,16 @@
   aspect-ratio: 1;
   display: grid;
   grid-template-columns: 1fr 82px;
-  border: 2px solid #351854;
+  border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
   overflow: hidden;
-  background: #000000;
+  background: var(--theme-color-text_base_black);
   box-sizing: border-box;
 }
 
 .motif-variation-art-wrap {
   min-width: 0;
-  border-right: 2px solid #351854;
+  border-right: 2px solid var(--theme-color-brand_frame);
 }
 
 .motif-variation-art {
@@ -226,20 +231,20 @@
   border: none;
   width: 100%;
   cursor: pointer;
-  color: color-mix(in srgb, var(--variation-color, #9ec7cd) 80%, #ffffff);
+  color: color-mix(in srgb, var(--variation-color, var(--theme-color-variation_base)) 80%, var(--theme-color-surface_tint_card));
   background: linear-gradient(
     to bottom right,
-    var(--variation-color, #9ec7cd),
-    #ffffff
+    var(--variation-color, var(--theme-color-variation_base)),
+    var(--theme-color-surface_tint_card)
   );
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-shadow:
-    -1px 0 #000000,
-    1px 0 #000000,
-    0 -1px #000000,
-    0 1px #000000;
+    -1px 0 var(--theme-color-text_base_black),
+    1px 0 var(--theme-color-text_base_black),
+    0 -1px var(--theme-color-text_base_black),
+    0 1px var(--theme-color-text_base_black);
   transition: filter 0.18s ease, opacity 0.18s ease;
 }
 
@@ -254,7 +259,7 @@
 }
 
 .motif-variation-side-badge + .motif-variation-side-badge {
-  border-top: 2px solid #351854;
+  border-top: 2px solid var(--theme-color-brand_frame);
 }
 
 .motif-variation-base {
@@ -276,8 +281,8 @@
   height: 24px;
   padding: 0 6px;
   border-radius: 4px;
-  border: 2px solid #351854;
-  background: #ffffff;
+  border: 2px solid var(--theme-color-brand_frame);
+  background: var(--theme-color-surface_tint_card);
   font-weight: 900;
   font-size: 0.9em;
   line-height: 20px;
@@ -288,7 +293,7 @@
   margin-top: 10px;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 2px solid #999;
+  border-bottom: 2px solid var(--theme-color-border_segment);
   font-size: 1.2em;
 }
 
@@ -303,31 +308,31 @@
 
 .motif-transcript-subtitle {
   margin: -4px 0 10px;
-  color: #4b4b4b;
+  color: var(--theme-color-text_transcript_muted);
   font-size: 0.85em;
 }
 
 .motif-transcript-status {
   margin: 0 0 10px;
-  color: #4b4b4b;
+  color: var(--theme-color-text_transcript_muted);
   font-size: 0.8em;
   min-height: 0;
 }
 
 .motif-transcript-status.is-error {
-  color: #8a1f1f;
+  color: var(--theme-color-text_error);
 }
 
 .motif-transcript-status.is-muted {
-  color: #666666;
+  color: var(--theme-color-text_muted);
 }
 
 .motif-transcript-player {
   margin: 0;
-  border: 1px solid #d0d0d0;
+  border: 1px solid var(--theme-color-border_pill);
   border-radius: 999px;
   padding: 4px 8px;
-  background: #efefef;
+  background: var(--theme-color-border_card_soft);
   width: fit-content;
 }
 
@@ -343,10 +348,10 @@
 }
 
 .motif-transcript-player-btn {
-  border: 1px solid #2f2f2f;
+  border: 1px solid var(--theme-color-text_karaoke_next);
   border-radius: 4px;
-  background: #ffffff;
-  color: #111111;
+  background: var(--theme-color-surface_tint_card);
+  color: var(--theme-color-text_primary);
   font-weight: 700;
   font-size: 0.82em;
   padding: 4px 10px;
@@ -363,7 +368,7 @@
 }
 
 .motif-transcript-player-btn:hover {
-  background: #f1f1f1;
+  background: var(--theme-color-border_card_soft);
 }
 
 .motif-transcript-player-btn.secondary {
@@ -371,7 +376,7 @@
 }
 
 .motif-transcript-player-timing {
-  color: #333333;
+  color: var(--theme-color-text_karaoke_next);
   font-size: 0.74em;
   margin-left: 0;
   min-width: 64px;
@@ -379,17 +384,17 @@
 
 .motif-transcript-player-message {
   margin: 6px 0 0;
-  color: #555555;
+  color: var(--theme-color-text_motif_help);
   font-size: 0.78em;
   display: none;
 }
 
 .motif-transcript-player-message.is-error {
-  color: #8a1f1f;
+  color: var(--theme-color-text_error);
 }
 
 .motif-transcript-player-message.is-muted {
-  color: #666666;
+  color: var(--theme-color-text_muted);
 }
 
 .motif-transcript-mount {
@@ -399,7 +404,7 @@
   position: relative;
   border: none;
   border-radius: 0;
-  background: transparent;
+  background: var(--theme-color-transparent_value);
   padding: 0;
   box-sizing: border-box;
 }
@@ -415,7 +420,7 @@
   width: 2px;
   pointer-events: none;
   opacity: 0;
-  background: #ffe754;
+  background: var(--theme-color-surface_highlight);
   transition: opacity 0.15s ease;
   z-index: 12;
 }
@@ -446,7 +451,7 @@
   display: grid;
   gap: 14px;
   padding: 0;
-  background: transparent;
+  background: var(--theme-color-transparent_value);
   border: none;
 }
 
@@ -469,12 +474,12 @@
 }
 
 .motif-song-pill {
-  background: #ffffff;
-  border: 2px solid #351854;
+  background: var(--theme-color-surface_tint_card);
+  border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
   min-height: 74px;
   padding: 8px;
-  color: #111111;
+  color: var(--theme-color-text_primary);
   text-decoration: none;
   font-weight: 700;
   font-size: 0.9em;
@@ -486,8 +491,8 @@
 }
 
 .motif-song-pill:hover {
-  color: #68BDE7;
-  border-color: #68BDE7;
+  color: var(--theme-color-accent_hover);
+  border-color: var(--theme-color-accent_hover);
 }
 
 .motif-player-main {
@@ -504,8 +509,8 @@
 .motif-play-btn {
   border: none;
   border-radius: 4px;
-  background: #f0f0f0;
-  color: #111;
+  background: var(--theme-color-border_card_soft);
+  color: var(--theme-color-text_primary);
   width: 44px;
   height: 32px;
   cursor: pointer;
@@ -519,7 +524,7 @@
 .motif-time-labels {
   display: flex;
   justify-content: space-between;
-  color: #222222;
+  color: var(--theme-color-text_primary);
   font-size: 0.72em;
   letter-spacing: 0.02em;
   margin-bottom: 4px;
@@ -529,7 +534,7 @@
   width: 100%;
   height: 10px;
   border-radius: 999px;
-  background: #e3e3e3;
+  background: var(--theme-color-surface_track);
   overflow: hidden;
   position: relative;
   cursor: pointer;
@@ -538,7 +543,7 @@
 .motif-main-progress {
   height: 100%;
   width: 0;
-  background: #351854;
+  background: var(--theme-color-brand_frame);
 }
 
 .motif-segment-track {
@@ -546,7 +551,7 @@
   width: 100%;
   height: 10px;
   border-radius: 999px;
-  background: #e3e3e3;
+  background: var(--theme-color-surface_track);
   margin-top: 8px;
 }
 
@@ -556,14 +561,14 @@
   height: 10px;
   border: none;
   border-radius: 999px;
-  background: #351854;
+  background: var(--theme-color-brand_frame);
   cursor: pointer;
   padding: 0;
   overflow: visible;
 }
 
 .motif-segment.definition {
-  box-shadow: inset 0 0 0 2px #1f1f1f;
+  box-shadow: inset 0 0 0 2px var(--theme-color-text_primary);
 }
 
 .motif-segment-badge {
@@ -573,9 +578,9 @@
   min-width: 14px;
   height: 14px;
   border-radius: 3px;
-  border: 1px solid #1f1f1f;
-  background: #ffffff;
-  color: #111111;
+  border: 1px solid var(--theme-color-text_primary);
+  background: var(--theme-color-surface_tint_card);
+  color: var(--theme-color-text_primary);
   font-size: 0.62rem;
   line-height: 12px;
   font-weight: 900;
@@ -585,7 +590,7 @@
 
 .motif-label {
   margin-top: 6px;
-  color: #222222;
+  color: var(--theme-color-text_primary);
   font-size: 0.74em;
   font-weight: 700;
 }
@@ -597,11 +602,11 @@
 }
 
 .motif-empty {
-  border: 2px dashed #a09aa7;
+  border: 2px dashed var(--theme-color-border_empty_state);
   border-radius: 6px;
   padding: 10px;
-  color: #666;
-  background: #fafafa;
+  color: var(--theme-color-text_muted);
+  background: var(--theme-color-surface_tint_card);
 }
 
 @media (max-width: 900px) {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html data-theme-id="default" style="background-image: url(../public/images/backgrounds/critterwhitegreenred.png);">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,8 +16,8 @@
       .motif-map-wrap {
         width: 100%;
         min-height: 900px;
-        background: rgba(255, 255, 255, 0.6);
-        border: 3px solid #351854;
+        background: color-mix(in srgb, var(--theme-color-surface_tint_card) 60%, transparent);
+        border: 3px solid var(--theme-color-brand_frame);
         border-radius: 5px;
         overflow: hidden;
         position: relative;
@@ -27,18 +27,18 @@
         display: block;
         width: 100%;
         height: 900px;
-        background: rgba(255, 255, 255, 0.15);
+        background: color-mix(in srgb, var(--theme-color-surface_tint_card) 15%, transparent);
       }
 
       .motif-map-edge {
-        stroke: rgba(53, 24, 84, 0.38);
+        stroke: color-mix(in srgb, var(--theme-color-brand_frame) 38%, transparent);
         stroke-width: 1.1;
         fill: none;
         transition: stroke-width 0.18s ease, stroke 0.18s ease, opacity 0.18s ease;
       }
 
       .motif-map-edge--active {
-        stroke: rgba(53, 24, 84, 0.9);
+        stroke: color-mix(in srgb, var(--theme-color-brand_frame) 90%, transparent);
         stroke-width: 2.6;
         opacity: 1;
       }
@@ -51,15 +51,15 @@
       }
 
       .motif-map-song-node {
-        fill: #f0f0f0;
-        stroke: rgba(53, 24, 84, 0.8);
+        fill: var(--theme-color-border_card_soft);
+        stroke: color-mix(in srgb, var(--theme-color-brand_frame) 80%, transparent);
         stroke-width: 1.4;
         transition: stroke-width 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
         cursor: pointer;
       }
 
       .motif-map-motif-node {
-        stroke: rgba(16, 16, 16, 0.75);
+        stroke: color-mix(in srgb, var(--theme-color-text_primary) 75%, transparent);
         stroke-width: 1.8;
         transition: stroke-width 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
         cursor: pointer;
@@ -74,7 +74,7 @@
 
       .motif-map-node-group.motif-map-node--active {
         opacity: 1;
-        filter: drop-shadow(0 0 5px rgba(53, 24, 84, 0.25));
+        filter: drop-shadow(0 0 5px color-mix(in srgb, var(--theme-color-brand_frame) 25%, transparent));
         transform: scale(1.08);
       }
 
@@ -86,10 +86,10 @@
       .motif-map-label,
       .motif-map-song-label {
         font-size: 11px;
-        fill: rgba(18, 18, 18, 0.9);
+        fill: color-mix(in srgb, var(--theme-color-text_primary) 90%, transparent);
         font-weight: 700;
         paint-order: stroke;
-        stroke: rgba(255, 255, 255, 0.7);
+        stroke: color-mix(in srgb, var(--theme-color-surface_tint_card) 70%, transparent);
         stroke-width: 1.6px;
         stroke-linejoin: round;
         font-family: "Nunito", sans-serif;
@@ -101,12 +101,12 @@
       .motif-map-label--active,
       .motif-map-song-label--active {
         font-size: 13px;
-        fill: rgba(18, 18, 18, 1);
+        fill: var(--theme-color-text_primary);
       }
 
       .motif-map-legend {
         margin-top: 12px;
-        color: #2d2d2d;
+        color: var(--theme-color-text_primary);
         font-size: 0.9em;
       }
     </style>
@@ -408,17 +408,28 @@
           });
 
           const graphSongIds = new Set();
+          const exactSongKeySource = new Map();
+          allSongs.forEach((song) => {
+            const exactKeys = [String(song.songId || '').trim(), String(song.title || '').trim()].filter(Boolean);
+            exactKeys.forEach((key) => {
+              exactSongKeySource.set(key, song);
+            });
+          });
+
           allSongs.forEach((song) => {
             const refs = getSongMotifRefs(song);
             refs.forEach((ref) => {
-              const normalizedRef = normalizeGraphKey(ref.motifId);
-              if (!normalizedRef) {
+              const refValue = String(ref.motifId || '').trim();
+              if (!refValue || motifById.has(refValue)) {
                 return;
               }
-              const targetSong = songLookup.get(normalizedRef);
+
+              const targetSong = exactSongKeySource.get(refValue)
+                || exactSongKeySource.get(String(refValue).replace(/[_\s]+/g, '-').replace(/[^a-z0-9-]+/gi, '-'));
               if (!targetSong) {
                 return;
               }
+
               const currentKey = normalizeGraphKey(song.songId || song.title);
               const targetKey = normalizeGraphKey(targetSong.songId || targetSong.title);
               if (currentKey !== targetKey && targetSong && targetSong.title) {
@@ -438,14 +449,17 @@
             }
 
             return refs.some((ref) => {
-              const normalizedRef = normalizeGraphKey(ref.motifId);
-              if (!normalizedRef) {
+              const refValue = String(ref.motifId || '').trim();
+              if (!refValue || motifById.has(refValue)) {
                 return false;
               }
-              const targetSong = songLookup.get(normalizedRef);
+
+              const targetSong = exactSongKeySource.get(refValue)
+                || exactSongKeySource.get(String(refValue).replace(/[_\s]+/g, '-').replace(/[^a-z0-9-]+/gi, '-'));
               if (!targetSong) {
                 return false;
               }
+
               return normalizeGraphKey(targetSong.songId || targetSong.title) !== normalizeGraphKey(song.songId || song.title);
             });
           });
@@ -482,9 +496,6 @@
                 referenceKeys.add(refKey);
               }
             });
-            const titleKeys = [song.title, song.songId || song.title].map((value) => normalizeGraphKey(value)).filter(Boolean);
-            titleKeys.forEach((key) => referenceKeys.add(key));
-
             const songNode = {
               id: 'song-' + (song.songId || song.title),
               title: song.title,
@@ -579,6 +590,10 @@
 
             refs.forEach((ref) => {
               const refValue = String(ref.motifId || '').trim();
+              if (!refValue || motifById.has(refValue)) {
+                return;
+              }
+
               const targetSong = findSongReferenceTarget(allSongs, sourceSong || {}, refValue) || songExactIndex.get(refValue);
               if (!targetSong || String(targetSong.songId || targetSong.title || '').trim() === String(songNode.songKey || songNode.title || '').trim()) {
                 return;
@@ -819,21 +834,18 @@
                 .filter(Boolean)
                 .map((connectedSong) => ({ x: connectedSong.x, y: connectedSong.y }));
 
-              if (!songNode.connectedMotifIds.length && connectedSongPoints.length) {
-                const target = average(connectedSongPoints);
-                const pull = 0.22;
-                songNode.x += (target.x - songNode.x) * pull;
-                songNode.y += (target.y - songNode.y) * pull;
-                return;
-              }
-
               const motifPoints = songNode.connectedMotifIds
                 .map((motifId) => motifNodes.get(motifId))
                 .filter(Boolean)
                 .map((motifNode) => ({ x: motifNode.x, y: motifNode.y }));
 
-              const target = average(motifPoints);
-              const pull = 0.18 + songNode.weight * 0.06;
+              const targetPoints = [...connectedSongPoints, ...motifPoints];
+              if (!targetPoints.length) {
+                return;
+              }
+
+              const target = average(targetPoints);
+              const pull = 0.18 + songNode.weight * 0.06 + (connectedSongPoints.length ? 0.12 : 0);
               songNode.x += (target.x - songNode.x) * pull;
               songNode.y += (target.y - songNode.y) * pull;
             });
@@ -951,7 +963,7 @@
           bg.setAttribute('y', '0');
           bg.setAttribute('width', CANVAS_WIDTH);
           bg.setAttribute('height', CANVAS_HEIGHT);
-          bg.setAttribute('fill', 'rgba(255,255,255,0.05)');
+          bg.setAttribute('fill', 'color-mix(in srgb, var(--theme-color-surface_tint_card) 5%, transparent)');
           svg.appendChild(bg);
 
           const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
