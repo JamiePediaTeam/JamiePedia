@@ -24,7 +24,7 @@ html {
   border-radius: 4px;
   border: 2px solid var(--theme-color-brand_frame);
   display: block;
-  background-color: var(--theme-color-surface_tint_card);
+  background-color: var(--theme-color-background_base);
 }
 
 .album-title {

@@ -93,8 +93,8 @@ const themeColumnAliases = {
   surface_soft: 'border_card_soft',
   surface_button: 'border_card_soft',
   surface_control: 'border_card_soft',
-  surface_empty_state: 'surface_tint_card',
-  surface_base: 'surface_tint_card'
+  surface_empty_state: 'background_base',
+  surface_base: 'background_base'
 };
 
 function applyThemeRow(themeRow) {

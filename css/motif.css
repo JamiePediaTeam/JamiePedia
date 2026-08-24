@@ -59,7 +59,7 @@ html {
   border-radius: 6px;
   padding: 10px;
   color: var(--theme-color-text_muted);
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
 }
 
 .motif-overview-meta {
@@ -111,7 +111,7 @@ html {
   border-radius: 6px;
   padding: 3px 5px;
   font-size: 0.72em;
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
   color: var(--theme-color-text_primary);
   width: 100%;
   min-width: 78px;
@@ -148,7 +148,7 @@ html {
   object-fit: cover;
   border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
 }
 
 .motif-first-appears {
@@ -186,7 +186,7 @@ html {
   aspect-ratio: 1;
   border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--motif-icon-color, var(--theme-color-link_default)) 30%, var(--theme-color-surface_tint_card)), var(--theme-color-surface_tint_card));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--motif-icon-color, var(--theme-color-link_default)) 30%, var(--theme-color-background_base)), var(--theme-color-background_base));
   color: var(--theme-color-text_primary);
   display: flex;
   align-items: center;
@@ -231,11 +231,11 @@ html {
   border: none;
   width: 100%;
   cursor: pointer;
-  color: color-mix(in srgb, var(--variation-color, var(--theme-color-background_base)) 80%, var(--theme-color-surface_tint_card));
+  color: color-mix(in srgb, var(--variation-color, var(--theme-color-background_base)) 80%, var(--theme-color-background_base));
   background: linear-gradient(
     to bottom right,
     var(--variation-color, var(--theme-color-background_base)),
-    var(--theme-color-surface_tint_card)
+    var(--theme-color-background_base)
   );
   font-size: 1.25rem;
   font-weight: 800;
@@ -282,7 +282,7 @@ html {
   padding: 0 6px;
   border-radius: 4px;
   border: 2px solid var(--theme-color-brand_frame);
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
   font-weight: 900;
   font-size: 0.9em;
   line-height: 20px;
@@ -350,7 +350,7 @@ html {
 .motif-transcript-player-btn {
   border: 1px solid var(--theme-color-text_karaoke_next);
   border-radius: 4px;
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
   color: var(--theme-color-text_primary);
   font-weight: 700;
   font-size: 0.82em;
@@ -474,7 +474,7 @@ html {
 }
 
 .motif-song-pill {
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
   border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
   min-height: 74px;
@@ -579,7 +579,7 @@ html {
   height: 14px;
   border-radius: 3px;
   border: 1px solid var(--theme-color-text_primary);
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
   color: var(--theme-color-text_primary);
   font-size: 0.62rem;
   line-height: 12px;
@@ -606,7 +606,7 @@ html {
   border-radius: 6px;
   padding: 10px;
   color: var(--theme-color-text_muted);
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
 }
 
 @media (max-width: 900px) {

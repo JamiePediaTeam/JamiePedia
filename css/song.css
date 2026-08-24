@@ -89,10 +89,10 @@ html {
   background: none;
   border: none;
   font-size: 1em;
-  color: var(--theme-color-text_base_black);
+  color: var(--theme-color-brand_frame);
   background-color: var(--theme-color-background_base);
   font-weight: 500;
-  border: 3px solid var(--theme-color-text_base_black);
+  border: 3px solid var(--theme-color-brand_frame);
   border-bottom: 0px solid var(--theme-color-transparent_value);
   border-radius: 4px 4px 0px 0px;
 }
@@ -161,7 +161,7 @@ html {
   margin: 10px 0;
   padding: 8px 12px;
   border-left: 3px solid var(--theme-color-border_segment);
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
 }
 
 .song-markdown-code {
@@ -169,7 +169,7 @@ html {
   padding: 10px;
   border: 1px solid var(--theme-color-border_pill);
   border-radius: 6px;
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
   overflow-x: auto;
 }
 
@@ -388,9 +388,9 @@ html {
   cursor: pointer;
   background-color: var(--theme-color-background_base);
   font-size: 0.75em;
-  color: var(--theme-color-text_base_black);
+  color: var(--theme-color-brand_frame);
   font-weight: 500;
-  border: 2px solid var(--theme-color-text_base_black);
+  border: 2px solid var(--theme-color-brand_frame);
   border-bottom: none;
   border-radius: 4px 4px 0px 0px;
   display: inline-block;
@@ -485,7 +485,7 @@ html {
   margin: 0 auto 14px;
   border: 1px solid var(--theme-color-border_pill);
   border-radius: 8px;
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
   padding: 8px 10px;
   box-sizing: border-box;
   --karaoke-line-height: 1.34rem;
@@ -811,7 +811,7 @@ html {
   border-radius: 6px;
   padding: 10px;
   color: var(--theme-color-text_muted);
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
 }
 
 .song-empty-box {
@@ -819,7 +819,7 @@ html {
   border-radius: 6px;
   padding: 10px;
   color: var(--theme-color-text_muted);
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
 }
 
 @media (max-width: 900px) {

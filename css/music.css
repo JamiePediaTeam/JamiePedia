@@ -24,11 +24,11 @@ html {
   border-radius: 4px;
   border: 2px solid var(--theme-color-brand_frame);
   display: block;
-  background-color: var(--theme-color-surface_tint_card);
+  background-color: var(--theme-color-background_base);
 }
 
 .motif-variation-cover {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--motif-icon-color, var(--theme-color-link_default)) 30%, var(--theme-color-surface_tint_card)), var(--theme-color-surface_tint_card));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--motif-icon-color, var(--theme-color-link_default)) 30%, var(--theme-color-background_base)), var(--theme-color-background_base));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -68,9 +68,9 @@ html {
   background: linear-gradient(
     to bottom right,
     var(--variation-color, var(--theme-color-background_base)),
-    var(--theme-color-surface_tint_card)
+    var(--theme-color-background_base)
   );
-  color: color-mix(in srgb, var(--variation-color, var(--theme-color-background_base)) 80%, var(--theme-color-surface_tint_card));
+  color: color-mix(in srgb, var(--variation-color, var(--theme-color-background_base)) 80%, var(--theme-color-background_base));
   font-weight: 800;
   font-size: 1.25rem;
   letter-spacing: 0.02em;
@@ -106,7 +106,7 @@ html {
   padding: 0 6px;
   border-radius: 4px;
   border: 2px solid var(--theme-color-brand_frame);
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
   color: var(--theme-color-text_primary);
   font-weight: 900;
   font-size: 0.9em;

@@ -404,7 +404,7 @@ async function performSearch(query) {
   }
   
   const resultsContainer = document.getElementById('searchResults');
-  resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Searching...</p>';
+  resultsContainer.innerHTML = '<p style="color: var(--theme-color-text_muted); text-align: center;">Searching...</p>';
   
   const modal = document.getElementById('searchModal');
   modal.style.display = 'block';
@@ -440,13 +440,13 @@ function displaySearchResults(results, originalQuery) {
   resultsContainer.innerHTML = '';
   
   if (results.length === 0) {
-    resultsContainer.innerHTML = '<p style="color: #888;">No results found for "' + originalQuery + '"</p>';
+    resultsContainer.innerHTML = '<p style="color: var(--theme-color-text_muted);">No results found for "' + originalQuery + '"</p>';
     searchTitle.textContent = 'Search Results (0)';
   } else {
     searchTitle.textContent = 'Search Results (' + results.length + ')';
     results.forEach(item => {
       const resultDiv = document.createElement('div');
-      resultDiv.style.cssText = 'margin-bottom: 15px; padding: 10px; border: 3px solid #351854; background: #fff; display: flex; gap: 15px; align-items: flex-start; border-radius: 5px;';
+      resultDiv.style.cssText = 'margin-bottom: 15px; padding: 10px; border: 3px solid var(--theme-color-brand_frame); background: var(--theme-color-background_base); display: flex; gap: 15px; align-items: flex-start; border-radius: 5px;';
       
       const coverImg = document.createElement('img');
       // Ensure absolute paths have basePath prepended for GitHub Pages
@@ -460,17 +460,17 @@ function displaySearchResults(results, originalQuery) {
         this.src = basePath + '/public/images/cover-art/as.png';
       };
       coverImg.alt = item.title;
-      coverImg.style.cssText = 'width: 80px; height: auto; flex-shrink: 0; border: 1px solid #ddd; border-radius: 2px;';
+      coverImg.style.cssText = 'width: 80px; height: auto; flex-shrink: 0; border: 1px solid var(--theme-color-border_pill); border-radius: 2px;';
       
       const contentDiv = document.createElement('div');
       contentDiv.style.cssText = 'flex: 1;';
-      const highlightedContent = item.content.replace(queryRegex, '<strong style="background-color: #fffacd; font-weight: bold;">$1</strong>');
+      const highlightedContent = item.content.replace(queryRegex, '<strong style="background-color: var(--theme-color-surface_highlight); color: var(--theme-color-text_base_black); font-weight: bold;">$1</strong>');
       const beforeEllipsis = item.hasContentBefore ? '...' : '';
       const afterEllipsis = item.hasContentAfter ? '...' : '';
-      contentDiv.innerHTML = '<div style="font-size: 12px; color: #999; font-weight: bold;">' + item.album + '</div>' +
-        '<a href="' + basePath + item.url + '" style="color: #ef8a85; text-decoration: none; font-size: 16px; font-weight: bold;">' + 
+      contentDiv.innerHTML = '<div style="font-size: 12px; color: var(--theme-color-text_muted); font-weight: bold;">' + item.album + '</div>' +
+        '<a href="' + basePath + item.url + '" style="color: var(--theme-color-link_default); text-decoration: none; font-size: 16px; font-weight: bold;">' + 
         item.title + '</a>' +
-        '<p style="margin: 5px 0 0 0; color: #666; font-size: 13px;">' + beforeEllipsis + highlightedContent + afterEllipsis + '</p>';
+        '<p style="margin: 5px 0 0 0; color: var(--theme-page-text); font-size: 13px;">' + beforeEllipsis + highlightedContent + afterEllipsis + '</p>';
       
       resultDiv.appendChild(coverImg);
       resultDiv.appendChild(contentDiv);

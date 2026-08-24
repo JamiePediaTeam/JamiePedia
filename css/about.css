@@ -45,7 +45,7 @@ html {
   display: block;
   border: 2px solid var(--theme-color-brand_frame);
   border-radius: 6px;
-  background: var(--theme-color-surface_tint_card);
+  background: var(--theme-color-background_base);
 }
 
 .contributor-content {
