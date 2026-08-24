@@ -2,6 +2,109 @@
 const pathname = window.location.pathname;
 const basePath = pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
 
+function stripBasePath(path) {
+  let normalized = String(path || '/');
+  if (!normalized.startsWith('/')) {
+    normalized = '/' + normalized;
+  }
+
+  if (basePath && normalized.startsWith(basePath + '/')) {
+    return normalized.slice(basePath.length) || '/';
+  }
+
+  if (basePath && normalized === basePath) {
+    return '/';
+  }
+
+  return normalized;
+}
+
+function toExtensionlessPath(path) {
+  let normalized = stripBasePath(path).split('?')[0].split('#')[0];
+  if (!normalized.startsWith('/')) {
+    normalized = '/' + normalized;
+  }
+
+  if (normalized === '/index.html') {
+    return '/';
+  }
+
+  normalized = normalized.replace(/\/index\.html$/i, '/');
+  normalized = normalized.replace(/\.html$/i, '');
+
+  if (normalized.length > 1 && normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+
+  return normalized || '/';
+}
+
+function withBasePath(path) {
+  const normalized = String(path || '/').startsWith('/') ? String(path || '/') : '/' + String(path || '/');
+  if (!basePath) {
+    return normalized;
+  }
+
+  if (normalized === '/') {
+    return basePath + '/';
+  }
+
+  if (normalized === basePath || normalized.startsWith(basePath + '/')) {
+    return normalized;
+  }
+
+  return basePath + normalized;
+}
+
+function toSiteHref(rawHref) {
+  const source = String(rawHref || '').trim();
+  if (!source || source.startsWith('#') || /^(mailto:|tel:|javascript:|data:|blob:)/i.test(source)) {
+    return source;
+  }
+
+  try {
+    const absolute = new URL(source, window.location.href);
+    if (absolute.origin !== window.location.origin) {
+      return source;
+    }
+
+    const canonicalPath = withBasePath(toExtensionlessPath(absolute.pathname));
+    return canonicalPath + absolute.search + absolute.hash;
+  } catch (_error) {
+    return source;
+  }
+}
+
+function normalizeInternalAnchorTargets(root) {
+  const scope = root && root.querySelectorAll ? root : document;
+  scope.querySelectorAll('a[href]').forEach((anchor) => {
+    const originalHref = anchor.getAttribute('href') || '';
+    if (!originalHref || originalHref === 'javascript:void(0);') {
+      return;
+    }
+
+    const normalizedHref = toSiteHref(originalHref);
+    if (normalizedHref && normalizedHref !== originalHref) {
+      anchor.setAttribute('href', normalizedHref);
+    }
+  });
+}
+
+function canonicalizeCurrentUrl() {
+  if (!window.history || typeof window.history.replaceState !== 'function') {
+    return;
+  }
+
+  const currentHref = window.location.pathname + window.location.search + window.location.hash;
+  const canonicalHref = withBasePath(toExtensionlessPath(window.location.pathname)) + window.location.search + window.location.hash;
+  if (canonicalHref !== currentHref) {
+    window.history.replaceState(null, document.title, canonicalHref);
+  }
+}
+
+window.toSiteHref = toSiteHref;
+window.normalizeInternalAnchorTargets = normalizeInternalAnchorTargets;
+
 function splitThemeCsvLine(line) {
   const values = [];
   let current = '';
@@ -303,12 +406,16 @@ musicFilesScript.onload = function() {
       // Initialize search after navibar loads
       $(function(){
         $("#navi").load(basePath + "/assets/static/navibar.html", function() {
+          normalizeInternalAnchorTargets(document.getElementById('navi'));
           if (typeof initializeSearch === 'function') {
             initializeSearch();
           }
         });
-        $("#sidebar").load(basePath + "/assets/static/sidebar.html");
+        $("#sidebar").load(basePath + "/assets/static/sidebar.html", function() {
+          normalizeInternalAnchorTargets(document.getElementById('sidebar'));
+        });
         $("#linkbox").load(basePath + "/assets/static/linkbox.html", function() {
+          normalizeInternalAnchorTargets(document.getElementById('linkbox'));
           // After jQuery loads content, add icons to any new links
           if (typeof addSocialMediaIcons === 'function') {
             addSocialMediaIcons();
@@ -342,22 +449,11 @@ document.head.appendChild(socialIconsScript);
 
 // Navigate to a song with proper base path
 function goToSong(relativePath) {
-  window.location.href = basePath + relativePath;
+  window.location.href = toSiteHref(relativePath);
 }
 
 function normalizePathForNav(path) {
-  if (!path) return '/';
-
-  let normalized = String(path).split('?')[0].split('#')[0];
-  if (!normalized.startsWith('/')) {
-    normalized = '/' + normalized;
-  }
-
-  if (basePath && normalized.startsWith(basePath + '/')) {
-    normalized = normalized.slice(basePath.length);
-  }
-
-  return normalized;
+  return toExtensionlessPath(path);
 }
 
 function setNavLinkTarget(element, targetPath) {
@@ -367,7 +463,7 @@ function setNavLinkTarget(element, targetPath) {
   element.removeAttribute('onclick');
 
   if (hasTarget) {
-    const href = basePath + targetPath;
+    const href = toSiteHref(targetPath);
 
     if (isAnchor) {
       element.setAttribute('href', href);
@@ -400,15 +496,15 @@ function getNavListForPath(currentPath) {
   const navOrder = window.navOrder;
   if (!navOrder) return null;
 
-  if (Array.isArray(navOrder.songs) && navOrder.songs.includes(currentPath)) {
+  if (Array.isArray(navOrder.songs) && navOrder.songs.some((item) => normalizePathForNav(item) === currentPath)) {
     return navOrder.songs;
   }
 
-  if (Array.isArray(navOrder.albums) && navOrder.albums.includes(currentPath)) {
+  if (Array.isArray(navOrder.albums) && navOrder.albums.some((item) => normalizePathForNav(item) === currentPath)) {
     return navOrder.albums;
   }
 
-  if (Array.isArray(navOrder.motifs) && navOrder.motifs.includes(currentPath)) {
+  if (Array.isArray(navOrder.motifs) && navOrder.motifs.some((item) => normalizePathForNav(item) === currentPath)) {
     return navOrder.motifs;
   }
 
@@ -423,7 +519,7 @@ function initializeDataNavButtons() {
   const activeList = getNavListForPath(currentPath);
   if (!activeList) return;
 
-  const currentIndex = activeList.indexOf(currentPath);
+  const currentIndex = activeList.findIndex((item) => normalizePathForNav(item) === currentPath);
   if (currentIndex === -1) return;
 
   const prevPath = currentIndex > 0 ? activeList[currentIndex - 1] : null;
@@ -456,6 +552,16 @@ function initializeDataNavButtons() {
     setNavLinkTarget(prevElement, prevPath);
     setNavLinkTarget(nextElement, nextPath);
   });
+}
+
+canonicalizeCurrentUrl();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function onReady() {
+    normalizeInternalAnchorTargets(document);
+  }, { once: true });
+} else {
+  normalizeInternalAnchorTargets(document);
 }
 
 function isProgressiveArtPath(pathname) {

@@ -467,8 +467,11 @@ function displaySearchResults(results, originalQuery) {
       const highlightedContent = item.content.replace(queryRegex, '<strong style="background-color: var(--theme-color-surface_highlight); color: var(--theme-color-text_base_black); font-weight: bold;">$1</strong>');
       const beforeEllipsis = item.hasContentBefore ? '...' : '';
       const afterEllipsis = item.hasContentAfter ? '...' : '';
+      const resultHref = typeof window.toSiteHref === 'function'
+        ? window.toSiteHref(basePath + item.url)
+        : basePath + item.url;
       contentDiv.innerHTML = '<div style="font-size: 12px; color: var(--theme-color-text_muted); font-weight: bold;">' + item.album + '</div>' +
-        '<a href="' + basePath + item.url + '" style="color: var(--theme-color-link_default); text-decoration: none; font-size: 16px; font-weight: bold;">' + 
+        '<a href="' + resultHref + '" style="color: var(--theme-color-link_default); text-decoration: none; font-size: 16px; font-weight: bold;">' + 
         item.title + '</a>' +
         '<p style="margin: 5px 0 0 0; color: var(--theme-page-text); font-size: 13px;">' + beforeEllipsis + highlightedContent + afterEllipsis + '</p>';
       

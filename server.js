@@ -4,6 +4,66 @@ const path = require('path');
 
 const PORT = 3000;
 
+function toRelativeRequestPath(requestPath) {
+  if (requestPath === '/') {
+    return 'index.html';
+  }
+
+  return requestPath.startsWith('/') ? requestPath.slice(1) : requestPath;
+}
+
+function getCandidatePaths(requestPath) {
+  const relativePath = toRelativeRequestPath(requestPath);
+  const candidates = [relativePath];
+
+  if (!path.extname(relativePath)) {
+    candidates.push(relativePath + '.html');
+    candidates.push(path.join(relativePath, 'index.html'));
+  }
+
+  return Array.from(new Set(candidates)).map((candidate) => path.join(__dirname, candidate));
+}
+
+function detectContentType(filePath) {
+  if (filePath.endsWith('.css')) return 'text/css';
+  if (filePath.endsWith('.js')) return 'application/javascript';
+  if (filePath.endsWith('.csv')) return 'text/csv';
+  if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) return 'image/jpeg';
+  if (filePath.endsWith('.png')) return 'image/png';
+  if (filePath.endsWith('.gif')) return 'image/gif';
+  if (filePath.endsWith('.webp')) return 'image/webp';
+  if (filePath.endsWith('.ico')) return 'image/x-icon';
+  return 'text/html';
+}
+
+function readFirstExistingFile(candidates, callback) {
+  let index = 0;
+
+  function next(lastError) {
+    if (index >= candidates.length) {
+      callback(lastError || new Error('File not found'));
+      return;
+    }
+
+    const candidatePath = candidates[index];
+    index += 1;
+
+    fs.readFile(candidatePath, (error, content) => {
+      if (error) {
+        next(error);
+        return;
+      }
+
+      callback(null, {
+        filePath: candidatePath,
+        content
+      });
+    });
+  }
+
+  next(null);
+}
+
 const server = http.createServer((req, res) => {
   // Parse URL so query strings do not become part of the local file path.
   const rawUrl = req.url || '/';
@@ -21,12 +81,11 @@ const server = http.createServer((req, res) => {
     }
   }
 
-  let filePath = requestPath === '/' ? 'index.html' : requestPath.startsWith('/') ? requestPath.slice(1) : requestPath;
-  filePath = path.join(__dirname, filePath);
+  const candidatePaths = getCandidatePaths(requestPath);
 
   const rawRouteRequested = /\/raw\/?$/i.test(requestPath);
   
-  fs.readFile(filePath, (err, content) => {
+  readFirstExistingFile(candidatePaths, (err, file) => {
     if (err) {
       const fallbackPath = path.join(__dirname, '404.html');
       fs.readFile(fallbackPath, (fallbackErr, fallbackContent) => {
@@ -38,23 +97,17 @@ const server = http.createServer((req, res) => {
         }
 
         if (!rawRouteRequested) {
-          console.error(`Error reading ${filePath}:`, err.message);
+          console.error(`Error reading ${candidatePaths[0]}:`, err.message);
         }
 
         res.writeHead(404, { 'Content-Type': 'text/html' });
         res.end(fallbackContent, 'utf-8');
       });
     } else {
-      let contentType = 'text/html';
-      if (filePath.endsWith('.css')) contentType = 'text/css';
-      else if (filePath.endsWith('.js')) contentType = 'application/javascript';
-      else if (filePath.endsWith('.csv')) contentType = 'text/csv';
-      else if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) contentType = 'image/jpeg';
-      else if (filePath.endsWith('.png')) contentType = 'image/png';
-      else if (filePath.endsWith('.gif')) contentType = 'image/gif';
+      const contentType = detectContentType(file.filePath);
       
       res.writeHead(200, { 'Content-Type': contentType });
-      res.end(content, 'utf-8');
+      res.end(file.content, 'utf-8');
     }
   });
 });

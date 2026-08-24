@@ -68,6 +68,11 @@
     </div>
     <script>
       function goToPage(page) {
+        if (typeof window.toSiteHref === 'function') {
+          window.location.href = window.toSiteHref(page);
+          return;
+        }
+
         // Determine base path for GitHub Pages compatibility
         const pathname = window.location.pathname;
         const basePath = pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
@@ -85,6 +90,11 @@
         }
         
         const randomEntry = musicFilePaths[Math.floor(Math.random() * musicFilePaths.length)];
+        if (typeof window.toSiteHref === 'function') {
+          window.location.href = window.toSiteHref(randomEntry.path);
+          return;
+        }
+
         window.location.href = basePath + randomEntry.path;
       }
     </script>
