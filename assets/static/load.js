@@ -103,12 +103,55 @@ function applyThemeRow(themeRow) {
   }
 
   const root = document.documentElement;
+  const rowValuesByKey = {};
+  Object.keys(themeRow).forEach((key) => {
+    rowValuesByKey[String(key || '').trim().toLowerCase()] = themeRow[key];
+  });
+
   const normalizeThemeValue = (value) => String(value || '').trim().replace(/^"+|"+$/g, '');
   const resolveThemeKey = (key) => themeColumnAliases[key] || key;
+  const toThemeVarKey = (key) => String(key || '').trim().toLowerCase().replace(/\s+/g, '_');
+  const toThemeAssetCssValue = (rawValue, assetType) => {
+    const value = normalizeThemeValue(rawValue);
+    if (!value) {
+      return '';
+    }
+
+    if (/^url\(/i.test(value)) {
+      return value;
+    }
+
+    if (/^(https?:|data:|blob:)/i.test(value)) {
+      return 'url("' + value.replace(/"/g, '%22') + '")';
+    }
+
+    let path = value;
+    if (path.startsWith('/')) {
+      if (basePath && !path.startsWith(basePath + '/')) {
+        path = basePath + path;
+      }
+      return 'url("' + path.replace(/"/g, '%22') + '")';
+    }
+
+    if (assetType === 'background') {
+      path = basePath + '/public/images/backgrounds/' + path;
+      return 'url("' + path.replace(/"/g, '%22') + '")';
+    }
+
+    // Header values can be provided as plain filenames or explicit image paths.
+    if (path.includes('/')) {
+      path = basePath + '/public/images/' + path;
+      return 'url("' + path.replace(/"/g, '%22') + '")';
+    }
+
+    path = basePath + '/public/images/headers/' + path;
+    return 'url("' + path.replace(/"/g, '%22') + '")';
+  };
+
   const pickThemeValue = (...keys) => {
     for (const key of keys) {
       const resolvedKey = resolveThemeKey(key);
-      const value = normalizeThemeValue(themeRow[resolvedKey]);
+      const value = normalizeThemeValue(rowValuesByKey[String(resolvedKey || '').trim().toLowerCase()]);
       if (value) {
         return value;
       }
@@ -154,8 +197,25 @@ function applyThemeRow(themeRow) {
       return;
     }
 
-    root.style.setProperty('--theme-color-' + key, value);
+    root.style.setProperty('--theme-color-' + toThemeVarKey(key), value);
   });
+
+  const backgroundCssValue = toThemeAssetCssValue(
+    pickThemeValue('background', 'background_image', 'background_image_link', 'page_background_image'),
+    'background'
+  );
+  if (backgroundCssValue) {
+    root.style.setProperty('--theme-background-image', backgroundCssValue);
+    root.style.backgroundImage = backgroundCssValue;
+  }
+
+  const headerCssValue = toThemeAssetCssValue(
+    pickThemeValue('header', 'header_image', 'header_image_link', 'logo_image'),
+    'header'
+  );
+  if (headerCssValue) {
+    root.style.setProperty('--theme-header-image', headerCssValue);
+  }
 
   Object.keys(themeRow).forEach((key) => {
     if (!key.startsWith('theme_color_')) {

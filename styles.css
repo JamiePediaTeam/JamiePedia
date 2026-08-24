@@ -4,7 +4,7 @@ html {
   line-height: 22px;
   font-family: "Nunito", sans-serif;
   padding: 0px;
-  background-image: url(public/images/backgrounds/critterwhitegreenred.png);
+  background-image: var(--theme-background-image, url(public/images/backgrounds/critterwhitegreenred.png));
   background-attachment: fixed;
   background-color: var(--theme-color-keyword_white);
   overflow-x: auto;
@@ -62,7 +62,7 @@ h1 {
   width: 800px;
   position: relative;
   padding: 10px;
-  background-image: url(public/images/logo.png);
+  background-image: var(--theme-header-image, url(public/images/logo.png));
   background-size: auto;
   background-color: var(--theme-color-background_base);
 }

@@ -2,6 +2,8 @@
   --theme-id: default;
   --theme-name: Default;
   --theme-meta-color: #F05E55;
+  --theme-background-image: url(public/images/backgrounds/critterwhitegreenred.png);
+  --theme-header-image: url(public/images/logo.png);
 
   --theme-page-background: #ffffff;
   --theme-page-text: #111111;
