@@ -1,4 +1,4 @@
-Motif Name,Motif ID,Motif Image,is variation,Type?,Has Page,reference link,motif color,variation letter,Song Name,Song ID,Song File,Embed Type,Embed Link,Song Color,Song ID,Motif ID,Start Time,End Time,Definition,Variation,Variation Letter,Song ID,Motif Id,Start Time,End Time,Lyrics,Song ID,Motif Id,Start Time,End Time
+Motif Name,Motif ID,Motif Image (Page and Map),is variation,Type?,Has Page,reference link,motif color,variation letter,Song Name,Song ID,Song File,Embed Type,Embed Link,Song Color,Song ID,Motif ID,Start Time,End Time,Definition,Variation,Variation Letter,Song ID,Motif Id,Start Time,End Time,Lyrics,Song ID,Motif Id,Start Time,End Time
 Paisley Pudge,paisley-pudge,../public/images/motif-art/paisley-pudge.png,FALSE,Motif,TRUE,,F391CC,A,Dyad,DYAD,../music/cc/dyad.html,youtube,9KfKbr_wiNQ,FA4333,GUMMYWORM,gummyworm,0:20,0:31,TRUE,TRUE,B,NOT_QUITE_THERE,GUMMYWORM,2:04,2:06.5,"(Oh gummyworm, gotta make it hurt)",STREETCAT,let-the-bass-go,0:18,0:19
 Paisley Pudge,paisley-pudge,,TRUE,Motif,TRUE,,734590,B,Not Quite There,NOT_QUITE_THERE,../music/cc/not-quite-there.html,youtube,r0sXI02NJ5M,66BDE6,GUMMYWORM,gummyworm,0:33,0:43,FALSE,TRUE,B,OBJECT_OF_AFFECTION,HOLD_ME_TIGHTLY,1:09,1:11,hold me tight,STREETCAT,let-the-bass-go,0:47,0:48
 Kalia Vibte,kalia-vibte,../public/images/motif-art/kalia-vibte.png,FALSE,Motif,TRUE,,B1785B,,ROT FOR CLOUT,ROT_FOR_CLOUT,../music/cc/rot-for-clout.html,youtube,1e8NADa_gEI,F7393B,GUMMYWORM,gummyworm,2:02,2:14,TRUE,TRUE,A,OBJECT_OF_AFFECTION,HOLD_ME_TIGHTLY,2:38,2:40,hold me tight,STREETCAT,let-the-bass-go,0:58,0:59
@@ -12,12 +12,12 @@ Jya~,jya,../public/images/motif-art/jya.png,FALSE,Sample,TRUE,,FCE73E,,Clouddrop
 Let The Bass Go,let-the-bass-go,../public/images/motif-art/letthebassgo.png,FALSE,Sample,TRUE,,1F1F1F,,"My Darling, My Companion",MY_DARLING_MY_COMPANION,../music/cc/my-darling-my-companion.html,youtube,D-vfGlcyQ28,9AB00A,NOT_QUITE_THERE,gummyworm,3:15,3:26,FALSE,TRUE,A,OBJECT_OF_AFFECTION,NOTHING_WITH_YOU,3:40,3:44,"No holding up to scrutiny, impossibly obtuse",STREETCAT,let-the-bass-go,1:30,1:33
 PP Aliteration,pp-alliteration,../public/images/cover-art/pjscpfp.jpg,FALSE,Lyrical,TRUE,,F391CC,,Machine Love,MACHINE_LOVE,../music/cc/machine-love.html,youtube,mrLI2gw4Emo,DC4468,NOT_QUITE_THERE,gummyworm,3:26,3:42,FALSE,TRUE,A,OBJECT_OF_AFFECTION,anew-again,3:20,3:23,born anew,STREETCAT,let-the-bass-go,1:33,1:39
 Where Hearts Thaw,where-hearts-thaw,,FALSE,Motif,TRUE,,615858,,BIRDBRAIN,BIRDBRAIN,../music/cc/birdbrain.html,youtube,Cn__J8t7agk,FECC35,NOT_QUITE_THERE,bittersweet-kalia-vibte,2:11,2:16,FALSE,FALSE,,OBJECT_OF_AFFECTION,AUTUMN_EVERY_DAY,3:37,3:37,autumn,STREETCAT,let-the-bass-go,1:56,1:57
-The Patterns of Clouds,patterns-of-clouds,,FALSE,Motif,TRUE,,FFFFFF,,Shiny Chariot,SHINY_CHARIOT,../music/cc/shiny-chariot.html,youtube,WXeeY5JVBGU,91DB69,NOT_QUITE_THERE,constant-companions,4:16,4:23,FALSE,FALSE,,OBJECT_OF_AFFECTION,CADMIUM_COLORS,3:38,3:37,cadmium-colored hues,STREETCAT,let-the-bass-go,2:07,2:09
+The Patterns of Clouds,patterns-of-clouds,../public/images/cover-art/tpoc.jpg,FALSE,Motif,TRUE,,FFFFFF,,Shiny Chariot,SHINY_CHARIOT,../music/cc/shiny-chariot.html,youtube,WXeeY5JVBGU,91DB69,NOT_QUITE_THERE,constant-companions,4:16,4:23,FALSE,FALSE,,OBJECT_OF_AFFECTION,CADMIUM_COLORS,3:38,3:37,cadmium-colored hues,STREETCAT,let-the-bass-go,2:07,2:09
 Autumn Every Day,autumn-every-day,../public/images/cover-art/aed.png,FALSE,Motif,TRUE,,E05C43,,Strawberry,STRAWBERRY,../music/cc/strawberry.html,youtube,CQBbYjMWorc,C82A0B,DANCE_DELIGHTFUL,gummyworm,3:33,3:38,FALSE,TRUE,A,OBJECT_OF_AFFECTION,HONOR_MAJESTY,2:56,3:01,"(I swear on my life, I'll make it worth the while)(Never anything less than free!)",STREETCAT,let-the-bass-go,2:20,2:21
 On Fire,on-fire,,FALSE,Motif,TRUE,,FFFFFF,,Manifesto,MANIFESTO,../music/cc/manifesto.html,youtube,g7rbq4XSOeg,F7393B,SPACE_CENTER,space-center,0:18,0:32,TRUE,TRUE,A,OBJECT_OF_AFFECTION,HONOR_MAJESTY,3:48,3:50,I swear it on my honor,STREETCAT,let-the-bass-go,2:30,2:32
 Jijo,jijo,,FALSE,Motif,TRUE,,FFFFFF,,Dance Delightful,DANCE_DELIGHTFUL,../music/cc/dance-delightful.html,youtube,sxO1RG9q30I,DE7F46,SPACE_CENTER,space-center,0:33,0:49,TRUE,TRUE,B,PAISLEY_PATTERNS,pp-alliteration,0:34,0:35,paisley patterns,STREETCAT,let-the-bass-go,2:42,2:46
 Decree,decree,,FALSE,Motif,TRUE,,FFFFFF,,dyad with vox.mp3,DYAD_DEMO,../music/cc/dyad.html#demo,youtube,,C6C6C6,SPACE_CENTER,space-center,1:10,1:24,FALSE,TRUE,A,PAISLEY_PATTERNS,GENTLE_HEART,1:04,1:05,gentle heart,STREETCAT,let-the-bass-go,2:46,2:48
-When Spring Comes,when-spring-comes,,FALSE,Motif,TRUE,,FFFFFF,,all i ever do is watch wip 2.mp3 / not quite there.mp3,NOT_QUITE_THERE_DEMO,../music/cc/not-quite-there.html#demo,youtube,,C6C6C6,SPACE_CENTER,space-center,1:25,1:42,FALSE,TRUE,B,PAISLEY_PATTERNS,pp-alliteration,1:40,1:41,paisley patterns,STREETCAT,let-the-bass-go,2:48,2:52
+When Spring Comes,when-spring-comes,../public/images/cover-art/wscrr.png,FALSE,Motif,TRUE,,FFFFFF,,all i ever do is watch wip 2.mp3 / not quite there.mp3,NOT_QUITE_THERE_DEMO,../music/cc/not-quite-there.html#demo,youtube,,C6C6C6,SPACE_CENTER,space-center,1:25,1:42,FALSE,TRUE,B,PAISLEY_PATTERNS,pp-alliteration,1:40,1:41,paisley patterns,STREETCAT,let-the-bass-go,2:48,2:52
 Jerma Woo,jerma-woo,../public/images/motif-art/jerma.png,FALSE,Sample,TRUE,,FFFFFF,,cloutchaser longer.wav,ROT_FOR_CLOUT_DEMO,../music/cc/rot-for-clout.html#demo,youtube,lagssHOCgak,C6C6C6,SPACE_CENTER_PT2,space-center,0:40,0:42,FALSE,TRUE,B,PAISLEY_PATTERNS,pp-alliteration,2:35,2:36,paisley pudge,STREETCAT,let-the-bass-go,2:52,2:54
 Say it Ain't So,say-it-aint-so,../public/images/motif-art/weezer.png,FALSE,Lyrical,FALSE,https://en.wikipedia.org/wiki/Weezer_(Blue_Album),00ACE6,,i wish that i could fall wip 1.mp3,I_WISH_THAT_I_COULD_FALL_DEMO,../music/cc/i-wish-that-i-could-fall.html#demo,youtube,z_pFPjN2Rvc,C6C6C6,SPACE_CENTER_PT2,space-center,1:02,1:20,FALSE,TRUE,A,PAISLEY_PATTERNS,GENTLE_HEART,3:05,3:05,gentle heart,STREETCAT,let-the-bass-go,2:54,2:58
 Anew Again,anew-again,../public/images/cover-art/aa.png,FALSE,Lyrical,FALSE,,9EC7CD,,cadmium colors.mp3,CADMIUM_COLORS_DEMO,../music/cc/cadmium-colors.html#demo,youtube,luLwdVSwfCo,C6C6C6,SPACE_CENTER_PT2,space-center,1:18,1:42,FALSE,TRUE,B,PAISLEY_PATTERNS,BITTERSWEET,3:19,3:20,bittersweet,STREETCAT,let-the-bass-go,2:58,3:00
@@ -118,12 +118,12 @@ Honor Majesty,honor-majesty,,FALSE,Motif,TRUE,,E31C2C,,oh my god its dumb and it
 ,,,,,,,,,by the seashore,BY_THE_SEASHORE,../music/bc/by-the-seashore.html,youtube,,FFFFFF,MANIFESTO,constant-companions,0:51,0:53,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,between the day and night (ally beta),BETWEEN_THE_DAY_AND_NIGHT,../music/bc/between-the-day-and-night-ally-beta.html,youtube,,FFFFFF,MANIFESTO,fantasize,0:54,0:56,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,asemic speech (demo),ASEMIC_SPEECH_DEMO,../music/bc/asemic-speech-demo.html,youtube,,FFFFFF,MANIFESTO,constant-companions,0:56,0:58,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,bittersweet (demo),BITTERSWEET_DEMO,../music/bc/bittersweet-demo.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,where hearts thaw,WHERE_HEARTS_THAW,../music/bc/where-hearts-thaw.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,the patterns of clouds,THE_PATTERNS_OF_CLOUDS,../music/bc/the-patterns-of-clouds.html,youtube,5xUC1pmaHxA,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,eScape (ffxiv cover),ESCAPE_FFXIV_COVER,../music/bc/escape-ffxiv-cover.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,spaceman (the killers cover),SPACEMAN,../music/bc/spaceman-the-killers-cover.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
-,,,,,,,,,patchwork eden (sasakure.uk cover),PATCHWORK_EDEN,../music/bc/patchwork-eden-sasakure-uk-cover.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,bittersweet (demo),BITTERSWEET_DEMO,../music/bc/bittersweet-demo.html,youtube,,FFFFFF,MANIFESTO,fantasize,1:58,2:01,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,where hearts thaw,WHERE_HEARTS_THAW,../music/bc/where-hearts-thaw.html,youtube,,FFFFFF,MANIFESTO,constant-companions,2:01,2:03,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,the patterns of clouds,THE_PATTERNS_OF_CLOUDS,../music/bc/the-patterns-of-clouds.html,youtube,5xUC1pmaHxA,FFFFFF,MANIFESTO,fantasize,2:03,2:05,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,eScape (ffxiv cover),ESCAPE_FFXIV_COVER,../music/bc/escape-ffxiv-cover.html,youtube,,FFFFFF,MANIFESTO,constant-companions,2:06,2:08,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,spaceman (the killers cover),SPACEMAN,../music/bc/spaceman-the-killers-cover.html,youtube,,FFFFFF,MANIFESTO,fantasize,2:09,2:11,FALSE,FALSE,,,,,,,,,,
+,,,,,,,,,patchwork eden (sasakure.uk cover),PATCHWORK_EDEN,../music/bc/patchwork-eden-sasakure-uk-cover.html,youtube,,FFFFFF,MaNIFESTO,constant-companions,2:11,2:14,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,vessel of stars ~ casket of star,VESSEL_OF_STARS_CASKET_OF_STAR,../music/bc/vessel-of-stars-casket-of-star.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,grimoire of alice x locked girl,GRIMOIRE_OF_ALICE_X_LOCKED_GIRL,../music/bc/grimoire-of-alice-x-locked-girl.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
 ,,,,,,,,,grand restore (2021 version),GRAND_RESTORE_2021,../music/bc/grand-restore-2021-version.html,youtube,,FFFFFF,,,,,FALSE,FALSE,,,,,,,,,,
@@ -160,7 +160,7 @@ Honor Majesty,honor-majesty,,FALSE,Motif,TRUE,,E31C2C,,oh my god its dumb and it
 ,,,,,,,,,FIRE!!!,FIRE,../music/singles/fire.html,youtube,yZkPe7TEuyk,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,SQUARE UP,SQUARE_UP,../music/singles/square-up.html,youtube,0ZVFAkdRMRY,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,Love Taste,LOVE_TASTE,../music/collabs/love-taste.html,youtube,sWbD5q769Ms,FFFFFF,,,,,,,,,,,,,,,,
-,,,,,,,,,Matryoshka (Club Mix),MATRYOSHKA_CLUB_MIX,../music/collabs/matryoshka-club-mix.html,youtube,UqLBxAn6XP4,FFFFFF,,,,,,,,,,,,,,,,
+,,,,,,,,,Matryoshka (Club Mix),MATRYOSHKA_CLUB_MIX,../music/collabs/matryoshka-club-mix.html,youtube,LfmbUfkOR0w,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,Ghostride My Bad Emotions,GHOSTRIDE_MY_BAD_EMOTIONS,../music/collabs/ghostride-my-bad-emotions.html,youtube,,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,Annihilation Waltz,ANNIHILATION_WALTZ,../music/collabs/annihilation-waltz.html,youtube,TiQXhgBHdB0,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,Ride,RIDE,../music/collabs/ride.html,youtube,rzeF30Q5ZjY,FFFFFF,,,,,,,,,,,,,,,,
@@ -226,7 +226,7 @@ Honor Majesty,honor-majesty,,FALSE,Motif,TRUE,,E31C2C,,oh my god its dumb and it
 ,,,,,,,,,meltdown but with the drums from :women_wrestling: on it,MELTDOWN_WOMEN_WRESTLING_DRUMS,,youtube,,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,liege lord,LIEGE LORD,,youtube,,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,good luck pudgy puk!,GOOD_LUCK_PUDGY_PUK,,youtube,,FFFFFF,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,youtube,,FFFFFF,,,,,,,,,,,,,,,,
+,,,,,,,,,Happy Synthesizer (Jamie Paige Remix),HAPPY_SYNTHESIZER,,youtube,,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,youtube,,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,youtube,,FFFFFF,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,youtube,,FFFFFF,,,,,,,,,,,,,,,,
