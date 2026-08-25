@@ -1081,7 +1081,7 @@ function switchAlbumArt(filename) {
     'of.jpg': 'Fourth Strike Records',
     'ofw.jpg': 'Yostar Games',
     'otw.jpg': 'nika37',
-    'paisleypudge.png': 'Unknown',
+    'paisleypudge.png': 'veryeet', // https://x.com/veryeet/status/1584609209454587904
     'pjscpfp.jpg': 'REVERIEQUE',
     'plinkplonk.jpg': 'N/A',
     'pmprr.png': 'monolarkey',
