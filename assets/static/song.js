@@ -135,10 +135,15 @@ function switchVersion(versionName, options) {
   
   if (versionElement) {
     versionElement.style.display = 'flex';
-    
-    // Switch background
-    const bgPath = '../../public/images/backgrounds/' + config.background;
-    document.documentElement.style.backgroundImage = 'url(' + bgPath + ')';
+
+    // Switch to the version-specific theme so all theme tokens update together.
+    const versionThemeId = String(config.theme || '').trim();
+    if (typeof window.applyThemeById === 'function') {
+      const fallbackThemeId = String(document.documentElement.getAttribute('data-theme-id') || 'default').trim() || 'default';
+      window.applyThemeById(versionThemeId || fallbackThemeId);
+    } else if (versionThemeId) {
+      document.documentElement.setAttribute('data-theme-id', versionThemeId);
+    }
     
     // Reset album art tabs and image
     versionElement.querySelectorAll('.album-tab').forEach(el => {
