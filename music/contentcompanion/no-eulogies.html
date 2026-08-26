@@ -1,0 +1,96 @@
+<!doctype html>
+<html data-theme-id="default">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JamiePedia! - NO EULOGIES</title>
+    <meta name="title" content="NO EULOGIES" />
+    <meta name="description" content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jamiepediateam.github.io/JamiePedia/music/singles/no-eulogies.html" />
+    <meta property="og:title" content="NO EULOGIES" />
+    <meta property="og:description" content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception." />
+    <meta property="og:image" content="https://jamiepediateam.github.io/JamiePedia/public/images/cover-art/no-eulogies.jpg" />
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://jamiepediateam.github.io/JamiePedia/music/singles/no-eulogies.html" />
+    <meta property="twitter:title" content="NO EULOGIES" />
+    <meta property="twitter:description" content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception." />
+    <meta property="twitter:image" content="https://jamiepediateam.github.io/JamiePedia/public/images/cover-art/no-eulogies.jpg" />
+    <meta name="theme-color" content="#F05E55" />
+    <link rel="icon" type="image/x-icon" href="../../public/images/favicon.ico" />
+    <link href="../../styles.css" rel="stylesheet" type="text/css" media="all" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="../../assets/static/load.js"></script>
+    <link href="../../css/song.css" rel="stylesheet" type="text/css" media="all" />
+    <script src="../../assets/static/song.js"></script>
+  </head>
+  <body>
+    <a href="../../"><div class="head"></div></a>
+    <div class="navi"><span id="navi"></span></div>
+    <div class="song-page-wrapper">
+      <div class="song-sidebar-col">
+        <div class="sidebar1"><span id="sidebar"></span></div>
+      </div>
+      <div class="song-main-col">
+        <div class="song-tabs-container">
+          <div class="song-tabs">
+            <button class="song-tab active" onclick="switchTab('summary')">Summary</button>
+            <button class="song-tab" onclick="switchTab('lyrics')">Lyrics</button>
+            <button class="song-tab" onclick="switchTab('motifs')">Connections</button>
+            <button class="song-tab" onclick="switchTab('extended')">Extended Info</button>
+          </div>
+        </div>
+        <div class="bodybar">
+          <div class="song-container">
+            <div class="song-leftview">
+              <h1 class="song-title">NO EULOGIES</h1>
+              <p class="song-length">Length: X:XX</p>
+              <div id="lyrics-subtabs-container" class="lyrics-subtabs-container">
+                <div class="lyrics-subtabs">
+                  <button class="lyrics-subtab active" onclick="switchLyricsTab('annotated')">Annotated Lyrics</button>
+                  <button class="lyrics-subtab" onclick="switchLyricsTab('raw')">Raw Lyrics</button>
+                </div>
+              </div>
+              <div id="content-lyrics" class="song-content active">
+                <div id="lyrics-annotated" class="lyrics-content active"></div>
+                <div id="lyrics-raw" class="lyrics-content"></div>
+              </div>
+              <div id="content-motifs" class="song-content"></div>
+              <div id="content-summary" class="song-content"></div>
+              <div id="content-extended" class="song-content"></div>
+            </div>
+            <div class="song-rightview">
+              <div class="album-tabs-container">
+                <div class="album-tabs"><button class="album-tab active" onclick="switchAlbumArt('noeulogies.png')">unbeatable</button><button class="album-tab" onclick="switchAlbumArt('contentcompanion.jpg')">Album</button></div>
+              </div>
+              <div class="song-cover"><img id="album-art-image" src="../../public/images/cover-art/noeulogies.png" alt="NO EULOGIES Cover" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px" /></div>
+              <div class="cover-art-footer">
+                <div class="cover-art-credit">
+                  Cover art by:
+                  <span id="cover-artist-display">Jamie Paige</span>
+                </div>
+              </div>
+              <div class="song-nav-buttons">
+                <a href="javascript:void(0);" onclick="goToSong('/music/template/template.html')" class="song-nav-link">← Previous</a>
+                <a href="javascript:void(0);" onclick="goToSong('/music/template/template2.html')" class="song-nav-link">Next →</a>
+              </div>
+              <div class="song-info-block">
+                <div class="song-info-label">Appears On</div>
+                <div class="song-info-content">Single</div>
+              </div>
+              <div class="song-info-block">
+                <div class="song-info-label">Release Date</div>
+                <div class="song-info-content">TBD</div>
+              </div>
+              <div class="song-info-block">
+                <div class="song-info-label">Artist</div>
+                <div class="song-info-content">Jamie Paige</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

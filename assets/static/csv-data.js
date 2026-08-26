@@ -310,7 +310,7 @@ function createJamiePediaData() {
   const columns = {
     motifName: getColumnIndex('Motif Name'),
     motifId: getColumnIndex('Motif ID', 0),
-    motifImage: getColumnIndex('Motif Image'),
+    motifImage: getColumnIndex('Motif Image (Page and Map)'),
     motifIsVariation: getColumnIndex('is variation'),
     motifType: getColumnIndex('Type?'),
     motifIsLyrical: getColumnIndex('Is Lyrical'),

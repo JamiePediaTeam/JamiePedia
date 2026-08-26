@@ -157,6 +157,14 @@ function switchVersion(versionName, options) {
       if (albumArtElement) {
         albumArtElement.src = '../../public/images/cover-art/' + config.defaultAlbumArt;
       }
+      // Also update the cover artist credit for the default art
+      const coverArtistDisplay = document.getElementById(config.coverArtistDisplayId);
+      if (coverArtistDisplay) {
+        const artist = getCoverArtist(config.defaultAlbumArt);
+        if (artist !== null) {
+          coverArtistDisplay.textContent = artist;
+        }
+      }
     }
   }
   
@@ -952,58 +960,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-function switchAlbumArt(filename) {
-  let albumArtImageId;
-  let coverArtistDisplayId;
-  let activeVersionElement;
-  
-  // Check if version system is in use
-  if (versionOrder && versionOrder.length > 0) {
-    // Version-based logic
-    let activeVersionName = 'original';
-    for (const versionName of versionOrder) {
-      const versionElement = document.getElementById('version-' + versionName);
-      if (versionElement && versionElement.style.display === 'flex') {
-        activeVersionName = versionName;
-        break;
-      }
-    }
-    
-    // Get the config for the active version
-    const config = versionConfig[activeVersionName];
-    if (!config) return;
-    
-    albumArtImageId = config.albumArtImageId;
-    coverArtistDisplayId = config.coverArtistDisplayId;
-    activeVersionElement = document.getElementById('version-' + activeVersionName);
-  } else {
-    // Simple logic for pages without version system
-    albumArtImageId = 'album-art-image';
-    coverArtistDisplayId = 'cover-artist-display';
-    activeVersionElement = document.querySelector('.song-container') || document.body;
-  }
-  
-  // Update the image source
-  const albumArtElement = document.getElementById(albumArtImageId);
-  if (albumArtElement) {
-    albumArtElement.src = '../../public/images/cover-art/' + filename;
-  }
-  
-  // Remove active state from all album art tabs in the active version
-  if (activeVersionElement) {
-    activeVersionElement.querySelectorAll('.album-tab').forEach(el => {
-      el.classList.remove('active');
-    });
-  }
-  
-  // Add active state to clicked tab
-  if (event && event.target) {
-    event.target.classList.add('active');
-  }
-  
-  // Update cover artist based on selected album art
-  const coverArtistDisplay = document.getElementById(coverArtistDisplayId);
-  const coverArtists = {
+const coverArtists = {
     'aa.png': 'RJ Lake',
     'acs.png': 'angelwinter',
     'aed.png': 'Valerie Halla',
@@ -1028,8 +985,10 @@ function switchAlbumArt(filename) {
     'ccii.png': 'REVERIEQUE',
     'ccolors.png': 'REVERIEQUE',
     'ccommune.jpg': 'Louie Zong',
+    'contentcompanion.jpg': 'Jamie Paige',
     'ccontrepoint.png': 'ajihaew',
     'closer.jpg': 'Jamie Paige',
+    'contentcompanion.jpg': 'Andrew Tsai',
     'crmg.jpg': 'FLStudio Screenshot, REVERIEQUE',
     'cs.png': 'Catherine G. Erhlhell',
     'ddiary.png': 'starapture',
@@ -1063,6 +1022,7 @@ function switchAlbumArt(filename) {
     'jpiaw.jpg': 'Unknown',
     'jpjp3.png': 'Jamie Paige',
     'jpjp4.png': 'Jamie Paige',
+    'jpjp5.jpg': 'Jamie Paige',
     'jpjp5.png': 'Jamie Paige',
     'jpjp6.png': 'Jamie Paige',
     'liegelord.jpg': 'Synthesizer V Screenshot, Sakauchi Waka',
@@ -1134,9 +1094,72 @@ function switchAlbumArt(filename) {
     'wwr.jpg': 'kheechuu',
     'wwrcc.png': 'ajihaew',
     'wwunbeatable.png': 'BEARVAMPS'
-  };
+};
+
+function getCoverArtist(filename) {
+  return coverArtists[String(filename || '')] || null;
+}
+
+// Expose globally so load.js's populateAlbumPageCoverCredits can use this
+// richer dict on pages that load song.js (overrides the load.js IIFE version).
+window.getCoverArtist = getCoverArtist;
+
+function switchAlbumArt(filename) {
+  let albumArtImageId;
+  let coverArtistDisplayId;
+  let activeVersionElement;
+
+  // Check if version system is in use
+  if (versionOrder && versionOrder.length > 0) {
+    // Version-based logic
+    let activeVersionName = 'original';
+    for (const versionName of versionOrder) {
+      const versionElement = document.getElementById('version-' + versionName);
+      if (versionElement && versionElement.style.display === 'flex') {
+        activeVersionName = versionName;
+        break;
+      }
+    }
+
+    // Get the config for the active version
+    const config = versionConfig[activeVersionName];
+    if (!config) return;
+
+    albumArtImageId = config.albumArtImageId;
+    coverArtistDisplayId = config.coverArtistDisplayId;
+    activeVersionElement = document.getElementById('version-' + activeVersionName);
+  } else {
+    // Simple logic for pages without version system
+    albumArtImageId = 'album-art-image';
+    coverArtistDisplayId = 'cover-artist-display';
+    activeVersionElement = document.querySelector('.song-container') || document.body;
+  }
+
+  // Update the image source
+  const albumArtElement = document.getElementById(albumArtImageId);
+  if (albumArtElement) {
+    albumArtElement.src = '../../public/images/cover-art/' + filename;
+  }
+
+  // Remove active state from all album art tabs in the active version
+  if (activeVersionElement) {
+    activeVersionElement.querySelectorAll('.album-tab').forEach(el => {
+      el.classList.remove('active');
+    });
+  }
+
+  // Add active state to clicked tab
+  if (typeof event !== 'undefined' && event && event.target) {
+    event.target.classList.add('active');
+  }
+
+  // Update cover artist — keep existing text if the filename isn't in the map
+  const coverArtistDisplay = document.getElementById(coverArtistDisplayId);
   if (coverArtistDisplay) {
-    coverArtistDisplay.textContent = coverArtists[filename] || '';
+    const artist = getCoverArtist(filename);
+    if (artist !== null) {
+      coverArtistDisplay.textContent = artist;
+    }
   }
 }
 

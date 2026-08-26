@@ -742,6 +742,170 @@ function installProgressiveArtObserver() {
 
 installProgressiveArtObserver();
 
+// The coverArtists dict lives in song.js for song pages. For album index pages
+// (which don't load song.js) we provide the same lookup via an IIFE so there is
+// no global const that would conflict with song.js's own const coverArtists.
+window.getCoverArtist = (function () {
+  const artists = {
+    'aa.png': 'RJ Lake',
+    'acs.png': 'angelwinter',
+    'aed.png': 'Valerie Halla',
+    'aisr.png': 'Braz_OS',
+    'aod.png': 'divvydots',
+    'aphextwin.jpg': 'Screenshot',
+    'as.png': 'REVERIEQUE',
+    'atm.jpg': 'Avi Roberts',
+    'aw.jpg': 'Remy Boydell',
+    'bb.png': 'Sidoopa',
+    'bc.jpg': 'REVERIEQUE',
+    'bdkt26.png': 'Kurumitsu',
+    'bluesky.jpg': 'REVERIEQUE',
+    'bs.png': 'REVERIEQUE',
+    'bv.png': 'ricedeity',
+    'bvcc.png': 'ajihaew',
+    'bvi.png': 'ricedeity',
+    'cb.jpg': 'ODDEEO',
+    'cc.png': 'REVERIEQUE',
+    'ccde.png': 'REVERIEQUE',
+    'ccdev.jpg': 'REVERIEQUE',
+    'ccii.png': 'REVERIEQUE',
+    'ccolors.png': 'REVERIEQUE',
+    'ccommune.jpg': 'Louie Zong',
+    'contentcompanion.jpg': 'Jamie Paige',
+    'ccontrepoint.png': 'ajihaew',
+    'closer.jpg': 'Jamie Paige',
+    'crmg.jpg': 'FLStudio Screenshot, REVERIEQUE',
+    'cs.png': 'Catherine G. Erhlhell',
+    'ddiary.png': 'starapture',
+    'ddoll.jpg': 'Crispy6usiness',
+    'destiny.jpg': 'Bluffy',
+    'dgtkchop.jpg': 'Twitter Screenshot',
+    'dnh.png': 'Skaði Kaos',
+    'ds2021.jpg': 'REVERIEQUE',
+    'ds2024.png': 'BUNBUN © CFM',
+    'ds2026.jpg': 'koharayuyu',
+    'dsc2021.jpg': 'Nou',
+    'dsc2025.jpg': 'lack',
+    'ebi.jpg': 'Jamie Paige',
+    'ebiquaver.png': 'starapture',
+    'encore.jpg': 'REVERIEQUE',
+    'erb.png': 'Arusechika',
+    'evilloop.jpg': 'Geoff Keighley',
+    'evoevo.jpg': 'John Kafka, GraphersRock',
+    'ewz.jpg': 'REVERIEQUE, ricedeity',
+    'fire.png': 'angelfaise',
+    'ghf.jpg': 'Unknown',
+    'glpp.jpg': 'Unknown',
+    'gr.jpg': 'kalrot',
+    'hc.jpg': 'citruslucy',
+    'headass.jpg': 'Unknown',
+    'hmt.jpg': 'pipiskulle',
+    'human.png': 'insertdisc5',
+    'ifhm.jpg': 'FLStudio Screenshot',
+    'iwticf.png': 'BEARVAMPS',
+    'iwticfpd.png': 'starapture',
+    'jpiaw.jpg': 'Unknown',
+    'jpjp3.png': 'Jamie Paige',
+    'jpjp4.png': 'Jamie Paige',
+    'jpjp5.jpg': 'Jamie Paige',
+    'jpjp5.png': 'Jamie Paige',
+    'jpjp6.png': 'Jamie Paige',
+    'liegelord.jpg': 'Synthesizer V Screenshot, Sakauchi Waka',
+    'lilpp.jpg': 'BEARVAMPS',
+    'loll.jpg': 'worm-suggestion',
+    'lr.jpg': 'REVERIEQUE',
+    'lscorrupted.png': 'REVERIEQUE',
+    'lt.jpg': 'haru / oomr005',
+    'matryoshka.png': 'milkbean',
+    'meltdownww.png': 'Unknown, Twemoji',
+    'ml.png': 'REVERIEQUE',
+    'mm.png': 'Luciel Ellis',
+    'motqddotk.jpg': 'Unknown',
+    'mu.png': 'starapture',
+    'mushroomfarmer.jpg': 'Logic Pro Screenshot',
+    'naomirmx.jpg': 'Unknown',
+    'noeulogies.png': 'Michelle Ramos',
+    'nothingevercorrupted.png': 'REVERIEQUE',
+    'notyet.jpg': 'REVERIEQUE',
+    'nqtsc.jpg': 'Ryoko Kui',
+    'of.jpg': 'Fourth Strike Records',
+    'ofw.jpg': 'Yostar Games',
+    'otw.jpg': 'nika37',
+    'paisleypudge.png': 'veryeet',
+    'pjscpfp.jpg': 'REVERIEQUE',
+    'plinkplonk.jpg': 'N/A',
+    'pmprr.png': 'monolarkey',
+    'ppiiharaylyhssltl.jpg': 'REVERIEQUE',
+    'pppp.png': 'REVERIEQUE',
+    'ptpt.jpg': 'Enid, friendxp',
+    'qov.jpg': 'sferics32',
+    'qovcc.png': 'ajihaew',
+    'r4c.png': 'ricedeity',
+    'rd.jpg': 'pierrotsdoll',
+    'rdcc.png': 'ajihaew',
+    'ride.jpg': 'LulunaRina',
+    'rotjpa.jpg': 'ODDEEO',
+    'rr.jpeg': 'vippori',
+    'sc.png': 'eggtan',
+    'sd.png': 'Cochet',
+    'sevenfour.jpg': 'Unknown',
+    'sf.png': 'hoshizorelone',
+    'sfrr.png': 'ajihaew',
+    'sijpr.jpg': 'REVERIEQUE',
+    'slurmbrain.jpg': 'Unknown',
+    'smots.png': 'SoftySapphie',
+    'spaceman': 'The Killers',
+    'srid.png': 'nika37',
+    'static.jpg': 'ricedeity',
+    'su.png': 'Jamie Lee',
+    'tb.png': 'starapture',
+    'tetoboy.jpg': 'Sasuke Haraguchi',
+    'thatsmydad.jpg': 'DALL-E mini',
+    'tia.jpg': 'TheRyDesign',
+    'tpoc.jpg': 'Unknown',
+    'ts26.jpg': 'Kurumitsu',
+    'twitter.jpg': 'vippori',
+    'vhs.png': 'BEARVAMPS',
+    'virtue.jpg': 'Cochet V.',
+    'vvff.png': 'retrotenn',
+    'vvjp.png': 'retrotenn',
+    'wbtc.png': 'Raffums',
+    'wg.jpg': 'ippo.tsk',
+    'wgcc.png': 'ajihaew',
+    'wscrr.png': 'REVERIEQUE',
+    'wtr.jpg': 'Edlinklover',
+    'wtrcc.png': 'ajihaew',
+    'ww.jpg': 'BEARVAMPS',
+    'wwr.jpg': 'kheechuu',
+    'wwrcc.png': 'ajihaew',
+    'wwunbeatable.png': 'BEARVAMPS'
+  };
+  return function (filename) {
+    return artists[String(filename || '')] || null;
+  };
+})();
+
+function populateAlbumPageCoverCredits() {
+  document.querySelectorAll('.album-cover-credit').forEach(function (creditEl) {
+    const container = creditEl.closest('.album-cover-container');
+    if (!container) {
+      return;
+    }
+
+    const img = container.querySelector('img');
+    if (!img) {
+      return;
+    }
+
+    const filename = String(img.getAttribute('src') || '').split('/').pop();
+    const artist = getCoverArtist(filename);
+    if (artist) {
+      creditEl.textContent = 'Artwork by ' + artist;
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   initializeDataNavButtons();
+  populateAlbumPageCoverCredits();
 });
