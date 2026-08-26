@@ -916,6 +916,35 @@ function initializeSongConnectionsFeature() {
     .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js'));
 }
 
+function initializeCoverArtistCredits() {
+  const containers = versionOrder && versionOrder.length > 0
+    ? versionOrder.map((v) => document.getElementById('version-' + v)).filter(Boolean)
+    : Array.from(document.querySelectorAll('.song-container')).filter(Boolean);
+
+  containers.forEach((container) => {
+    const activeTab = container.querySelector('.album-tab.active');
+    if (!activeTab) {
+      return;
+    }
+
+    const onclick = String(activeTab.getAttribute('onclick') || '');
+    const match = onclick.match(/switchAlbumArt\('([^']+)'\)/);
+    if (!match) {
+      return;
+    }
+
+    const artist = getCoverArtist(match[1]);
+    if (artist === null) {
+      return;
+    }
+
+    const display = container.querySelector('[id^="cover-artist-display"]');
+    if (display) {
+      display.textContent = artist;
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   loadVersionConfig();
   removeRawLyricsUi();
@@ -947,6 +976,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (songLength) songLength.classList.add('hide-border');
   }
 
+  initializeCoverArtistCredits();
   loadSongTextContent();
   initializeSongConnectionsFeature();
 
