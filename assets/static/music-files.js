@@ -230,6 +230,8 @@ const musicFilePaths = [
   { album: 'Singles', path: '/music/singles/ebi.html' },
   { album: 'Singles', path: '/music/singles/hope-cafe.html' },
   { album: 'Singles', path: '/music/singles/fire.html' },
+  { album: 'Singles', path: '/music/singles/radient-revival.html' },
+  { album: 'Singles', path: '/music/singles/little-secret.html' },
   { album: 'Singles', path: '/music/singles/square-up.html' },
 
   // Features and Collaborations
