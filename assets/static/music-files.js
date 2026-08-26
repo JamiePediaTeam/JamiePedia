@@ -13,6 +13,7 @@ const musicFilePaths = [
   { album: 'Album', path: '/music/cc.html' },
   { album: 'Album', path: '/music/ccde.html' },
   { album: 'Album', path: '/music/cs.html' },
+  { album: 'Album', path: '/music/contentcompanion.html' },
   { album: 'Album', path: '/music/destiny.html' },
   { album: 'Album', path: '/music/PPPP.html' },
   { album: 'Album', path: '/music/dnh.html' },
@@ -105,6 +106,16 @@ const musicFilePaths = [
   { album: 'c-sides', path: '/music/cs/one-small-moment-of-silence.html' },
   { album: 'c-sides', path: '/music/cs/some-more-of-that-song.html' },
   
+  // The Jamie Paige Content Companion's Official Companion Content
+  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/no-eulogies.html' },
+  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/dream-diary.html' },
+  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/my-universal.html' },
+  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/sleeping-in.html' },
+  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/i-wish-that-i-could-fall-peak.html' },
+  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/turn-back.html' },
+  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/ebi-quaver.html' },
+  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/square-up-synthetic.html' },
+
   // Cardiac Contrepoint
   { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/butcher-vanity.html' },
   { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/rawdog.html' },
@@ -115,7 +126,7 @@ const musicFilePaths = [
   { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/paparazzi-murder-party-rr.html' },
   { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/snowflake-rr.html' },
   { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/when-spring-comes-rr.html' },
-
+  
   // Destiny
   { album: 'Destiny', path: '/music/destiny/destiny.html' },
   { album: 'Destiny', path: '/music/destiny/destiny-marcy-nabors-remix.html' },
@@ -228,7 +239,6 @@ const musicFilePaths = [
   { album: 'Features and Collaborations', path: '/music/collabs/annihilation-waltz.html' },
   { album: 'Features and Collaborations', path: '/music/collabs/ride.html' },
   { album: 'Features and Collaborations', path: '/music/collabs/love-renewed.html' },
-  { album: 'Features and Collaborations', path: '/music/collabs/letterboxd.html' },
   { album: 'Features and Collaborations', path: '/music/collabs/take-it-away.html' },
   { album: 'Features and Collaborations', path: '/music/collabs/newly-human-feeling.html' },
   { album: 'Features and Collaborations', path: '/music/collabs/on-the-wind.html' },
@@ -239,7 +249,8 @@ const musicFilePaths = [
   { album: 'FF Album 2', path: '/music/ff2/human.html' },
   { album: 'FF Album 2', path: '/music/ff2/connect-commune.html' },
   { album: 'FF Album 2', path: '/music/ff2/ego-renegade-boy.html' },
+  { album: 'FF Album 2', path: '/music/ff2/streetcat.html' },
 
   // FLAVOR FOLEY singles
-  { album: 'FLAVOR FOLEY', path: '/music/ewz.html' }
+  { album: 'FLAVOR FOLEY', path: '/music/ewz.html' },
 ];
