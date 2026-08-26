@@ -200,6 +200,17 @@ const themeColumnAliases = {
   surface_base: 'background_base'
 };
 
+let loadedThemeRows = [];
+
+function findThemeRowById(themeId) {
+  const requested = String(themeId || '').trim();
+  if (!requested || !Array.isArray(loadedThemeRows) || loadedThemeRows.length === 0) {
+    return null;
+  }
+
+  return loadedThemeRows.find((row) => String(row.theme_id || '').trim() === requested) || null;
+}
+
 function applyThemeRow(themeRow) {
   if (!themeRow || typeof themeRow !== 'object') {
     return;
@@ -340,6 +351,31 @@ function applyThemeRow(themeRow) {
   }
 }
 
+function applyThemeById(themeId) {
+  if (!Array.isArray(loadedThemeRows) || loadedThemeRows.length === 0) {
+    return false;
+  }
+
+  const selected = findThemeRowById(themeId)
+    || findThemeRowById('default')
+    || loadedThemeRows[0];
+
+  if (!selected) {
+    return false;
+  }
+
+  const root = document.documentElement;
+  const selectedThemeId = String(selected.theme_id || '').trim();
+  if (selectedThemeId) {
+    root.setAttribute('data-theme-id', selectedThemeId);
+  }
+
+  applyThemeRow(selected);
+  return true;
+}
+
+window.applyThemeById = applyThemeById;
+
 async function loadThemeFromCsv() {
   const root = document.documentElement;
   const requestedThemeId = String(root.getAttribute('data-theme-id') || 'default').trim() || 'default';
@@ -374,16 +410,13 @@ async function loadThemeFromCsv() {
     if (!rows.length) {
       return;
     }
-
-    const selected = rows.find((row) => String(row.theme_id || '').trim() === requestedThemeId)
-      || rows.find((row) => String(row.theme_id || '').trim() === 'default')
-      || rows[0];
+    loadedThemeRows = rows;
 
     if (loadedCsvPath) {
       root.setAttribute('data-theme-source', loadedCsvPath);
     }
 
-    applyThemeRow(selected);
+    applyThemeById(requestedThemeId);
   } catch (_error) {
     // Keep defaults if theme data cannot be fetched.
   }
