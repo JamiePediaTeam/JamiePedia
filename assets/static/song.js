@@ -1104,6 +1104,33 @@ function getCoverArtist(filename) {
 // richer dict on pages that load song.js (overrides the load.js IIFE version).
 window.getCoverArtist = getCoverArtist;
 
+function formatSongLengthSeconds(totalSeconds) {
+  const s = Math.floor(Math.max(0, Number(totalSeconds) || 0));
+  const minutes = Math.floor(s / 60);
+  const secs = s % 60;
+  return minutes + ':' + String(secs).padStart(2, '0');
+}
+
+// Called by song-motifs.js after the YouTube player fires onReady with a real
+// duration. Updates the visible .song-length paragraph so the user never has
+// to type the duration manually. Falls back to whatever is already in the
+// element when no YouTube link exists (song-motifs.js never calls this).
+window.updateSongLengthFromYoutube = function (totalSeconds) {
+  if (!totalSeconds || totalSeconds <= 0) {
+    return;
+  }
+
+  const text = 'Length: ' + formatSongLengthSeconds(totalSeconds);
+  const nodes = Array.from(document.querySelectorAll('.song-length'));
+
+  // Prefer the element that is currently visible (active version).
+  const visible = nodes.find((n) => n.offsetParent !== null);
+  const target = visible || nodes[0];
+  if (target) {
+    target.textContent = text;
+  }
+};
+
 function switchAlbumArt(filename) {
   let albumArtImageId;
   let coverArtistDisplayId;

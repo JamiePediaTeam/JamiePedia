@@ -1194,6 +1194,12 @@ function songMotifsAttachPlayer(song, youtubeId) {
         }
         state.durationLabel.textContent = songMotifFormatTime(state.duration);
 
+        // Propagate the YouTube-derived duration to the page's song-length
+        // paragraph so it doesn't need to be manually entered in the HTML.
+        if (ytDuration > 0 && typeof window.updateSongLengthFromYoutube === 'function') {
+          window.updateSongLengthFromYoutube(state.duration);
+        }
+
         const rows = document.querySelectorAll('.song-motif-track');
         state.refsByMotif.forEach((entry, index) => {
           const row = rows[index];
