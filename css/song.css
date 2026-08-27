@@ -17,6 +17,17 @@ html {
   margin-top: 0;
   z-index: 9;
 }
+.song-sidebar-col .sidebar2 {
+  margin-top: 12px;
+}
+.sidebar-sticky-wrapper {
+  position: sticky;
+  top: 20px;
+}
+.sidebar-sticky-wrapper .sidebar1 {
+  position: static;
+  top: auto;
+}
 
 .song-main-col > .bodybar {
   margin-left: auto;

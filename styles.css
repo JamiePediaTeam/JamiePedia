@@ -168,3 +168,63 @@ h1 {
   margin-bottom: -4px;
   margin-left: 2px;
 }
+
+/* Tracklist sidebar (sidebar2) */
+.sidebar2 {
+  background-color: var(--theme-color-background_base);
+  border: 3px solid var(--theme-color-brand_frame);
+  border-radius: 5px;
+  padding: 10px;
+  width: 120px;
+}
+
+/* Stack wrapper: used on album/motif pages where sidebar1 is absolutely positioned */
+.sidebar-stack {
+  position: absolute;
+  left: -180px;
+  top: 20px;
+  z-index: 9;
+}
+.sidebar-stack .sidebar1 {
+  position: static;
+  left: auto;
+  top: auto;
+}
+.sidebar-stack .sidebar2 {
+  margin-top: 12px;
+}
+
+.tracklist-header {
+  margin-bottom: 4px;
+}
+.tracklist-album-title {
+  color: var(--theme-color-link_default);
+  text-decoration: none;
+  font-weight: bold;
+  line-height: 26px;
+  display: block;
+  word-break: break-word;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+.tracklist-album-title:hover {
+  color: var(--theme-color-accent_hover);
+}
+.tracklist-list {
+  margin: 0;
+  padding: 0 0 0 18px;
+  line-height: 26px;
+}
+.tracklist-item a {
+  color: var(--theme-color-link_default);
+  text-decoration: none;
+  word-break: break-word;
+  transition: color 0.3s ease;
+}
+.tracklist-item a:hover {
+  color: var(--theme-color-accent_hover);
+}
+.tracklist-item.tracklist-current > a {
+  color: var(--theme-color-accent_hover);
+  font-weight: bold;
+}
