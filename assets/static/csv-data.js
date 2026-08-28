@@ -211,7 +211,7 @@ function currentScriptBaseUrl() {
 }
 
 function loadJamiePediaCsvText() {
-  const csvPath = encodeURI('../../public/motifs/JamiePedia Motifs spreadsheet - Sheet1.csv');
+  const csvPath = encodeURI('../../public/motifs/JamiePedia Data - Motifs.csv');
   const csvUrl = new URL(csvPath, currentScriptBaseUrl());
   const request = new XMLHttpRequest();
   request.open('GET', csvUrl.href, false);

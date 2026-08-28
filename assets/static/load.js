@@ -380,7 +380,7 @@ async function loadThemeFromCsv() {
   const root = document.documentElement;
   const requestedThemeId = String(root.getAttribute('data-theme-id') || 'default').trim() || 'default';
   const csvCandidates = [
-    '/public/themes/themes - sheet1.csv',
+    '/public/themes/JamiePedia Data - Themes.csv',
     '/public/themes/themes.csv'
   ];
 
