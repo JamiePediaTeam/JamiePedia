@@ -1,15 +1,12 @@
 ## Trivia
 ### Appearances
 - First appeared on November 29th, 2021 on [twitter@pamiejaige](https://x.com/pamiejaige/status/1465395180643758092)
+ - The visualizer used in this is from [CanOpener Studio](https://goodhertz.com/canopener-studio/) by Goodhertz
 - Also shown transitioning into Machine Love on October 27th, 2023 on [twitter@pudgierpuk](https://x.com/pudgierpuk)
   - This indicates that the song might have been originally intended to be on Constant Companions
 
-### Voicebanks
-**Jamie Paige**
-ANRI
 
-- Only song that wasn't accessible to be heard in it's full version prior to release on c-sides
 - This song's bridge before the outro is labelled as "[this page left intentionally blank]" on its [Bandcamp lyrics](https://jamiepaige.bandcamp.com/album/c-sides)
   - The part after the outro is labelled as "[]"
 - papergirl's stems of its frightening ending are called ["paper blank page"](https://www.dropbox.com/scl/fo/zhd1mp450vitawf4kls6s/AGDxuE_zFA9DokFlsZcCrj0/paper%20blank%20page.wav?rlkey=ei3dog0ina79qoklx64qyydxu&e=3&st=99bg3rq6&bmus=1&dl=0)
-
+- The Bandcamp URL (track/papergirl**-7**) for this song slightly differs from the expected structure that the rest of c-sides follows (track/papergirl)

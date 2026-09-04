@@ -2,9 +2,20 @@
 const musicFilePaths = [
   // Motif Pages
   { album: 'Motifs', path: '/motifs.html' },
+  { album: 'Motifs', path: '/motifs/autumn-every-day.html' },
   { album: 'Motifs', path: '/motifs/bittersweet-kalia-vibte.html' },
-  { album: 'Motifs', path: '/motifs/gummyworm.html' },
   { album: 'Motifs', path: '/motifs/constant-companions.html' },
+  { album: 'Motifs', path: '/motifs/decree.html' },
+  { album: 'Motifs', path: '/motifs/erri-nollau.html' },
+  { album: 'Motifs', path: '/motifs/jijo.html' },
+  { album: 'Motifs', path: '/motifs/jya.html' },
+  { album: 'Motifs', path: '/motifs/let-the-bass-go.html' },
+  { album: 'Motifs', path: '/motifs/on-fire.html' },
+  { album: 'Motifs', path: '/motifs/paisley-pudge.html' },
+  { album: 'Motifs', path: '/motifs/pp-alliteration.html' },
+  { album: 'Motifs', path: '/motifs/space-center.html' },
+  { album: 'Motifs', path: '/motifs/when-spring-comes.html' },
+  { album: 'Motifs', path: '/motifs/where-hearts-thaw.html' },
 
   // Album Pages
   { album: 'Album', path: '/music/aa.html' },
