@@ -7,6 +7,7 @@ const musicFilePaths = [
   { album: 'Motifs', path: '/motifs/constant-companions.html' },
   { album: 'Motifs', path: '/motifs/decree.html' },
   { album: 'Motifs', path: '/motifs/erri-nollau.html' },
+  { album: 'Motifs', path: '/motifs/gummyworm.html' },
   { album: 'Motifs', path: '/motifs/jijo.html' },
   { album: 'Motifs', path: '/motifs/jya.html' },
   { album: 'Motifs', path: '/motifs/let-the-bass-go.html' },
