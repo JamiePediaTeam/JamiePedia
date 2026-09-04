@@ -1089,6 +1089,7 @@ const coverArtists = {
     'rd.jpg': 'pierrotsdoll',
     'rdcc.png': 'ajihaew',
     'ride.jpg': 'LulunaRina',
+    'rot.png': '[Brackets124]', // http://bsky.app/profile/brackets124.bsky.social
     'rotjpa.jpg': 'ODDEEO',
     'rr.jpeg': 'vippori',
     'sc.png': 'eggtan',

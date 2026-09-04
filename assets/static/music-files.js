@@ -245,6 +245,7 @@ const musicFilePaths = [
   { album: 'Singles', path: '/music/singles/radiant-revival.html' },
   { album: 'Singles', path: '/music/singles/little-secret.html' },
   { album: 'Singles', path: '/music/singles/square-up.html' },
+  
 
   // Features and Collaborations
   { album: 'Features and Collaborations', path: '/music/collabs/love-taste.html' },
@@ -267,4 +268,7 @@ const musicFilePaths = [
 
   // FLAVOR FOLEY singles
   { album: 'FLAVOR FOLEY', path: '/music/ewz.html' },
+
+  // Apple's Eye
+  { album: 'Apple\'s Eye', path: '/music/apples-eye/rot.html' },
 ];
