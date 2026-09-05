@@ -1029,7 +1029,7 @@ const coverArtists = {
     'ds2021.jpg': 'REVERIEQUE',
     'ds2024.png': 'BUNBUN © CFM',
     'ds2026.jpg': 'koharayuyu',
-    'dsc2021.jpg': 'Nou',
+    'dsc2021.jpg': 'のう',
     'dsc2025.jpg': 'lack',
     'ebi.jpg': 'Jamie Paige',
     'ebiquaver.png': 'starapture',
