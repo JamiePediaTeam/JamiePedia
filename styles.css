@@ -197,6 +197,7 @@ h1 {
 .tracklist-header {
   margin-bottom: 4px;
 }
+
 .tracklist-album-title {
   color: var(--theme-color-link_default);
   text-decoration: none;
@@ -207,24 +208,39 @@ h1 {
   cursor: pointer;
   transition: color 0.3s ease;
 }
+
 .tracklist-album-title:hover {
   color: var(--theme-color-accent_hover);
 }
+
 .tracklist-list {
   margin: 0;
-  padding: 0 0 0 18px;
+  padding-left: 18px;
+  list-style-position: outside;
   line-height: 26px;
 }
+
+.tracklist-item {
+  margin: 0;
+  padding: 0;
+}
+
 .tracklist-item a {
   color: var(--theme-color-link_default);
   text-decoration: none;
+  line-height: 26px;
+  display: block;
   word-break: break-word;
   transition: color 0.3s ease;
 }
+
 .tracklist-item a:hover {
   color: var(--theme-color-accent_hover);
 }
+
 .tracklist-item.tracklist-current > a {
   color: var(--theme-color-accent_hover);
   font-weight: bold;
 }
+
+

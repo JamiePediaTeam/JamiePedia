@@ -1,29 +1,16 @@
-// Music file paths for search indexing
-const musicFilePaths = [
-  // Motif Pages
-  { album: 'Motifs', path: '/motifs.html' },
-  { album: 'Motifs', path: '/motifs/autumn-every-day.html' },
-  { album: 'Motifs', path: '/motifs/bittersweet-kalia-vibte.html' },
-  { album: 'Motifs', path: '/motifs/constant-companions.html' },
-  { album: 'Motifs', path: '/motifs/decree.html' },
-  { album: 'Motifs', path: '/motifs/erri-nollau.html' },
-  { album: 'Motifs', path: '/motifs/gummyworm.html' },
-  { album: 'Motifs', path: '/motifs/jijo.html' },
-  { album: 'Motifs', path: '/motifs/jya.html' },
-  { album: 'Motifs', path: '/motifs/let-the-bass-go.html' },
-  { album: 'Motifs', path: '/motifs/on-fire.html' },
-  { album: 'Motifs', path: '/motifs/paisley-pudge.html' },
-  { album: 'Motifs', path: '/motifs/pp-alliteration.html' },
-  { album: 'Motifs', path: '/motifs/space-center.html' },
-  { album: 'Motifs', path: '/motifs/when-spring-comes.html' },
-  { album: 'Motifs', path: '/motifs/where-hearts-thaw.html' },
+// Music file paths for search/nav/random/tracklist behavior.
+// Songs are sourced from Songs CSV, motif pages from Motifs CSV,
+// and album index pages remain static until album CSV migration is complete.
 
-  // Album Pages
+const musicFilePaths = [];
+window.musicFilePaths = musicFilePaths;
+
+const albumPageEntries = [
   { album: 'Album', path: '/music/aa.html' },
   { album: 'Album', path: '/music/aed.html' },
   { album: 'Album', path: '/music/bs.html' },
   { album: 'Album', path: '/music/cc.html' },
-  { album: 'Album', path: '/music/ccde.html', sidebarSongsDir: 'cc', sidebarAlbumName: 'Constant Companions (Deluxe Edition)' },
+  { album: 'Album', path: '/music/ccde.html' },
   { album: 'Album', path: '/music/cs.html' },
   { album: 'Album', path: '/music/contentcompanion.html' },
   { album: 'Album', path: '/music/destiny.html' },
@@ -50,225 +37,246 @@ const musicFilePaths = [
   { album: 'Album', path: '/music/paisleyAcc.html' },
   { album: 'Album', path: '/music/tumble.html' },
   { album: 'Album', path: '/music/sound.html' },
-  { album: 'Album', path: '/music/pamiejaige.html' },
-  
-  // Anew Again
-  { album: 'Anew Again', path: '/music/aa/decree.html' },
-  { album: 'Anew Again', path: '/music/aa/space-center.html' },
-  { album: 'Anew Again', path: '/music/aa/skygirl.html' },
-  { album: 'Anew Again', path: '/music/aa/imaginary-effervescent.html' },
-  { album: 'Anew Again', path: '/music/aa/adelaide-delays.html' },
-  { album: 'Anew Again', path: '/music/aa/song-for-jijo.html' },
-  { album: 'Anew Again', path: '/music/aa/grand-restore.html' },
-  { album: 'Anew Again', path: '/music/aa/space-center-pt-2.html' },
-  { album: 'Anew Again', path: '/music/aa/good-time-lead-line.html' },
-  
-  // Autumn Every Day
-  { album: 'Autumn Every Day', path: '/music/aed/automated-answering-service.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/a-repetition.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/to-atlantis.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/its-2013-again.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/too-much-autotune.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/special-days.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/amelie.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/secret-girlfriend.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/bizarre-love-triangle.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/pass.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/honor-majesty.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/autumn-every-day.html' },
-  { album: 'Autumn Every Day', path: '/music/aed/hold-me-tightly.html' },
-  
-  // Bittersweet
-  { album: 'Bittersweet', path: '/music/bs/second-hello.html' },
-  { album: 'Bittersweet', path: '/music/bs/gentle-heart.html' },
-  { album: 'Bittersweet', path: '/music/bs/asemic-speech.html' },
-  { album: 'Bittersweet', path: '/music/bs/nothing-with-you.html' },
-  { album: 'Bittersweet', path: '/music/bs/paisley-patterns.html' },
-  { album: 'Bittersweet', path: '/music/bs/gummyworm.html' },
-  { album: 'Bittersweet', path: '/music/bs/greatsword-love-as-fire.html' },
-  { album: 'Bittersweet', path: '/music/bs/ally.html' },
-  { album: 'Bittersweet', path: '/music/bs/ballroom.html' },
-  { album: 'Bittersweet', path: '/music/bs/bittersweet.html' },
-  { album: 'Bittersweet', path: '/music/bs/close.html' },
-  { album: 'Bittersweet', path: '/music/bs/fiction.html' },
-  
-  // Constant Companions
-  { album: 'Constant Companions', path: '/music/cc/dyad.html' },
-  { album: 'Constant Companions', path: '/music/cc/not-quite-there.html' },
-  { album: 'Constant Companions', path: '/music/cc/rot-for-clout.html' },
-  { album: 'Constant Companions', path: '/music/cc/i-wish-that-i-could-fall.html' },
-  { album: 'Constant Companions', path: '/music/cc/cadmium-colors.html' },
-  { album: 'Constant Companions', path: '/music/cc/breeze-blows.html' },
-  { album: 'Constant Companions', path: '/music/cc/aggrandicize.html' },
-  { album: 'Constant Companions', path: '/music/cc/liaison.html' },
-  { album: 'Constant Companions', path: '/music/cc/object-of-affection.html' },
-  { album: 'Constant Companions (Deluxe Edition)', path: '/music/cc/clouddrop.html', sidebarAlbumSlug: 'ccde' },
-  { album: 'Constant Companions', path: '/music/cc/my-darling-my-companion.html' },
-  { album: 'Constant Companions', path: '/music/cc/machine-love.html' },
-  { album: 'Constant Companions (Deluxe Edition)', path: '/music/cc/birdbrain.html', sidebarAlbumSlug: 'ccde' },
-  { album: 'Constant Companions (Deluxe Edition)', path: '/music/cc/shiny-chariot.html', sidebarAlbumSlug: 'ccde' },
-  { album: 'Constant Companions (Deluxe Edition)', path: '/music/cc/strawberry.html', sidebarAlbumSlug: 'ccde' },
-  { album: 'Constant Companions (Deluxe Edition)', path: '/music/cc/manifesto.html', sidebarAlbumSlug: 'ccde' },
-  { album: 'Constant Companions (Deluxe Edition)', path: '/music/cc/dance-delightful.html', sidebarAlbumSlug: 'ccde' },
-  
-  // c-sides
-  { album: 'c-sides', path: '/music/cs/papergirl.html' },
-  { album: 'c-sides', path: '/music/cs/little-anger.html' },
-  { album: 'c-sides', path: '/music/cs/ringtone.html' },
-  { album: 'c-sides', path: '/music/cs/one-small-moment-of-silence.html' },
-  { album: 'c-sides', path: '/music/cs/some-more-of-that-song.html' },
-  
-  // The Jamie Paige Content Companion's Official Companion Content
-  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/no-eulogies.html' },
-  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/dream-diary.html' },
-  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/my-universal.html' },
-  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/sleeping-in.html' },
-  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/i-wish-that-i-could-fall-peak.html' },
-  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/turn-back.html' },
-  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/ebi-quaver.html' },
-  { album: "The Jamie Paige Content Companion's Official Companion Content", path: '/music/contentcompanion/square-up-synthetic.html' },
-
-  // Cardiac Contrepoint
-  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/butcher-vanity.html' },
-  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/rawdog.html' },
-  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/weathergirl.html' },
-  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/weiward-romance.html' },
-  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/water-the-roses.html' },
-  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/queen-of-venus.html' },
-  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/paparazzi-murder-party-rr.html' },
-  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/snowflake-rr.html' },
-  { album: 'Cardiac Contrepoint', path: '/music/ccontrepoint/when-spring-comes-rr.html' },
-  
-  // Destiny
-  { album: 'Destiny', path: '/music/destiny/destiny.html' },
-  { album: 'Destiny', path: '/music/destiny/destiny-marcy-nabors-remix.html' },
-
-  // People Posture Play Pretend
-  { album: 'People Posture Play Pretend', path: '/music/PPPP/people-posture-play-pretend.html' },
-  { album: 'People Posture Play Pretend', path: '/music/PPPP/when-spring-comes.html' },
-
-  // Do No Harm
-  { album: 'Do No Harm', path: '/music/dnh/do-no-harm-atrial-mix.html' },
-  { album: 'Do No Harm', path: '/music/dnh/do-no-harm-ventricular-mix.html' },
-
-  // Video Hunting Specimen
-  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/vhs-get.html' },
-  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/dont-stop.html' },
-  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/buh-buh-buh-baby-vacant-heart-sounds.html' },
-  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/the-whole-place-has-to-workit.html' },
-  { album: 'Video Hunting Specimen', path: '/music/video-hunting-specimen/marcy-nabors-and-jamie-paige-take-your-bones-to-work-day.html' },
-
-  // Autumn's Other Days
-  { album: 'Autumn\'s Other Days', path: '/music/aod/behind-the-phone-line.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/secret-girlfriend-dream-logic-version.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/fenicsong-with-valerie-halla.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/abraxas.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/hey-jamie-lets-go-to-walmart.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/girl-heart-friend.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/for-u.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/to-atlantis-oddeeo-remix.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/too-much-autotune-drainpuppets-attention-deficitmix.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/autumn-every-day-lavande-remix.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/a-thousand-miles.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/lonely-singing-doll.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/peg.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/like-a-dream.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/closer.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/rather-be.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/pollyanna-i-believe-in-you.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/oddeeo-karma-wears-white-ties-chinatown-blues-jamie-paige-remix.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/nelward-apple-shampoo-jamie-paiges-mcintosh-mix.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/soundcloud-promo-with-cory-pangilinan-and-marcy-nabors.html' },
-  { album: 'Autumn\'s Other Days', path: '/music/aod/distinct-recollections-of-russian-nesting-dolls-in-a-moving-car.html' },
-
-  // Buttercream
-  { album: 'Buttercream', path: '/music/bc/on-fire-from-fourth-strike-song-jam-2021.html' },
-  { album: 'Buttercream', path: '/music/bc/breakup.html' },
-  { album: 'Buttercream', path: '/music/bc/winter.html' },
-  { album: 'Buttercream', path: '/music/bc/brush.html' },
-  { album: 'Buttercream', path: '/music/bc/feather.html' },
-  { album: 'Buttercream', path: '/music/bc/this-project-file-is-called-depression-shit-i-guess.html' },
-  { album: 'Buttercream', path: '/music/bc/that-aint-how-it-has-to-be.html' },
-  { album: 'Buttercream', path: '/music/bc/by-the-seashore.html' },
-  { album: 'Buttercream', path: '/music/bc/between-the-day-and-night-ally-beta.html' },
-  { album: 'Buttercream', path: '/music/bc/asemic-speech-demo.html' },
-  { album: 'Buttercream', path: '/music/bc/bittersweet-demo.html' },
-  { album: 'Buttercream', path: '/music/bc/where-hearts-thaw.html' },
-  { album: 'Buttercream', path: '/music/bc/the-patterns-of-clouds.html' },
-  { album: 'Buttercream', path: '/music/bc/escape-ffxiv-cover.html' },
-  { album: 'Buttercream', path: '/music/bc/spaceman-the-killers-cover.html' },
-  { album: 'Buttercream', path: '/music/bc/patchwork-eden-sasakure-uk-cover.html' },
-  { album: 'Buttercream', path: '/music/bc/vessel-of-stars-casket-of-star.html' },
-  { album: 'Buttercream', path: '/music/bc/grimoire-of-alice-x-locked-girl.html' },
-  { album: 'Buttercream', path: '/music/bc/grand-restore-2021-version.html' },
-  { album: 'Buttercream', path: '/music/bc/moe-shop-love-taste-jamie-paige-rmx.html' },
-  { album: 'Buttercream', path: '/music/bc/song-for-jijo-2021-version.html' },
-  { album: 'Buttercream', path: '/music/bc/swag-pt-3-its-2014-again.html' },
-
-    // Jamie Paige Jam Pack - March 2024
-  { album: 'Jamie Paige Jam Pack - March 2024', path: '/music/jpjp3/funtown-usa.html' },
-  { album: 'Jamie Paige Jam Pack - March 2024', path: '/music/jpjp3/paisley-pudge-airship.html' },
-
-  // Jamie P Jam Pack - April 2024
-  { album: 'Jamie P Jam Pack - April 2024', path: '/music/jpjp4/shrimp-miku-yelling-at-me.html' },
-  { album: 'Jamie P Jam Pack - April 2024', path: '/music/jpjp4/vane-ft-enid-and-hatsune-miku-pitter-patter-jamie-p-remix.html' },
-  { album: 'Jamie P Jam Pack - April 2024', path: '/music/jpjp4/get-down-b4-4-cover-i-guess.html' },
-  { album: 'Jamie P Jam Pack - April 2024', path: '/music/jpjp4/oddeeo-this-feeling-is-a-cliche-jamie-p-edit.html' },
-
-  // Jamie P Jam Pack - May 2024
-  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/poinsettia-demo.html' },
-  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/people-posture-play-pretend-arcane.html' },
-  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/lineage-of-legless-lizards-demo.html' },
-  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/march-of-the-quail-doves.html' },
-  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/standing-up-demo.html' },
-  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/machine-love-lo-fi-hip-hop-beat-to-daemon-doll-to-version.html' },
-  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/alabaster-demo.html' },
-  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/light-mode-lover-demo.html' },
-  { album: 'Jamie P Jam Pack - May 2024', path: '/music/jpjp5/frimomen-penis-blast.html' },
-
-  // Jamie P Jam Pack - June 2024
-  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/so-what-am-i-supposed-to-do-with-track-10.html' },
-  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/magnasanti-idea-1.html' },
-  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/magnasanti-but-different-idea-1-5.html' },
-  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/all-i-want-to-do-idea-2.html' },
-  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/all-i-want-to-do-gust-idea-3.html' },
-  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/manifesto-idea-4.html' },
-  { album: 'Jamie P Jam Pack - June 2024', path: '/music/jpjp6/international-sweet-trip-cover.html' },
-
-  // Singles
-  { album: 'Singles', path: '/music/singles/virtue.html' },
-  { album: 'Singles', path: '/music/singles/encore.html' },
-  { album: 'Singles', path: '/music/singles/women-wrestling.html' },
-  { album: 'Singles', path: '/music/singles/ebi.html' },
-  { album: 'Singles', path: '/music/singles/hope-cafe.html' },
-  { album: 'Singles', path: '/music/singles/fire.html' },
-  { album: 'Singles', path: '/music/singles/radiant-revival.html' },
-  { album: 'Singles', path: '/music/singles/little-secret.html' },
-  { album: 'Singles', path: '/music/singles/square-up.html' },
-  
-
-  // Features and Collaborations
-  { album: 'Features and Collaborations', path: '/music/collabs/love-taste.html' },
-  { album: 'Features and Collaborations', path: '/music/collabs/matryoshka-club-mix.html' },
-  { album: 'Features and Collaborations', path: '/music/collabs/ghostride-my-bad-emotions.html' },
-  { album: 'Features and Collaborations', path: '/music/collabs/annihilation-waltz.html' },
-  { album: 'Features and Collaborations', path: '/music/collabs/ride.html' },
-  { album: 'Features and Collaborations', path: '/music/collabs/love-renewed.html' },
-  { album: 'Features and Collaborations', path: '/music/collabs/take-it-away.html' },
-  { album: 'Features and Collaborations', path: '/music/collabs/newly-human-feeling.html' },
-  { album: 'Features and Collaborations', path: '/music/collabs/on-the-wind.html' },
-
-  // FF Album 2
-  { album: 'FF Album 2', path: '/music/ff2/static.html' },
-  { album: 'FF Album 2', path: '/music/ff2/spoken-for.html' },
-  { album: 'FF Album 2', path: '/music/ff2/human.html' },
-  { album: 'FF Album 2', path: '/music/ff2/connect-commune.html' },
-  { album: 'FF Album 2', path: '/music/ff2/ego-renegade-boy.html' },
-  { album: 'FF Album 2', path: '/music/ff2/streetcat.html' },
-
-  // FLAVOR FOLEY singles
-  { album: 'FLAVOR FOLEY', path: '/music/ewz.html' },
-
-  // Apple's Eye
-  { album: 'Apple\'s Eye', path: '/music/apples-eye/rot.html' },
+  { album: 'Album', path: '/music/pamiejaige.html' }
 ];
+
+const staticMiscEntries = [
+  { album: 'Motifs', path: '/motifs.html' }
+];
+
+function getBasePath() {
+  const pathname = String(window.location.pathname || '');
+  return pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
+}
+
+function splitCsvLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values.map((value) => String(value || '').trim());
+}
+
+function splitPipeValues(value) {
+  return String(value || '')
+    .split(/\s*\|\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseAlbumPageTitle(htmlText) {
+  const html = String(htmlText || '');
+  const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (h1Match && h1Match[1]) {
+    const h1Text = h1Match[1].replace(/<[^>]+>/g, '').trim();
+    if (h1Text) {
+      return h1Text;
+    }
+  }
+
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (titleMatch && titleMatch[1]) {
+    const titleText = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+    if (titleText) {
+      return titleText;
+    }
+  }
+
+  return '';
+}
+
+function getAlbumIdFromAlbumPath(pathname) {
+  const fileName = String(pathname || '').split('/').pop() || '';
+  return fileName.replace(/\.html$/i, '').trim().toLowerCase();
+}
+
+function loadAlbumTitleByIdMap(basePath) {
+  const requests = albumPageEntries.map((entry) => {
+    const albumPath = String((entry || {}).path || '').trim();
+    const albumId = getAlbumIdFromAlbumPath(albumPath);
+    if (!albumPath || !albumId) {
+      return Promise.resolve(null);
+    }
+
+    const url = String(basePath || '') + albumPath;
+    return fetch(url, { cache: 'no-store' })
+      .then((response) => response.ok ? response.text() : '')
+      .then((html) => ({ albumId, title: parseAlbumPageTitle(html) }))
+      .catch(() => null);
+  });
+
+  return Promise.all(requests).then((records) => {
+    const map = new Map();
+    records.forEach((record) => {
+      if (!record || !record.albumId || !record.title) {
+        return;
+      }
+      map.set(record.albumId, record.title);
+    });
+    return map;
+  });
+}
+
+function isTruthyFlag(value) {
+  const normalized = String(value || '').trim().toUpperCase();
+  return normalized === 'TRUE' || normalized === 'YES' || normalized === '1';
+}
+
+function findSongCsvHeaderIndex(headers, aliases) {
+  const lowered = headers.map((header) => String(header || '').trim().toLowerCase());
+  for (const alias of aliases) {
+    const index = lowered.indexOf(String(alias || '').trim().toLowerCase());
+    if (index !== -1) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function parseSongEntriesFromCsv(text, albumTitleById) {
+  const lines = String(text || '').split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
+    return [];
+  }
+
+  const headers = splitCsvLine(lines[0]);
+  const pathIndex = findSongCsvHeaderIndex(headers, ['page_path', 'Path']);
+  const albumIdIndex = findSongCsvHeaderIndex(headers, ['album_id']);
+
+  if (pathIndex === -1) {
+    return [];
+  }
+
+  const entries = [];
+  const seenPaths = new Set();
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitCsvLine(lines[index]);
+    const pagePath = String(values[pathIndex] || '').trim();
+    if (!pagePath || pagePath.includes('#')) {
+      continue;
+    }
+
+    const normalizedPagePath = '/music/' + pagePath.replace(/^\/+/, '');
+    if (seenPaths.has(normalizedPagePath)) {
+      continue;
+    }
+    seenPaths.add(normalizedPagePath);
+
+    const primaryAlbumId = splitPipeValues(values[albumIdIndex])[0] || '';
+    const normalizedAlbumId = primaryAlbumId.toLowerCase();
+    const derivedAlbum = (albumTitleById && normalizedAlbumId)
+      ? String(albumTitleById.get(normalizedAlbumId) || '').trim()
+      : '';
+    const album = derivedAlbum || 'Collection';
+    entries.push({ album, path: normalizedPagePath });
+  }
+
+  return entries;
+}
+
+function parseMotifEntriesFromCsv(text) {
+  const lines = String(text || '').split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
+    return [];
+  }
+
+  const headers = splitCsvLine(lines[0]).map((header) => header.toLowerCase());
+  const motifIdIndex = headers.indexOf('motif id');
+  const hasPageIndex = headers.indexOf('has page');
+
+  if (motifIdIndex === -1 || hasPageIndex === -1) {
+    return [];
+  }
+
+  const entries = [];
+  const seenMotifIds = new Set();
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitCsvLine(lines[index]);
+    const motifId = String(values[motifIdIndex] || '').trim();
+    const hasPage = isTruthyFlag(values[hasPageIndex]);
+
+    if (!motifId || !hasPage || seenMotifIds.has(motifId)) {
+      continue;
+    }
+
+    seenMotifIds.add(motifId);
+    entries.push({
+      album: 'Motifs',
+      path: '/motifs/' + motifId + '.html'
+    });
+  }
+
+  return entries;
+}
+
+function setMusicFilePaths(motifEntries, songEntries) {
+  musicFilePaths.length = 0;
+
+  staticMiscEntries.forEach((entry) => musicFilePaths.push(entry));
+  motifEntries.forEach((entry) => musicFilePaths.push(entry));
+  albumPageEntries.forEach((entry) => musicFilePaths.push(entry));
+  songEntries.forEach((entry) => musicFilePaths.push(entry));
+
+  window.dispatchEvent(new Event('musicFilePathsReady'));
+}
+
+let resolveMusicFilePathsReady = null;
+const musicFilePathsReadyPromise = new Promise((resolve) => {
+  resolveMusicFilePathsReady = resolve;
+});
+
+window.musicFilePathsReadyPromise = musicFilePathsReadyPromise;
+window.whenMusicFilePathsReady = function () {
+  return musicFilePathsReadyPromise;
+};
+
+(function loadMusicFilePathsFromCsv() {
+  const basePath = getBasePath();
+  const songCsvUrl = basePath + '/public/music/JamiePedia Data - Songs.csv';
+  const motifCsvUrl = basePath + '/public/motifs/JamiePedia Data - Motifs.csv';
+
+  Promise.all([
+    fetch(songCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
+    fetch(motifCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
+    loadAlbumTitleByIdMap(basePath)
+  ])
+    .then(([songCsvText, motifCsvText, albumTitleById]) => {
+      const songEntries = parseSongEntriesFromCsv(songCsvText, albumTitleById);
+      const motifEntries = parseMotifEntriesFromCsv(motifCsvText);
+      setMusicFilePaths(motifEntries, songEntries);
+    })
+    .catch(() => {
+      setMusicFilePaths([], []);
+    })
+    .finally(() => {
+      if (resolveMusicFilePathsReady) {
+        resolveMusicFilePathsReady(musicFilePaths);
+      }
+    });
+})();

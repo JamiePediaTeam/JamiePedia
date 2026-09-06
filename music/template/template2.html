@@ -1,21 +1,5 @@
 <!DOCTYPE html>
-<html
-data-versions='{
-  "original": {
-    "name": "Original",
-    "theme": "aa",
-    "defaultAlbumArt": "cc.png",
-    "albumArtImageId": "album-art-image",
-    "coverArtistDisplayId": "cover-artist-display"
-  },
-  "alt1": {
-    "name": "Demo",
-    "theme": "grayscale",
-    "defaultAlbumArt": "ccii.png",
-    "albumArtImageId": "album-art-image-alt1",
-    "coverArtistDisplayId": "cover-artist-display-alt1"
-  }
-}' data-theme-id="default">
+<html data-theme-id="default">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -62,9 +46,8 @@ data-versions='{
           <button class="song-tab" onclick="switchTab('extended')">Extended Info</button>
 
           <div class="tabs-spacer"></div>
-          
-          <button class="version-tab active" onclick="switchVersion('original')">Original</button>
-          <button class="version-tab" onclick="switchVersion('alt1')">Alt</button>
+
+
         </div>
       </div>
       
@@ -73,183 +56,67 @@ data-versions='{
           <div id="version-original" class="song-container">
           <!-- Left View -->
           <div class="song-leftview">
-            <h1 class="song-title">Template 2</h1>
-            <p class="song-length">Length: X:XX</p>
-            
-            <!-- Lyrics Subtabs (only visible when lyrics tab is active) -->
-            <div id="lyrics-subtabs-container" class="lyrics-subtabs-container">
-              <div class="lyrics-subtabs">
-                <button class="lyrics-subtab active" onclick="switchLyricsTab('annotated')">Annotated Lyrics</button>
-                <button class="lyrics-subtab" onclick="switchLyricsTab('raw')">Raw Lyrics</button>
-              </div>
-            </div>
-            
+            <h1 class="song-title"></h1>
+            <p class="song-length"></p>
+
             <!-- Tab Content -->
             <div id="content-lyrics" class="song-content active">
-              <div id="lyrics-annotated" class="lyrics-content active">
-</div>
+              <div id="lyrics-annotated" class="lyrics-content active"></div>
 
               
-              <div id="lyrics-raw" class="lyrics-content">
-</div>
+              
             </div>
             
-            <div id="content-motifs" class="song-content">
-</div>
+            <div id="content-motifs" class="song-content"></div>
             
-            <div id="content-summary" class="song-content">
-</div>
+            <div id="content-summary" class="song-content"></div>
             
-            <div id="content-extended" class="song-content">
-</div>
+            <div id="content-extended" class="song-content"></div>
           </div>
-          
-          <!-- Right View -->
-          <div class="song-rightview">
-            <!-- Album Art Tabs -->
-            <div class="album-tabs-container">
-              <div class="album-tabs">
-                <button class="album-tab active" onclick="switchAlbumArt('cc.png')">Album</button>
-                <button class="album-tab" onclick="switchAlbumArt('ccde.png')">Deluxe</button> <!-- Example of an alternate album art tab, remove if not needed -->
-              </div>
-            </div>
-            
-            <!-- Cover Art -->
-            <div class="song-cover">
-              <img id="album-art-image" src="../../public/images/cover-art/cc.png" alt="Constant Companions Album Cover" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
-            </div>
-            
-            <!-- Cover Art Credit -->
-            <div class="cover-art-footer">
-              <div class="cover-art-credit">Cover art by: <span id="cover-artist-display">REVERIEQUE</span></div>
-            </div>
-            
-            <!-- Navigation Buttons -->
-            <div class="song-nav-buttons">
-              <a href="javascript:void(0);" onclick="goToSong('/music/template/template.html')" class="song-nav-link">← Previous</a>
-              <a href="javascript:void(0);" onclick="goToSong('/music/template/template2.html')" class="song-nav-link">Next →</a>
-            </div>
-            
-            <!-- Album & Date -->
-            <div class="song-info-block">
-              <div class="song-info-label">Appears On</div>
-              <div class="song-info-content">X/X - Album 1<br>X/X - Album 2</div>
-            </div>
-            
-            <div class="song-info-block">
-              <div class="song-info-label">Release Date</div>
-              <div class="song-info-content">XX/XX/20XX</div>
-            </div>
-            
-            <!-- Credits & Contributors -->
-            <div class="song-info-block">
-              <div class="song-info-label">Artist</div>
-              <div class="song-info-content">Jamie Paige</div>
-            </div>
 
-            <div class="song-info-block">
-              <div class="song-info-label">Vocalist</div>
-              <div class="song-info-content">Jamie Paige</div>
-            </div>
-
-            <!-- Links -->
-            <div class="song-info-block">
-              <div class="song-info-label">Listen</div>
-              <div class="song-links">
-                <a href="#">Music Links Here</a>
+            <div class="song-rightview">
+              <div class="album-tabs-container">
+                <div class="album-tabs"></div>
               </div>
+              <div class="song-cover"></div>
+              <div class="cover-art-footer">
+                <div class="cover-art-credit">Cover art by: <span id="cover-artist-display"></span></div>
+              </div>
+              <div class="song-nav-buttons"></div>
             </div>
           </div>
-        </div>
         
           <!-- Alternative Version -->
           <div id="version-alt1" class="song-container" style="display: none;">
             <!-- Left View -->
             <div class="song-leftview">
-              <h1 class="song-title">Template Alt</h1>
-              <p class="song-length">Length: X:XX</p>
-              
-              <!-- Lyrics Subtabs (only visible when lyrics tab is active) -->
-              <div id="lyrics-subtabs-container-alt1" class="lyrics-subtabs-container">
-                <div class="lyrics-subtabs">
-                  <button class="lyrics-subtab active" onclick="switchLyricsTab('annotated')">Annotated Lyrics</button>
-                  <button class="lyrics-subtab" onclick="switchLyricsTab('raw')">Raw Lyrics</button>
-                </div>
-              </div>
-              
+              <h1 class="song-title"></h1>
+              <p class="song-length"></p>
+
               <!-- Tab Content -->
               <div id="content-lyrics-alt1" class="song-content active">
-                <div id="lyrics-annotated-alt1" class="lyrics-content active">
-</div>
+                <div id="lyrics-annotated-alt1" class="lyrics-content active"></div>
                 
-                <div id="lyrics-raw-alt1" class="lyrics-content">
-</div>
+                
               </div>
               
-              <div id="content-motifs-alt1" class="song-content">
-</div>
+              <div id="content-motifs-alt1" class="song-content"></div>
               
-              <div id="content-summary-alt1" class="song-content">
-</div>
+              <div id="content-summary-alt1" class="song-content"></div>
               
-              <div id="content-extended-alt1" class="song-content">
-</div>
+              <div id="content-extended-alt1" class="song-content"></div>
             </div>
             
             <!-- Right View -->
             <div class="song-rightview">
-              <!-- Album Art Tabs -->
               <div class="album-tabs-container">
-                <div class="album-tabs">
-                  <button class="album-tab active" onclick="switchAlbumArt('cc.png')">Album</button>
-                  <button class="album-tab" onclick="switchAlbumArt('ccde.png')">Deluxe</button> <!-- Example of an alternate album art tab, remove if not needed -->
-                </div>
+                <div class="album-tabs"></div>
               </div>
-            <!-- Cover Art -->
-              <div class="song-cover">
-                <img id="album-art-image" src="../../public/images/cover-art/cc.png" alt="Constant Companions Album Cover" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
-              </div>
-              
-              <!-- Cover Art Credit -->
+              <div class="song-cover"></div>
               <div class="cover-art-footer">
-                <div class="cover-art-credit">Cover art by: <span id="cover-artist-display-alt1">REVERIEQUE</span></div>
+                  <div class="cover-art-credit">Cover art by: <span id="cover-artist-display-alt1"></span></div>
               </div>
-              
-              <!-- Navigation Buttons -->
-              <div class="song-nav-buttons">
-                <a href="javascript:void(0);" onclick="goToSong('/music/template/template2.html')" class="song-nav-link">← Previous</a>
-                <a href="javascript:void(0);" onclick="goToSong('/music/template/template.html')" class="song-nav-link">Next →</a>
-              </div>
-              
-              <!-- Album & Date -->
-              <div class="song-info-block">
-                <div class="song-info-label">Appears On</div>
-                <div class="song-info-content">X/X - Album 1<br>X/X - Album 2</div>
-              </div>
-              
-              <div class="song-info-block">
-                <div class="song-info-label">Release Date</div>
-                <div class="song-info-content">XX/XX/20XX</div>
-              </div>
-              
-              <!-- Credits & Contributors -->
-              <div class="song-info-block">
-                <div class="song-info-label">Artist</div>
-                <div class="song-info-content">Jamie Paige</div>
-              </div>
-            
-              <div class="song-info-block">
-                <div class="song-info-label">Vocalists</div>
-                <div class="song-info-content">Jamie Paige</div>
-              </div>
-              
-              <!-- Links -->
-              <div class="song-info-block">
-                <div class="song-info-label">Listen</div>
-                <div class="song-links">
-                  <a href="#">Music Links Here</a>
-      </div>
-    </div>
-  </div>
+              <div class="song-nav-buttons"></div>
+            </div>
   </body>
 </html>

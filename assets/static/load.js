@@ -426,6 +426,7 @@ async function loadThemeFromCsv() {
 const musicFilesScript = document.createElement('script');
 musicFilesScript.src = basePath + '/assets/static/music-files.js';
 musicFilesScript.onload = function() {
+  const continueLoadingDependentScripts = function () {
   const navOrderScript = document.createElement('script');
   navOrderScript.src = basePath + '/assets/static/nav-order.js';
   navOrderScript.onload = function() {
@@ -460,6 +461,17 @@ musicFilesScript.onload = function() {
     document.head.appendChild(searchScript);
   };
   document.head.appendChild(navOrderScript);
+  };
+
+  const readyPromise = typeof window.whenMusicFilePathsReady === 'function'
+    ? window.whenMusicFilePathsReady()
+    : window.musicFilePathsReadyPromise;
+
+  if (readyPromise && typeof readyPromise.then === 'function') {
+    readyPromise.finally(continueLoadingDependentScripts);
+  } else {
+    continueLoadingDependentScripts();
+  }
 };
 document.head.appendChild(musicFilesScript);
 
@@ -561,23 +573,34 @@ function initializeDataNavButtons() {
 
   let containers = Array.from(document.querySelectorAll('.song-nav-buttons, .album-nav-buttons'));
 
-  // Album pages typically do not include nav buttons in HTML.
-  // Auto-create a container so album prev/next is centrally data-driven too.
-  if (containers.length === 0 && activeList === navOrder.albums) {
-    const bodybar = document.querySelector('.bodybar');
-    if (bodybar) {
+  // Auto-create a container so prev/next is centrally data-driven even when
+  // song/album pages no longer hardcode those links in HTML.
+  if (containers.length === 0 && (activeList === navOrder.albums || activeList === navOrder.songs)) {
+    const isSong = activeList === navOrder.songs;
+    const mount = isSong
+      ? (document.querySelector('.song-container[id^="version-"][style*="display: flex"] .song-rightview')
+        || document.querySelector('.song-container .song-rightview'))
+      : document.querySelector('.bodybar');
+    if (mount) {
       const container = document.createElement('div');
-      container.className = 'album-nav-buttons';
+      container.className = isSong ? 'song-nav-buttons' : 'album-nav-buttons';
       container.innerHTML =
-        '<a href="javascript:void(0);" class="album-nav-link">← Previous</a>' +
-        '<a href="javascript:void(0);" class="album-nav-link">Next →</a>';
-      bodybar.appendChild(container);
+        '<a href="javascript:void(0);" class="' + (isSong ? 'song-nav-link' : 'album-nav-link') + '">← Previous</a>' +
+        '<a href="javascript:void(0);" class="' + (isSong ? 'song-nav-link' : 'album-nav-link') + '">Next →</a>';
+      mount.appendChild(container);
       containers = [container];
     }
   }
 
   containers.forEach((container) => {
-    const links = Array.from(container.querySelectorAll('a.song-nav-link, button.song-nav-link, a.album-nav-link, button.album-nav-link, a, button'));
+    let links = Array.from(container.querySelectorAll('a.song-nav-link, button.song-nav-link, a.album-nav-link, button.album-nav-link, a, button'));
+    if (links.length < 2) {
+      const isSong = activeList === navOrder.songs;
+      container.innerHTML =
+        '<a href="javascript:void(0);" class="' + (isSong ? 'song-nav-link' : 'album-nav-link') + '">← Previous</a>' +
+        '<a href="javascript:void(0);" class="' + (isSong ? 'song-nav-link' : 'album-nav-link') + '">Next →</a>';
+      links = Array.from(container.querySelectorAll('a.song-nav-link, button.song-nav-link, a.album-nav-link, button.album-nav-link, a, button'));
+    }
     if (links.length < 2) return;
 
     const prevElement = links.find((el) => /previous|←/i.test(el.textContent || '')) || links[0];
@@ -909,8 +932,629 @@ function populateAlbumPageCoverCredits() {
 document.addEventListener('DOMContentLoaded', function () {
   initializeDataNavButtons();
   populateAlbumPageCoverCredits();
+  initializeAlbumSongListFromCsv();
   initializeAlbumSummary();
+  initializeSongSidebarData();
 });
+
+function splitCsvLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values.map((value) => String(value || '').trim());
+}
+
+const songSidebarHeaderAliases = {
+  page_path: ['page_path', 'path'],
+  page_title: ['page_title', 'page title'],
+  version_theme: ['version_theme', 'theme'],
+  song_length: ['song_length', 'song length'],
+  alt_tab: ['alt_tab', 'alt tab status?'],
+  tab_name: ['tab_name', 'alt tab name'],
+  album_id: ['album_id'],
+  album_track: ['album_track', 'track number'],
+  album_art_paths: ['album_art_paths', 'album path', 'album art'],
+  album_tab_labels: ['album_tab_labels', 'cover art labels'],
+  appears_on: ['appears_on', 'appears on text'],
+  appears_on_enabled: ['appears_on_enabled'],
+  release_date: ['release_date', 'release date'],
+  release_date_enabled: ['release_date_enabled'],
+  artists: ['artists'],
+  artists_enabled: ['artists_enabled'],
+  vocalists: ['vocalists'],
+  vocalists_enabled: ['vocalists_enabled'],
+  listen_text: ['listen_text', 'listen text'],
+  listen_links: ['listen_links', 'listen links'],
+  listen_enabled: ['listen_enabled'],
+  close_up: ['close_up', 'close up'],
+  close_up_enabled: ['close_up_enabled']
+};
+
+function normalizeSongSidebarHeader(header) {
+  const key = String(header || '').trim().toLowerCase();
+  if (!key) {
+    return '';
+  }
+
+  for (const canonicalKey of Object.keys(songSidebarHeaderAliases)) {
+    const aliases = songSidebarHeaderAliases[canonicalKey] || [];
+    if (aliases.includes(key)) {
+      return canonicalKey;
+    }
+  }
+
+  return String(header || '').trim();
+}
+
+function parseSongSidebarCsv(text) {
+  const rows = [];
+  const lines = String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) {
+    return rows;
+  }
+
+  const headers = splitCsvLine(lines[0]);
+  const normalizedHeaders = headers.map((header) => normalizeSongSidebarHeader(header));
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitCsvLine(lines[index]);
+    const row = {};
+    normalizedHeaders.forEach((header, headerIndex) => {
+      if (!header) {
+        return;
+      }
+      row[header] = values[headerIndex] || '';
+    });
+    if (Object.keys(row).length > 0) {
+      rows.push(row);
+    }
+  }
+
+  return rows;
+}
+
+function isSongSidebarCsvLoaded() {
+  return Array.isArray(window.__songSidebarCsvRows) && window.__songSidebarCsvRows.length > 0;
+}
+
+function ensureSongSidebarCsvLoaded(onReady) {
+  if (isSongSidebarCsvLoaded()) {
+    if (typeof onReady === 'function') {
+      onReady(window.__songSidebarCsvRows);
+    }
+    return;
+  }
+
+  fetch(basePath + '/public/music/JamiePedia Data - Songs.csv', { cache: 'no-store' })
+    .then((response) => response.ok ? response.text() : '')
+    .then((text) => {
+      if (!text) {
+        return;
+      }
+      window.__songSidebarCsvRows = parseSongSidebarCsv(text);
+      if (typeof onReady === 'function') {
+        onReady(window.__songSidebarCsvRows);
+      }
+    })
+    .catch(() => {});
+}
+
+const songSidebarFieldOrder = [
+  { key: 'appears_on', label: 'Appears On', aliases: ['appears on'] },
+  { key: 'release_date', label: 'Release Date', aliases: ['release date'] },
+  { key: 'artists', label: 'Artists', aliases: ['artist', 'artists'] },
+  { key: 'vocalists', label: 'Vocalists', aliases: ['vocalist', 'vocalists'] },
+  { key: 'listen', label: 'Listen', aliases: ['listen'] },
+  { key: 'close_up', label: 'Close-up', aliases: ['close-up', 'close up', 'closeup'] }
+];
+
+function normalizeSongSidebarLabel(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function splitSongSidebarValues(value) {
+  return String(value || '')
+    .split(/\s*\|\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseLegacySongSidebarPairs(value) {
+  const labels = [];
+  const links = [];
+
+  splitSongSidebarValues(value).forEach((entry) => {
+    const splitIndex = entry.indexOf('=');
+    if (splitIndex === -1) {
+      labels.push(entry);
+      links.push('');
+      return;
+    }
+
+    const label = entry.slice(0, splitIndex).trim();
+    const href = entry.slice(splitIndex + 1).trim();
+    if (!label && !href) {
+      return;
+    }
+    labels.push(label);
+    links.push(href);
+  });
+
+  return { labels, links };
+}
+
+function normalizeSongSidebarHashToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^#/, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function normalizeSongSidebarPathKey(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  const splitIndex = raw.indexOf('#');
+  const rawPath = splitIndex === -1 ? raw : raw.slice(0, splitIndex);
+  const rawHash = splitIndex === -1 ? '' : raw.slice(splitIndex + 1);
+  const withMusicPrefix = rawPath.startsWith('/music/')
+    ? rawPath
+    : ('/music/' + rawPath.replace(/^\/+/, ''));
+  const normalizedPath = toExtensionlessPath(withMusicPrefix);
+  const hashToken = normalizeSongSidebarHashToken(rawHash);
+
+  return hashToken
+    ? normalizedPath + '#' + hashToken
+    : normalizedPath;
+}
+
+function getActiveSongSidebarScope() {
+  const versionContainers = Array.from(document.querySelectorAll('.song-container[id^="version-"]'));
+  if (!versionContainers.length) {
+    return document;
+  }
+
+  const visible = versionContainers.find((container) => container.style.display !== 'none');
+  return visible || versionContainers[0] || document;
+}
+
+function getSongSidebarRowForCurrentPage() {
+  const currentPath = toExtensionlessPath(window.location.pathname);
+  if (!document.querySelector('.song-page-wrapper')) {
+    return null;
+  }
+
+  const csvUrl = basePath + '/public/music/JamiePedia Data - Songs.csv';
+  if (!window.__songSidebarCsvRows) {
+    return null;
+  }
+
+  const hashToken = normalizeSongSidebarHashToken(window.location.hash);
+  const currentCandidate = currentPath.replace(/\/$/, '');
+  const rows = window.__songSidebarCsvRows;
+
+  if (hashToken) {
+    const hashCandidate = currentCandidate + '#' + hashToken;
+    const hashMatch = rows.find((row) => {
+      const pagePath = String(row.page_path || '').trim();
+      if (!pagePath) {
+        return false;
+      }
+      return normalizeSongSidebarPathKey(pagePath) === hashCandidate;
+    });
+
+    if (hashMatch) {
+      return hashMatch;
+    }
+  }
+
+  return rows.find((row) => {
+    const pagePath = String(row.page_path || '').trim();
+    if (!pagePath) {
+      return false;
+    }
+    return normalizeSongSidebarPathKey(pagePath) === currentCandidate;
+  }) || null;
+}
+
+function createSongSidebarLinks(labelsValue, linksValue) {
+  const labels = Array.isArray(labelsValue) ? labelsValue : splitSongSidebarValues(labelsValue);
+  const links = Array.isArray(linksValue) ? linksValue : splitSongSidebarValues(linksValue);
+  const total = Math.max(labels.length, links.length);
+  const container = document.createElement('div');
+  container.className = 'song-links';
+
+  for (let index = 0; index < total; index += 1) {
+    const label = String(labels[index] || '').trim();
+    const rawHref = String(links[index] || '').trim();
+
+    if (!label) {
+      continue;
+    }
+
+    const link = document.createElement('a');
+    link.textContent = label;
+    if (rawHref && /^https?:/i.test(rawHref)) {
+      link.href = rawHref;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+    } else if (rawHref) {
+      link.href = typeof window.toSiteHref === 'function' ? window.toSiteHref(rawHref) : rawHref;
+    } else {
+      link.href = '#';
+    }
+    container.appendChild(link);
+  }
+
+  return container;
+}
+
+function buildSongSidebarValueHtml(fieldKey, value, row) {
+  const entries = splitSongSidebarValues(value);
+
+  if (!entries.length) {
+    return '';
+  }
+
+  const renderEntry = (entry) => {
+    if (entry.includes('=')) {
+      const splitIndex = entry.indexOf('=');
+      const label = entry.slice(0, splitIndex).trim();
+      const href = entry.slice(splitIndex + 1).trim();
+
+      if (label && href) {
+        const normalizedHref = /^https?:/i.test(href)
+          ? href
+          : (typeof window.toSiteHref === 'function' ? window.toSiteHref(href) : href);
+        const isExternal = /^https?:/i.test(href);
+        const anchor = '<a href="' + normalizedHref.replace(/"/g, '%22') + '"' + (isExternal ? ' target="_blank" rel="noopener noreferrer"' : '') + '>' + label + '</a>';
+        return anchor;
+      }
+
+      return label || '';
+    }
+
+    return entry;
+  };
+
+  if (fieldKey === 'listen' || fieldKey === 'close_up') {
+    return entries.map(renderEntry).join('<br>');
+  }
+
+  if (fieldKey === 'appears_on') {
+    const albumIds = splitSongSidebarValues((row || {}).album_id || '');
+    const singleAlbumFallback = albumIds.length === 1 ? albumIds[0] : '';
+
+    return entries.map((entry, index) => {
+      if (entry.includes('=')) {
+        return renderEntry(entry);
+      }
+
+      const albumId = String(albumIds[index] || singleAlbumFallback || '').trim();
+      if (albumId && albumId.toLowerCase() !== 'x') {
+        const href = typeof window.toSiteHref === 'function'
+          ? window.toSiteHref('/music/' + albumId)
+          : ('/music/' + albumId);
+        return '<a href="' + href.replace(/"/g, '%22') + '">' + entry + '</a>';
+      }
+
+      return entry;
+    }).join('<br>');
+  }
+
+  return entries.join('<br>');
+}
+
+function populateSongSidebarBlock(block, row, key) {
+  if (!block) {
+    return;
+  }
+
+  const labelEl = block.querySelector('.song-info-label');
+  const contentEl = block.querySelector('.song-info-content, .song-links');
+  const enabled = String(row[key + '_enabled'] || '').toUpperCase() === 'TRUE';
+
+  if (!enabled) {
+    block.style.display = 'none';
+    return;
+  }
+
+  block.style.display = '';
+  if (labelEl) {
+    const field = songSidebarFieldOrder.find((item) => item.key === key);
+    if (key === 'artists') {
+      const artistCount = splitSongSidebarValues(String(row.artists || '')).length;
+      labelEl.textContent = artistCount === 1 ? 'Artist' : 'Artists';
+    } else {
+      labelEl.textContent = field ? field.label : labelEl.textContent;
+    }
+  }
+
+  if (key === 'listen') {
+    let labels = splitSongSidebarValues(row.listen_text || '');
+    let links = splitSongSidebarValues(row.listen_links || '');
+
+    if ((!labels.length && !links.length) && row.listen) {
+      const legacy = parseLegacySongSidebarPairs(row.listen);
+      labels = legacy.labels;
+      links = legacy.links;
+    }
+
+    if (!labels.length && !links.length) {
+      if (contentEl) {
+        contentEl.textContent = '';
+      }
+      return;
+    }
+
+    const linkContainer = createSongSidebarLinks(labels, links);
+    if (contentEl && contentEl.classList && contentEl.classList.contains('song-links')) {
+      contentEl.replaceWith(linkContainer);
+    } else {
+      const parent = block.querySelector('.song-info-content');
+      if (parent) {
+        parent.replaceWith(linkContainer);
+      } else if (contentEl) {
+        contentEl.replaceWith(linkContainer);
+      } else {
+        block.appendChild(linkContainer);
+      }
+    }
+    return;
+  }
+
+  const value = String(row[key] || '').trim();
+  if (!value) {
+    if (contentEl) {
+      contentEl.textContent = '';
+    }
+    return;
+  }
+
+  if (key === 'close_up') {
+    const parsed = parseLegacySongSidebarPairs(value);
+    const labels = parsed.labels.length ? parsed.labels : splitSongSidebarValues(value);
+    const links = parsed.links.some((entry) => String(entry || '').trim())
+      ? parsed.links
+      : splitSongSidebarValues(value);
+    const linkContainer = createSongSidebarLinks(labels, links);
+    if (contentEl && contentEl.classList && contentEl.classList.contains('song-links')) {
+      contentEl.replaceWith(linkContainer);
+    } else {
+      const parent = block.querySelector('.song-info-content');
+      if (parent) {
+        parent.replaceWith(linkContainer);
+      } else if (contentEl) {
+        contentEl.replaceWith(linkContainer);
+      } else {
+        block.appendChild(linkContainer);
+      }
+    }
+    return;
+  }
+
+  const outputHtml = buildSongSidebarValueHtml(key, value, row);
+  if (contentEl && contentEl.classList && contentEl.classList.contains('song-info-content')) {
+    contentEl.innerHTML = outputHtml;
+  } else {
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'song-info-content';
+    contentWrapper.innerHTML = outputHtml;
+    const existing = block.querySelector('.song-info-content');
+    if (existing) {
+      existing.replaceWith(contentWrapper);
+    } else if (contentEl) {
+      contentEl.replaceWith(contentWrapper);
+    } else {
+      block.appendChild(contentWrapper);
+    }
+  }
+}
+
+function createSongSidebarBlock(field) {
+  const block = document.createElement('div');
+  block.className = 'song-info-block';
+
+  const label = document.createElement('div');
+  label.className = 'song-info-label';
+  label.textContent = field ? field.label : '';
+
+  const content = document.createElement('div');
+  content.className = 'song-info-content';
+
+  block.appendChild(label);
+  block.appendChild(content);
+  return block;
+}
+
+function getOrCreateSongSidebarBlock(sidebarScope, field) {
+  if (!sidebarScope || !field) {
+    return null;
+  }
+
+  const existingBlocks = Array.from(sidebarScope.querySelectorAll('.song-info-block'));
+  const existing = existingBlocks.find((candidate) => {
+    const labelText = (candidate.querySelector('.song-info-label') || {}).textContent || '';
+    const normalized = normalizeSongSidebarLabel(labelText);
+    const exactMatch = normalized === normalizeSongSidebarLabel(field.label);
+    const aliasMatch = (field.aliases || []).some((alias) => normalized === normalizeSongSidebarLabel(alias));
+    return exactMatch || aliasMatch;
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  const rightView = sidebarScope.querySelector('.song-rightview');
+  if (!rightView) {
+    return null;
+  }
+
+  const block = createSongSidebarBlock(field);
+  rightView.appendChild(block);
+  return block;
+}
+
+function initializeSongSidebarData() {
+  const currentPath = toExtensionlessPath(window.location.pathname);
+  if (!document.querySelector('.song-page-wrapper')) {
+    return;
+  }
+
+  if (!isSongSidebarCsvLoaded()) {
+    ensureSongSidebarCsvLoaded(function () {
+      initializeSongSidebarData();
+    });
+    return;
+  }
+
+  const row = getSongSidebarRowForCurrentPage();
+  if (!row) {
+    return;
+  }
+
+  const sidebarScope = getActiveSongSidebarScope();
+  songSidebarFieldOrder.forEach((field) => {
+    const block = getOrCreateSongSidebarBlock(sidebarScope, field);
+
+    if (block) {
+      populateSongSidebarBlock(block, row, field.key);
+    }
+  });
+}
+
+window.initializeSongSidebarData = initializeSongSidebarData;
+
+function getAlbumIdFromCurrentPage() {
+  const currentPath = toExtensionlessPath(window.location.pathname);
+  if (!/^\/music\/[^/]+$/.test(currentPath) || currentPath === '/music') {
+    return '';
+  }
+  return String(currentPath.split('/').pop() || '').toLowerCase();
+}
+
+function rowToAlbumSongHref(row) {
+  const raw = String((row || {}).page_path || '').trim();
+  if (!raw) {
+    return '#';
+  }
+  return '/music/' + raw;
+}
+
+function rowToAlbumSongTitle(row) {
+  const pageTitle = String((row || {}).page_title || '').trim();
+  if (pageTitle) {
+    return pageTitle.split(/\s*\|\s*/).filter(Boolean).join(' ');
+  }
+
+  const pathPart = String((row || {}).page_path || '').split('#')[0];
+  return pathToPageName(pathPart);
+}
+
+function getTrackLabelForAlbum(row, albumId) {
+  const ids = splitSongSidebarValues((row || {}).album_id || '').map((value) => value.toLowerCase());
+  const tracks = splitSongSidebarValues((row || {}).album_track || '');
+  const index = ids.indexOf(String(albumId || '').toLowerCase());
+  if (index === -1) {
+    return 'x';
+  }
+  return String(tracks[index] || 'x').trim() || 'x';
+}
+
+function initializeAlbumSongListFromCsv() {
+  const songListEl = document.querySelector('.album-header .song-list');
+  if (!songListEl) {
+    return;
+  }
+
+  const albumId = getAlbumIdFromCurrentPage();
+  if (!albumId) {
+    return;
+  }
+
+  ensureSongSidebarCsvLoaded(function (rows) {
+    if (!Array.isArray(rows) || !rows.length) {
+      return;
+    }
+
+    const matches = rows.filter((row) => {
+      const ids = splitSongSidebarValues((row || {}).album_id || '').map((value) => value.toLowerCase());
+      return ids.includes(albumId);
+    });
+
+    if (!matches.length) {
+      return;
+    }
+
+    const entries = matches.map((row, index) => {
+      const trackLabel = getTrackLabelForAlbum(row, albumId);
+      const parsedTrack = parseInt(String(trackLabel || '').trim(), 10);
+      return {
+        row: row,
+        trackLabel: trackLabel,
+        trackNumber: Number.isFinite(parsedTrack) ? parsedTrack : Number.POSITIVE_INFINITY,
+        originalIndex: index
+      };
+    });
+
+    entries.sort((a, b) => {
+      if (a.trackNumber !== b.trackNumber) {
+        return a.trackNumber - b.trackNumber;
+      }
+      return a.originalIndex - b.originalIndex;
+    });
+
+    songListEl.innerHTML = '';
+
+    entries.forEach((entry) => {
+      const row = entry.row;
+      const title = rowToAlbumSongTitle(row);
+
+      const songItem = document.createElement('div');
+      songItem.className = 'song-item';
+
+      const link = document.createElement('a');
+      const href = rowToAlbumSongHref(row);
+      link.href = typeof window.toSiteHref === 'function' ? window.toSiteHref(href) : href;
+      link.textContent = title;
+
+      songItem.appendChild(link);
+      songListEl.appendChild(songItem);
+    });
+  });
+}
 
 // ---- Tracklist Sidebar ----
 
@@ -973,117 +1617,54 @@ function buildTracklistSidebarEl(headerText, headerHref, entries, currentPath, u
 
 function initializeTracklistSidebar() {
   var currentPath = toExtensionlessPath(window.location.pathname);
+  if (!/^\/music\/[^/]+\/[^/]+$/.test(currentPath)) {
+    return;
+  }
+
   var allFiles = Array.isArray(window.musicFilePaths)
     ? window.musicFilePaths
     : (typeof musicFilePaths !== 'undefined' && Array.isArray(musicFilePaths) ? musicFilePaths : []);
-  var sidebar2El = null;
 
-  var songMatch = currentPath.match(/^\/music\/([^/]+)\/[^/]+$/);
-  var albumMatch = !songMatch && currentPath.match(/^\/music\/([^/]+)$/);
-
-  if (!songMatch && !albumMatch) return;
-
-  var songEntries, albumSlug, albumName;
-
-  if (songMatch) {
-    var dirSlug = songMatch[1];
-    var currentEntry = allFiles.find(function (item) {
-      return item && item.path && toExtensionlessPath(item.path) === currentPath;
-    });
-
-    // Check if any album page declares sidebarSongsDir pointing at this directory.
-    // If so, ALL songs in this directory belong to that album page.
-    var dirRedirectEntry = allFiles.find(function (item) {
-      return item && item.album === 'Album' && item.sidebarSongsDir === dirSlug;
-    });
-
-    if (dirRedirectEntry) {
-      albumSlug = dirRedirectEntry.path.replace(/^\/music\//, '').replace(/\.html$/, '');
-      albumName = dirRedirectEntry.sidebarAlbumName || slugToDisplayName(albumSlug);
-      songEntries = allFiles.filter(function (item) {
-        return item && item.path && item.album !== 'Album' && item.album !== 'Motifs'
-          && item.path.startsWith('/music/' + dirSlug + '/');
-      });
-    } else if (currentEntry && currentEntry.sidebarAlbumSlug) {
-      // Per-song override (different album page, all songs in dir)
-      albumSlug = currentEntry.sidebarAlbumSlug;
-      var overrideAlbumEntry = allFiles.find(function (item) {
-        return item && item.album === 'Album' && item.path === '/music/' + albumSlug + '.html';
-      });
-      albumName = (overrideAlbumEntry && overrideAlbumEntry.sidebarAlbumName)
-        || slugToDisplayName(albumSlug);
-      songEntries = allFiles.filter(function (item) {
-        return item && item.path && item.album !== 'Album' && item.album !== 'Motifs'
-          && item.path.startsWith('/music/' + dirSlug + '/');
-      });
-    } else {
-      // Default: directory slug = album slug, exclude songs belonging to other album pages
-      albumSlug = dirSlug;
-      songEntries = allFiles.filter(function (item) {
-        return item && item.path && item.album !== 'Album' && item.album !== 'Motifs'
-          && item.path.startsWith('/music/' + albumSlug + '/')
-          && !item.sidebarAlbumSlug;
-      });
-      albumName = songEntries.length > 0 ? songEntries[0].album : null;
-    }
-  } else {
-    albumSlug = albumMatch[1];
-    var albumPageEntry = allFiles.find(function (item) {
-      return item && item.album === 'Album' && item.path === '/music/' + albumSlug + '.html';
-    });
-
-    if (albumPageEntry && albumPageEntry.sidebarSongsDir) {
-      // Album page whose songs live in a different directory
-      var songsDir = albumPageEntry.sidebarSongsDir;
-      albumName = albumPageEntry.sidebarAlbumName || slugToDisplayName(albumSlug);
-      songEntries = allFiles.filter(function (item) {
-        return item && item.path && item.album !== 'Album' && item.album !== 'Motifs'
-          && item.path.startsWith('/music/' + songsDir + '/');
-      });
-    } else {
-      // Default: songs in same directory, exclude those belonging to other album pages
-      songEntries = allFiles.filter(function (item) {
-        return item && item.path && item.album !== 'Album' && item.album !== 'Motifs'
-          && item.path.startsWith('/music/' + albumSlug + '/')
-          && !item.sidebarAlbumSlug;
-      });
-      albumName = songEntries.length > 0 ? songEntries[0].album : null;
-    }
-  }
-
-  if (!songEntries || songEntries.length === 0) return;
-  if (!albumName) return;
-  if (albumName === 'Singles' || albumName === 'Features and Collaborations') return;
-
-  var trackEntries = songEntries.map(function (item) {
-    return { path: item.path, name: null };
+  var dirSlug = currentPath.split('/').slice(2, -1)[0];
+  var songEntries = allFiles.filter(function (item) {
+    return item && item.path && item.album !== 'Album' && item.album !== 'Motifs'
+      && item.path.startsWith('/music/' + dirSlug + '/');
   });
 
-  sidebar2El = buildTracklistSidebarEl(albumName, '/music/' + albumSlug, trackEntries, currentPath, true);
+  if (!songEntries.length) {
+    return;
+  }
 
-  if (!sidebar2El) return;
+  var albumName = songEntries[0].album;
+  if (albumName === 'Singles' || albumName === 'Features and Collaborations') {
+    return;
+  }
+
+  var sidebar2El = buildTracklistSidebarEl(
+    albumName,
+    '/music/' + dirSlug,
+    songEntries.map(function (item) {
+      return { path: item.path, name: null };
+    }),
+    currentPath,
+    true
+  );
 
   var songSidebarCol = document.querySelector('.song-sidebar-col');
-  if (songSidebarCol) {
-    var sidebar1El = songSidebarCol.querySelector('.sidebar1');
-    var stickyWrapper = document.createElement('div');
-    stickyWrapper.className = 'sidebar-sticky-wrapper';
-    if (sidebar1El) {
-      songSidebarCol.insertBefore(stickyWrapper, sidebar1El);
-      stickyWrapper.appendChild(sidebar1El);
-    } else {
-      songSidebarCol.appendChild(stickyWrapper);
-    }
-    stickyWrapper.appendChild(sidebar2El);
-  } else {
-    var sidebar1 = document.querySelector('.sidebar1');
-    if (!sidebar1) return;
-    var stack = document.createElement('div');
-    stack.className = 'sidebar-stack';
-    sidebar1.parentNode.insertBefore(stack, sidebar1);
-    stack.appendChild(sidebar1);
-    stack.appendChild(sidebar2El);
+  if (!songSidebarCol) {
+    return;
   }
+
+  var sidebar1El = songSidebarCol.querySelector('.sidebar1');
+  if (!sidebar1El) {
+    return;
+  }
+
+  var stickyWrapper = document.createElement('div');
+  stickyWrapper.className = 'sidebar-sticky-wrapper';
+  songSidebarCol.insertBefore(stickyWrapper, sidebar1El);
+  stickyWrapper.appendChild(sidebar1El);
+  stickyWrapper.appendChild(sidebar2El);
 }
 
 function albumSummaryEscapeHtml(value) {

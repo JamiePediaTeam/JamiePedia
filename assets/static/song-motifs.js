@@ -52,28 +52,47 @@ function songMotifsNormalizeYouTubeId(value) {
 }
 
 function songMotifsReadDeclaredDuration() {
+  const getActiveScope = () => {
+    if (typeof window.getActiveVersionName === 'function') {
+      const activeVersionName = String(window.getActiveVersionName() || '').trim();
+      if (activeVersionName) {
+        const scope = document.getElementById('version-' + activeVersionName);
+        if (scope) {
+          return scope;
+        }
+      }
+    }
+
+    const visibleVersion = Array.from(document.querySelectorAll('[id^="version-"]')).find((node) => {
+      return node && node.offsetParent !== null;
+    });
+
+    return visibleVersion || document;
+  };
+
   const findTimeInText = (text) => {
     const match = String(text || '').match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
     return match ? songMotifTimeToSeconds(match[1]) : 0;
   };
 
-  const songLengthNodes = Array.from(document.querySelectorAll('.song-length'));
+  const songLengthNodes = Array.from(getActiveScope().querySelectorAll('.song-length'));
+  if (!songLengthNodes.length) {
+    return 0;
+  }
 
   for (const node of songLengthNodes) {
     if (!node || node.offsetParent === null) {
       continue;
     }
 
+    const source = String((node.dataset || {}).songLengthSource || '').trim().toLowerCase();
+    if (source && source !== 'manual') {
+      continue;
+    }
+
     const visibleDuration = findTimeInText(node.textContent);
     if (visibleDuration > 0) {
       return visibleDuration;
-    }
-  }
-
-  for (const node of songLengthNodes) {
-    const fallbackDuration = findTimeInText(node.textContent);
-    if (fallbackDuration > 0) {
-      return fallbackDuration;
     }
   }
 
@@ -114,9 +133,15 @@ function getSongMotifsMount() {
 }
 
 function songMotifsGetActiveVariantSuffix() {
-  const visibleVersion = Array.from(document.querySelectorAll('[id^="version-"]')).find((node) => {
-    return node && node.offsetParent !== null;
-  });
+  if (typeof window.getActiveVersionName === 'function') {
+    const activeVersionName = String(window.getActiveVersionName() || '').trim().toLowerCase();
+    if (!activeVersionName || activeVersionName === 'original') {
+      return '';
+    }
+    return activeVersionName;
+  }
+
+  const visibleVersion = Array.from(document.querySelectorAll('[id^="version-"]')).find((node) => node && node.offsetParent !== null);
 
   if (!visibleVersion) {
     return '';
@@ -136,7 +161,33 @@ function songMotifsGetBaseSongSlug() {
   return file;
 }
 
+function songMotifsNormalizeVersionHashToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^#/, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
 function songMotifsGetActiveVariantHashToken() {
+  const activeVariantSuffix = songMotifsGetActiveVariantSuffix();
+  if (!activeVariantSuffix) {
+    return '';
+  }
+
+  if (typeof window.getHashTokenForVersion === 'function') {
+    const helperToken = String(window.getHashTokenForVersion(activeVariantSuffix) || '').trim();
+    if (helperToken) {
+      return songMotifsNormalizeVersionHashToken(helperToken);
+    }
+  }
+
+  const hashToken = songMotifsNormalizeVersionHashToken(window.location.hash);
+  if (hashToken) {
+    return hashToken;
+  }
+
   const activeVersionTab = document.querySelector('.version-tab.active');
   if (!activeVersionTab) {
     return '';
@@ -685,6 +736,18 @@ function songMotifsFindSong() {
     });
     if (match) {
       return match;
+    }
+  }
+
+  const baseSlug = songMotifsGetBaseSongSlug();
+  if (baseSlug) {
+    const baseFile = baseSlug + '.html';
+    const fallback = window.SongData.allSongs.find((song) => {
+      const songFile = String(song.path || '').split('/').pop();
+      return songFile && songFile.toLowerCase() === baseFile;
+    });
+    if (fallback) {
+      return fallback;
     }
   }
 

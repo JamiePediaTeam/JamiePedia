@@ -4,23 +4,265 @@ let versionConfig = {};
 // Ordered list of version keys for tab navigation
 let versionOrder = [];
 
-// Load configuration from HTML data attributes
-function loadVersionConfig() {
-  const htmlElement = document.documentElement;
-  
-  // Parse JSON from data-versions attribute
-  if (htmlElement.hasAttribute('data-versions')) {
-    try {
-      const versionsJSON = JSON.parse(htmlElement.getAttribute('data-versions'));
-      versionConfig = versionsJSON;
-      versionOrder = Object.keys(versionsJSON);
-    } catch (e) {
-      console.error('Failed to parse data-versions JSON from HTML:', e);
-      console.error('The data-versions attribute must contain valid JSON configuration for all versions.');
-    }
-  } else {
-    console.error('No data-versions attribute found on HTML element. Version functionality requires this configuration.');
+let songSidebarRowsPromise = null;
+
+function splitSongDataValues(value) {
+  return String(value || '')
+    .split(/\s*\|\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function ensureSongSidebarRowsLoaded() {
+  if (Array.isArray(window.__songSidebarCsvRows) && window.__songSidebarCsvRows.length > 0) {
+    return Promise.resolve(window.__songSidebarCsvRows);
   }
+
+  if (songSidebarRowsPromise) {
+    return songSidebarRowsPromise;
+  }
+
+  if (typeof ensureSongSidebarCsvLoaded === 'function') {
+    songSidebarRowsPromise = new Promise((resolve) => {
+      ensureSongSidebarCsvLoaded((rows) => {
+        resolve(Array.isArray(rows) ? rows : []);
+      });
+    });
+    return songSidebarRowsPromise;
+  }
+
+  songSidebarRowsPromise = Promise.resolve([]);
+  return songSidebarRowsPromise;
+}
+
+function normalizeCurrentSongPathForRows() {
+  if (typeof toExtensionlessPath === 'function') {
+    return toExtensionlessPath(window.location.pathname || '');
+  }
+
+  return String(window.location.pathname || '')
+    .replace(/\/index\.html$/i, '')
+    .replace(/\.html$/i, '')
+    .replace(/\/$/, '');
+}
+
+function normalizeSongRowPath(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  if (typeof normalizeSongSidebarPathKey === 'function') {
+    return normalizeSongSidebarPathKey(raw);
+  }
+
+  const splitIndex = raw.indexOf('#');
+  const pathPart = splitIndex === -1 ? raw : raw.slice(0, splitIndex);
+  const hashPart = splitIndex === -1 ? '' : raw.slice(splitIndex + 1);
+  const prefixed = pathPart.startsWith('/music/') ? pathPart : ('/music/' + pathPart.replace(/^\/+/, ''));
+  const normalizedPath = prefixed.replace(/\.html$/i, '').replace(/\/$/, '');
+  const normalizedHash = normalizeVersionHashToken(hashPart);
+  return normalizedHash ? (normalizedPath + '#' + normalizedHash) : normalizedPath;
+}
+
+function songHasEmbedLinkForRow(row) {
+  const normalizedRowPath = normalizeSongRowPath((row || {}).page_path || '');
+  if (!normalizedRowPath || !window.SongData || !Array.isArray(window.SongData.allSongs)) {
+    return false;
+  }
+
+  const match = window.SongData.allSongs.find((song) => {
+    const normalizedSongPath = normalizeSongRowPath((song || {}).path || '');
+    return normalizedSongPath === normalizedRowPath;
+  });
+
+  return !!String((match || {}).youtubeId || '').trim();
+}
+
+function getSongRowsForCurrentPage() {
+  const currentPath = normalizeCurrentSongPathForRows();
+  const rows = Array.isArray(window.__songSidebarCsvRows) ? window.__songSidebarCsvRows : [];
+  if (!currentPath || !rows.length) {
+    return [];
+  }
+
+  return rows.filter((row) => {
+    const normalized = normalizeSongRowPath((row || {}).page_path || '');
+    if (!normalized) {
+      return false;
+    }
+
+    const basePath = normalized.split('#')[0];
+    return basePath === currentPath;
+  });
+}
+
+function getDeclaredVersionOrder() {
+  const containerOrder = Array.from(document.querySelectorAll('.song-container[id^="version-"]'))
+    .map((node) => String(node.id || '').replace(/^version-/, '').trim())
+    .filter(Boolean);
+
+  if (containerOrder.length) {
+    return containerOrder;
+  }
+
+  return Array.from(document.querySelectorAll('.version-tab'))
+    .map((button) => {
+      const onClick = String(button.getAttribute('onclick') || '');
+      const match = onClick.match(/switchVersion\((['"])(.*?)\1\)/);
+      return match ? String(match[2] || '').trim() : '';
+    })
+    .filter(Boolean);
+}
+
+function getVersionRows(songRows) {
+  return (Array.isArray(songRows) ? songRows : []).filter((row) => {
+    const mode = String((row || {}).alt_tab || '').trim();
+    return mode === 'Main Tab' || mode === 'Alt Tab';
+  });
+}
+
+function buildInternalVersionOrder(songRows) {
+  const versionRows = getVersionRows(songRows);
+  if (versionRows.length <= 1) {
+    return [];
+  }
+
+  return versionRows.map((_, index) => index === 0 ? 'original' : ('alt' + index));
+}
+
+function buildSongContainerShellHtml(versionName, isOriginal) {
+  const suffix = isOriginal ? '' : ('-' + versionName);
+  const idAttr = versionName ? (' id="version-' + versionName + '"') : '';
+  const styleAttr = isOriginal || !versionName ? '' : ' style="display: none;"';
+
+  return [
+    '<div' + idAttr + ' class="song-container"' + styleAttr + '>',
+    '  <div class="song-leftview">',
+    '    <h1 class="song-title"></h1>',
+    '    <p class="song-length"></p>',
+    '    <div id="content-lyrics' + suffix + '" class="song-content active">',
+    '      <div id="lyrics-annotated' + suffix + '" class="lyrics-content active"></div>',
+    '    </div>',
+    '    <div id="content-motifs' + suffix + '" class="song-content"></div>',
+    '    <div id="content-summary' + suffix + '" class="song-content"></div>',
+    '    <div id="content-extended' + suffix + '" class="song-content"></div>',
+    '  </div>',
+    '  <div class="song-rightview">',
+    '    <div class="album-tabs-container">',
+    '      <div class="album-tabs"></div>',
+    '    </div>',
+    '    <div class="song-cover"></div>',
+    '    <div class="cover-art-footer">',
+    '      <div class="cover-art-credit">Cover art by: <span id="cover-artist-display' + suffix + '"></span></div>',
+    '    </div>',
+    '    <div class="song-nav-buttons"></div>',
+    '  </div>',
+    '</div>'
+  ].join('\n');
+}
+
+function buildSongMainColShell(songRows) {
+  const mainCol = document.querySelector('.song-main-col');
+  if (!mainCol) {
+    return;
+  }
+
+  const versionOrderNames = buildInternalVersionOrder(songRows);
+  const hasVersions = versionOrderNames.length > 0;
+  const containerHtml = hasVersions
+    ? versionOrderNames.map((versionName, index) => buildSongContainerShellHtml(versionName, index === 0)).join('\n')
+    : buildSongContainerShellHtml('', true);
+
+  mainCol.innerHTML = [
+    '<div class="song-tabs-container">',
+    '  <div class="song-tabs">',
+    '    <button class="song-tab active" onclick="switchTab(\'summary\')">Summary</button>',
+    '    <button class="song-tab" onclick="switchTab(\'lyrics\')">Lyrics</button>',
+    '    <button class="song-tab" onclick="switchTab(\'motifs\')">Connections</button>',
+    '    <button class="song-tab" onclick="switchTab(\'extended\')">Extended Info</button>',
+    '    <div class="tabs-spacer"></div>',
+    '  </div>',
+    '</div>',
+    '<div class="bodybar">',
+    '  <div class="version-wrapper">',
+         containerHtml,
+    '  </div>',
+    '</div>'
+  ].join('\n');
+}
+
+function renderVersionTabsFromRows(songRows) {
+  const versionRows = getVersionRows(songRows);
+  const tabsContainers = Array.from(document.querySelectorAll('.song-tabs'));
+  if (!tabsContainers.length) {
+    return;
+  }
+
+  tabsContainers.forEach((tabsContainer) => {
+    Array.from(tabsContainer.querySelectorAll('.version-tab')).forEach((button) => button.remove());
+
+    if (versionRows.length <= 1) {
+      return;
+    }
+
+    const spacer = tabsContainer.querySelector('.tabs-spacer');
+    const insertBeforeNode = spacer ? spacer.nextSibling : null;
+
+    versionRows.forEach((row, index) => {
+      const versionName = versionOrder[index];
+      if (!versionName) {
+        return;
+      }
+
+      const button = document.createElement('button');
+      button.className = 'version-tab' + (index === 0 ? ' active' : '');
+      button.textContent = String((row || {}).tab_name || '').trim() || versionName;
+      button.setAttribute('onclick', "switchVersion('" + versionName + "')");
+
+      if (insertBeforeNode) {
+        tabsContainer.insertBefore(button, insertBeforeNode);
+      } else {
+        tabsContainer.appendChild(button);
+      }
+    });
+  });
+}
+
+// Load configuration from HTML data attributes
+function loadVersionConfig(songRows) {
+  const rows = Array.isArray(songRows) ? songRows : [];
+  const versionRows = getVersionRows(rows);
+
+  versionConfig = {};
+  versionOrder = buildInternalVersionOrder(rows);
+
+  if (!versionOrder.length) {
+    return;
+  }
+
+  const baseRow = rows.find((row) => String((row || {}).alt_tab || '').trim() === 'Nothing')
+    || rows.find((row) => String((row || {}).alt_tab || '').trim() === 'Main Tab')
+    || rows.find((row) => String((row || {}).page_path || '').indexOf('#') === -1)
+    || null;
+  const orderedRows = versionRows.length > 1 ? versionRows : (baseRow ? [baseRow] : []);
+
+  versionOrder.forEach((versionName, index) => {
+    const row = orderedRows[index] || null;
+    const albumArtPaths = splitSongDataValues((row || {}).album_art_paths || '');
+    const normalizedPagePath = String((row || {}).page_path || '').trim();
+    const hashToken = normalizedPagePath.includes('#')
+      ? normalizeVersionHashToken(normalizedPagePath.split('#')[1])
+      : '';
+
+    versionConfig[versionName] = {
+      name: String((row || {}).tab_name || '').trim() || versionName,
+      theme: String((row || {}).version_theme || '').trim() || String(document.documentElement.getAttribute('data-theme-id') || 'default').trim() || 'default',
+      defaultAlbumArt: albumArtPaths[0] || '',
+      hashToken: versionName === 'original' ? '' : hashToken,
+      row: row
+    };
+  });
 }
 
 function normalizeVersionHashToken(value) {
@@ -45,7 +287,8 @@ function getCurrentHashVersionName() {
   for (const versionName of versionOrder) {
     const config = versionConfig[versionName] || {};
     const nameToken = normalizeVersionHashToken(config.name || versionName);
-    if (token === nameToken) {
+    const hashToken = normalizeVersionHashToken(config.hashToken || '');
+    if (token === hashToken || token === nameToken) {
       return versionName;
     }
   }
@@ -59,7 +302,7 @@ function getHashTokenForVersion(versionName) {
   }
 
   const config = versionConfig[versionName] || {};
-  const candidate = normalizeVersionHashToken(config.name || versionName);
+  const candidate = normalizeVersionHashToken(config.hashToken || config.name || versionName);
   return candidate || normalizeVersionHashToken(versionName);
 }
 
@@ -108,6 +351,191 @@ function getActiveMainTabName() {
   return 'motifs';
 }
 
+function getVersionScope(versionName) {
+  if (versionOrder && versionOrder.length > 0) {
+    return document.getElementById('version-' + versionName);
+  }
+  return document.querySelector('.song-container') || document.body;
+}
+
+function formatSongTitleHtml(value) {
+  return splitSongDataValues(value)
+    .map((part) => escapeHtml(part))
+    .join('<br>');
+}
+
+function buildCoverArtSrc(filename) {
+  const trimmed = String(filename || '').trim();
+  if (!trimmed) {
+    return '';
+  }
+  return (typeof basePath === 'string' ? basePath : '') + '/public/images/cover-art/' + trimmed;
+}
+
+function extractCoverArtFilenameFromUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  try {
+    const absolute = new URL(raw, window.location.href);
+    const pathname = String(absolute.pathname || '');
+    const file = pathname.split('/').pop() || '';
+    return file.trim();
+  } catch (_error) {
+    const noQuery = raw.split('?')[0].split('#')[0];
+    return (noQuery.split('/').pop() || '').trim();
+  }
+}
+
+function getFallbackCoverArtFilename() {
+  const ogMeta = document.querySelector('meta[property="og:image"]');
+  const twitterMeta = document.querySelector('meta[property="twitter:image"], meta[name="twitter:image"]');
+  const ogValue = ogMeta ? ogMeta.getAttribute('content') : '';
+  const twitterValue = twitterMeta ? twitterMeta.getAttribute('content') : '';
+
+  return extractCoverArtFilenameFromUrl(ogValue) || extractCoverArtFilenameFromUrl(twitterValue);
+}
+
+function ensureSongNavContainer(scope) {
+  let container = scope.querySelector('.song-nav-buttons');
+  if (container) {
+    return container;
+  }
+
+  const rightView = scope.querySelector('.song-rightview');
+  if (!rightView) {
+    return null;
+  }
+
+  container = document.createElement('div');
+  container.className = 'song-nav-buttons';
+  rightView.appendChild(container);
+  return container;
+}
+
+function applyAlbumArtToScope(scope, filename, buttonElement) {
+  if (!scope) {
+    return;
+  }
+
+  const songCover = scope.querySelector('.song-cover');
+  if (!songCover) {
+    return;
+  }
+
+  let image = songCover.querySelector('img');
+  if (!image) {
+    image = document.createElement('img');
+    image.style.width = '100%';
+    image.style.height = '100%';
+    image.style.objectFit = 'cover';
+    image.style.borderRadius = '4px';
+    songCover.appendChild(image);
+  }
+
+  const src = buildCoverArtSrc(filename);
+  if (src) {
+    image.src = src;
+  }
+
+  const titleText = splitSongDataValues((scope.querySelector('.song-title') || {}).textContent || '').join(' ') || 'Song';
+  image.alt = titleText + ' Cover';
+
+  scope.querySelectorAll('.album-tab').forEach((tab) => tab.classList.remove('active'));
+  if (buttonElement) {
+    buttonElement.classList.add('active');
+  }
+
+  const coverArtistDisplay = scope.querySelector('[id^="cover-artist-display"], .cover-art-credit span');
+  if (coverArtistDisplay) {
+    const artist = getCoverArtist(filename);
+    coverArtistDisplay.textContent = artist !== null ? artist : '';
+  }
+}
+
+function renderSongPresentationIntoScope(scope, row) {
+  if (!scope || !row) {
+    return;
+  }
+
+  const titleElement = scope.querySelector('.song-title');
+  if (titleElement) {
+    titleElement.innerHTML = formatSongTitleHtml(String(row.page_title || '').trim());
+  }
+
+  const songLengthElement = scope.querySelector('.song-length');
+  if (songLengthElement) {
+    const lengthValue = String(row.song_length || '').trim();
+    const hasEmbedLink = songHasEmbedLinkForRow(row);
+    const hasManualLength = !hasEmbedLink && lengthValue && lengthValue.toLowerCase() !== 'x';
+    songLengthElement.dataset.songLengthSource = hasManualLength ? 'manual' : 'youtube';
+    songLengthElement.textContent = hasManualLength ? ('Length: ' + lengthValue) : '';
+    songLengthElement.style.display = hasManualLength ? '' : 'none';
+  }
+
+  const albumTabs = scope.querySelector('.album-tabs');
+  if (albumTabs) {
+    const labels = splitSongDataValues(row.album_tab_labels || '');
+    const rowArtPaths = splitSongDataValues(row.album_art_paths || '');
+    const fallbackArt = getFallbackCoverArtFilename();
+    const artPaths = rowArtPaths.length ? rowArtPaths : (fallbackArt ? [fallbackArt] : []);
+    albumTabs.innerHTML = '';
+
+    artPaths.forEach((artPath, index) => {
+      const button = document.createElement('button');
+      button.className = 'album-tab' + (index === 0 ? ' active' : '');
+      button.textContent = labels[index] || labels[0] || 'Cover';
+      button.addEventListener('click', function () {
+        applyAlbumArtToScope(scope, artPath, button);
+      });
+      albumTabs.appendChild(button);
+    });
+
+    if (artPaths[0]) {
+      applyAlbumArtToScope(scope, artPaths[0], albumTabs.querySelector('.album-tab'));
+    }
+  }
+
+  const coverArtistDisplay = scope.querySelector('[id^="cover-artist-display"], .cover-art-credit span');
+  if (coverArtistDisplay && !coverArtistDisplay.textContent.trim()) {
+    const firstArtPath = splitSongDataValues(row.album_art_paths || '')[0] || '';
+    const artist = getCoverArtist(firstArtPath);
+    if (artist !== null) {
+      coverArtistDisplay.textContent = artist;
+    }
+  }
+
+  ensureSongNavContainer(scope);
+}
+
+function renderSongPagePresentation() {
+  const rows = getSongRowsForCurrentPage();
+  if (!rows.length) {
+    const fallbackRow = {
+      page_title: String(document.title || '').trim(),
+      song_length: '',
+      album_tab_labels: 'Cover',
+      album_art_paths: getFallbackCoverArtFilename()
+    };
+    renderSongPresentationIntoScope(getVersionScope('original'), fallbackRow);
+    return;
+  }
+
+  if (versionOrder && versionOrder.length > 0) {
+    versionOrder.forEach((versionName) => {
+      const scope = getVersionScope(versionName);
+      const config = versionConfig[versionName] || {};
+      renderSongPresentationIntoScope(scope, config.row || null);
+    });
+    return;
+  }
+
+  const baseRow = rows.find((row) => String((row || {}).page_path || '').indexOf('#') === -1) || rows[0];
+  renderSongPresentationIntoScope(getVersionScope('original'), baseRow);
+}
+
 function switchVersion(versionName, options) {
   const settings = options || {};
   const nextTabName = settings.preserveTab === false ? 'motifs' : getActiveMainTabName();
@@ -135,6 +563,7 @@ function switchVersion(versionName, options) {
   
   if (versionElement) {
     versionElement.style.display = 'flex';
+    renderSongPresentationIntoScope(versionElement, config.row || null);
 
     // Switch to the version-specific theme so all theme tokens update together.
     const versionThemeId = String(config.theme || '').trim();
@@ -143,28 +572,6 @@ function switchVersion(versionName, options) {
       window.applyThemeById(versionThemeId || fallbackThemeId);
     } else if (versionThemeId) {
       document.documentElement.setAttribute('data-theme-id', versionThemeId);
-    }
-    
-    // Reset album art tabs and image
-    versionElement.querySelectorAll('.album-tab').forEach(el => {
-      el.classList.remove('active');
-    });
-    
-    const firstAlbumTab = versionElement.querySelector('.album-tab');
-    if (firstAlbumTab) {
-      firstAlbumTab.classList.add('active');
-      const albumArtElement = document.getElementById(config.albumArtImageId);
-      if (albumArtElement) {
-        albumArtElement.src = '../../public/images/cover-art/' + config.defaultAlbumArt;
-      }
-      // Also update the cover artist credit for the default art
-      const coverArtistDisplay = document.getElementById(config.coverArtistDisplayId);
-      if (coverArtistDisplay) {
-        const artist = getCoverArtist(config.defaultAlbumArt);
-        if (artist !== null) {
-          coverArtistDisplay.textContent = artist;
-        }
-      }
     }
   }
   
@@ -185,6 +592,10 @@ function switchVersion(versionName, options) {
   
   // Preserve the current tab when changing versions, defaulting to Connections.
   switchTab(nextTabName || 'motifs');
+
+  if (typeof window.initializeSongSidebarData === 'function') {
+    window.initializeSongSidebarData();
+  }
 }
 
 
@@ -945,200 +1356,159 @@ function initializeCoverArtistCredits() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  loadVersionConfig();
-  removeRawLyricsUi();
-  reorderSongTabs();
+const coverArtistCsvPath = '../../public/music/JamiePedia Data - Cover Artists.csv';
+let coverArtistsByFilename = {};
+let coverArtistsLoadPromise = null;
 
-  const hashVersionName = getCurrentHashVersionName();
-  if (hashVersionName && versionConfig[hashVersionName]) {
-    switchVersion(hashVersionName, { skipHashUpdate: true });
-  } else {
-    // Load connections as default tab
-    switchTab('motifs');
-  }
+function splitCoverArtistCsvLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
 
-  const activeVersionName = getActiveVersionName();
-  const lyricsSubtabsContainerId = activeVersionName === 'original'
-    ? 'lyrics-subtabs-container'
-    : ('lyrics-subtabs-container-' + activeVersionName);
-  const contentLyricsId = activeVersionName === 'original'
-    ? 'content-lyrics'
-    : ('content-lyrics-' + activeVersionName);
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const nextChar = line[index + 1];
 
-  const activeVersion = document.getElementById('version-' + activeVersionName);
-  const lyricsSubtabsContainer = document.getElementById(lyricsSubtabsContainerId);
-  const contentLyrics = document.getElementById(contentLyricsId);
-  const songLength = activeVersion ? activeVersion.querySelector('.song-length') : null;
-  
-  if (lyricsSubtabsContainer && contentLyrics && contentLyrics.classList.contains('active')) {
-    lyricsSubtabsContainer.classList.add('active');
-    if (songLength) songLength.classList.add('hide-border');
-  }
-
-  initializeCoverArtistCredits();
-  loadSongTextContent();
-  initializeSongConnectionsFeature();
-
-  if (versionOrder && versionOrder.length > 0) {
-    window.addEventListener('hashchange', () => {
-      const versionName = getCurrentHashVersionName() || 'original';
-      if (versionConfig[versionName]) {
-        switchVersion(versionName, { skipHashUpdate: true });
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
       }
-    });
-  }
-});
+      continue;
+    }
 
-const coverArtists = {
-    'aa.png': 'RJ Lake',
-    'acs.png': 'angelwinter',
-    'aed.png': 'Valerie Halla',
-    'aisr.png': 'Braz_OS',
-    'aod.png': 'divvydots',
-    'aphextwin.jpg': 'Screenshot',
-    'as.png': 'REVERIEQUE',
-    'atm.jpg': 'Avi Roberts',
-    'aw.jpg': 'Remy Boydell',
-    'bb.png': 'Sidoopa',
-    'bc.jpg': 'REVERIEQUE',
-    'bdkt26.png': 'Kurumitsu',
-    'bluesky.jpg': 'REVERIEQUE',
-    'breakout.jpg': 'Andrew Tsai, Richard Gung ',
-    'breakoutplaceholder.png': 'Unknown',
-    'bs.png': 'REVERIEQUE',
-    'bv.png': 'ricedeity',
-    'bvcc.png': 'ajihaew',
-    'bvi.png': 'ricedeity',
-    'cb.jpg': 'ODDEEO',
-    'cc.png': 'REVERIEQUE',
-    'ccde.png': 'REVERIEQUE',
-    'ccdev.jpg': 'REVERIEQUE',
-    'ccii.png': 'REVERIEQUE',
-    'ccolors.png': 'REVERIEQUE',
-    'ccommune.jpg': 'Louie Zong',
-    'contentcompanion.jpg': 'Jamie Paige',
-    'ccontrepoint.png': 'ajihaew',
-    'closer.jpg': 'Jamie Paige',
-    'contentcompanion.jpg': 'Andrew Tsai',
-    'criticaldamage': 'ききのき, 奈良瀬',
-    'crmg.jpg': 'FLStudio Screenshot, REVERIEQUE',
-    'cs.png': 'Catherine G. Erhlhell',
-    'ddiary.png': 'starapture',
-    'ddoll.jpg': 'Crispy6usiness',
-    'destiny.jpg': 'Bluffy',
-    'dgtkchop.jpg': 'Twitter Screenshot',
-    'dnh.png': 'Skaði Kaos',
-    'ds2021.jpg': 'REVERIEQUE',
-    'ds2024.png': 'BUNBUN © CFM',
-    'ds2026.jpg': 'koharayuyu',
-    'dsc2021.jpg': 'のう',
-    'dsc2025.jpg': 'lack',
-    'ebi.jpg': 'Jamie Paige',
-    'ebiquaver.png': 'starapture',
-    'encore.jpg': 'REVERIEQUE',
-    'enough': ' LAYER/suaviterra',
-    'erb.png': 'Arusechika',
-    'evilloop.jpg': 'Geoff Keighley',
-    'evoevo.jpg': 'John Kafka, GraphersRock',
-    'ewz.jpg': 'REVERIEQUE, ricedeity',
-    'fire.png': 'angelfaise',
-    'ghf.jpg': 'Unknown',
-    'glpp.jpg': 'Unknown',
-    'gr.jpg': 'kalrot',
-    'hc.jpg': 'citruslucy',
-    'headass.jpg': 'Unknown',
-    'hmt.jpg': 'pipiskulle',
-    'human.png': 'insertdisc5',
-    "ifhm.jpg": 'FLStudio Screenshot',
-    'iwticf.png': 'BEARVAMPS',
-    'iwticfpd.png': 'starapture',
-    'jpiaw.jpg': 'Unknown',
-    'jpjp3.png': 'Jamie Paige',
-    'jpjp4.png': 'Jamie Paige',
-    'jpjp5.jpg': 'Jamie Paige',
-    'jpjp5.png': 'Jamie Paige',
-    'jpjp6.png': 'Jamie Paige',
-    'liegelord.jpg': 'Synthesizer V Screenshot, Sakauchi Waka',
-    'lilpp.jpg': 'BEARVAMPS', // https://bsky.app/profile/bearvamps.bsky.social/post/3m5zriu5lyk2k
-    'loll.jpg': 'worm-suggestion',
-    'lr.jpg': 'REVERIEQUE',
-    'lscorrupted.png': 'REVERIEQUE',
-    'lt.jpg': 'haru / oomr005',
-    'matryoshka.png': 'milkbean',
-    'meltdownww.png': 'Unknown, Twemoji',
-    'ml.png': 'REVERIEQUE',
-    'mm.png': 'Luciel Ellis',
-    'motqddotk.jpg': 'Unknown',
-    'mu.png': 'starapture',
-    'mushroomfarmer.jpg': 'Logic Pro Screenshot',
-    'naomirmx.jpg': 'Unknown',
-    'noeulogies.png': 'Michelle Ramos',
-    'nothingevercorrupted.png': 'REVERIEQUE',
-    'notyet.jpg': 'REVERIEQUE',
-    'nqtsc.jpg': 'Ryoko Kui',
-    'of.jpg': 'Fourth Strike Records',
-    'ofw.jpg': 'Yostar Games',
-    'otw.jpg': 'nika37',
-    'paisleypudge.png': 'veryeet', // https://x.com/veryeet/status/1584609209454587904
-    'pjscpfp.jpg': 'REVERIEQUE',
-    'plinkplonk.jpg': 'N/A',
-    'pmprr.png': 'monolarkey',
-    'ppiiharaylyhssltl.jpg': 'REVERIEQUE',
-    'pppp.png': 'REVERIEQUE',
-    'ptpt.jpg': 'Enid, friendxp',
-    'qov.jpg': 'sferics32',
-    'qovcc.png': 'ajihaew',
-    'r4c.png': 'ricedeity',
-    'rd.jpg': 'pierrotsdoll',
-    'rdcc.png': 'ajihaew',
-    'ride.jpg': 'LulunaRina',
-    'rot.png': '[Brackets124]', // http://bsky.app/profile/brackets124.bsky.social
-    'rotjpa.jpg': 'ODDEEO',
-    'rr.jpeg': 'vippori',
-    'sc.png': 'eggtan',
-    'sd.png': 'Cochet',
-    'sevenfour.jpg': 'Unknown',
-    'sf.png': 'hoshizorelone',
-    'sfrr.png': 'ajihaew',
-    'sijpr.jpg': 'REVERIEQUE',
-    'slurmbrain.jpg': 'Unknown',
-    'smots.png': 'SoftySapphie',
-    'spaceman': 'The Killers',
-    'srid.png': 'nika37',
-    'static.jpg': 'ricedeity',
-    'su.png': 'Jamie Lee',
-    'tb.png': 'starapture',
-    'tetoboy.jpg': 'Sasuke Haraguchi',
-    'thatsmydad.jpg': 'DALL-E mini',
-    'tia.jpg': 'TheRyDesign',
-    'tpoc.jpg': 'Unknown',
-    'ts26.jpg': 'Kurumitsu',
-    'twitter.jpg': 'vippori',
-    'usonoanaekata.jpg': '064. / まむし',
-    'vhs.png': 'BEARVAMPS',
-    'virtue.jpg': 'Cochet V.',
-    'vvff.png': 'retrotenn',
-    'vvjp.png': 'retrotenn',
-    'wbtc.png': 'Raffums', // https://www.youtube.com/watch?v=U2suj6q_gME
-    'wg.jpg': 'ippo.tsk',
-    'wgcc.png': 'ajihaew',
-    'wscrr.png': 'REVERIEQUE',
-    'wtr.jpg': 'Edlinklover',
-    'wtrcc.png': 'ajihaew',
-    'ww.jpg': 'BEARVAMPS',
-    'wwr.jpg': 'kheechuu',
-    'wwrcc.png': 'ajihaew',
-    'wwunbeatable.png': 'BEARVAMPS'
-};
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values.map((value) => String(value || '').trim());
+}
+
+function parseCoverArtistCsv(text) {
+  const map = {};
+  const lines = String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) {
+    return map;
+  }
+
+  const headers = splitCoverArtistCsvLine(lines[0]).map((header) => header.toLowerCase());
+  const filenameIndex = headers.indexOf('filename');
+  const creditIndex = headers.indexOf('credit');
+  if (filenameIndex === -1 || creditIndex === -1) {
+    return map;
+  }
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitCoverArtistCsvLine(lines[index]);
+    const filename = String(values[filenameIndex] || '').trim().toLowerCase();
+    const credit = String(values[creditIndex] || '').trim();
+    if (!filename || !credit) {
+      continue;
+    }
+    map[filename] = credit;
+  }
+
+  return map;
+}
+
+function ensureCoverArtistsLoaded() {
+  if (coverArtistsLoadPromise) {
+    return coverArtistsLoadPromise;
+  }
+
+  coverArtistsLoadPromise = fetch(coverArtistCsvPath, { cache: 'no-store' })
+    .then((response) => response.ok ? response.text() : '')
+    .then((text) => {
+      coverArtistsByFilename = parseCoverArtistCsv(text);
+    })
+    .catch(() => {
+      coverArtistsByFilename = {};
+    });
+
+  return coverArtistsLoadPromise;
+}
 
 function getCoverArtist(filename) {
-  return coverArtists[String(filename || '')] || null;
+  const key = String(filename || '').trim().toLowerCase();
+  if (!key) {
+    return null;
+  }
+  return coverArtistsByFilename[key] || null;
 }
 
 // Expose globally so load.js's populateAlbumPageCoverCredits can use this
-// richer dict on pages that load song.js (overrides the load.js IIFE version).
+// lookup on pages that load song.js.
 window.getCoverArtist = getCoverArtist;
+
+document.addEventListener('DOMContentLoaded', function() {
+  Promise.all([ensureCoverArtistsLoaded(), ensureSongSidebarRowsLoaded()]).finally(() => {
+    const songRows = getSongRowsForCurrentPage();
+    buildSongMainColShell(songRows);
+    loadVersionConfig(songRows);
+    removeRawLyricsUi();
+    renderVersionTabsFromRows(songRows);
+    reorderSongTabs();
+    renderSongPagePresentation();
+
+    const hashVersionName = getCurrentHashVersionName();
+    if (hashVersionName && versionConfig[hashVersionName]) {
+      switchVersion(hashVersionName, { skipHashUpdate: true });
+    } else {
+      // Load connections as default tab
+      switchTab('motifs');
+    }
+
+    // song.js now rebuilds .song-main-col at runtime; rehydrate sidebar fields
+    // after that render pass so load.js's earlier DOMContentLoaded injection
+    // cannot be lost due to replacement.
+    if (typeof window.initializeSongSidebarData === 'function') {
+      window.initializeSongSidebarData();
+    }
+
+    const activeVersionName = getActiveVersionName();
+    const lyricsSubtabsContainerId = activeVersionName === 'original'
+      ? 'lyrics-subtabs-container'
+      : ('lyrics-subtabs-container-' + activeVersionName);
+    const contentLyricsId = activeVersionName === 'original'
+      ? 'content-lyrics'
+      : ('content-lyrics-' + activeVersionName);
+
+    const activeVersion = document.getElementById('version-' + activeVersionName);
+    const lyricsSubtabsContainer = document.getElementById(lyricsSubtabsContainerId);
+    const contentLyrics = document.getElementById(contentLyricsId);
+    const songLength = activeVersion ? activeVersion.querySelector('.song-length') : null;
+
+    if (lyricsSubtabsContainer && contentLyrics && contentLyrics.classList.contains('active')) {
+      lyricsSubtabsContainer.classList.add('active');
+      if (songLength) songLength.classList.add('hide-border');
+    }
+
+    initializeCoverArtistCredits();
+    loadSongTextContent();
+    initializeSongConnectionsFeature();
+
+    if (versionOrder && versionOrder.length > 0) {
+      window.addEventListener('hashchange', () => {
+        const versionName = getCurrentHashVersionName() || 'original';
+        if (versionConfig[versionName]) {
+          switchVersion(versionName, { skipHashUpdate: true });
+        }
+      });
+    }
+  });
+});
 
 function formatSongLengthSeconds(totalSeconds) {
   const s = Math.floor(Math.max(0, Number(totalSeconds) || 0));
@@ -1163,67 +1533,19 @@ window.updateSongLengthFromYoutube = function (totalSeconds) {
   const visible = nodes.find((n) => n.offsetParent !== null);
   const target = visible || nodes[0];
   if (target) {
+    target.dataset.songLengthSource = 'youtube';
     target.textContent = text;
+    target.style.display = '';
   }
 };
 
 function switchAlbumArt(filename) {
-  let albumArtImageId;
-  let coverArtistDisplayId;
-  let activeVersionElement;
+  const activeVersionElement = versionOrder && versionOrder.length > 0
+    ? (Array.from(document.querySelectorAll('.song-container[id^="version-"]')).find((node) => node && node.style.display === 'flex') || document.querySelector('.song-container'))
+    : (document.querySelector('.song-container') || document.body);
 
-  // Check if version system is in use
-  if (versionOrder && versionOrder.length > 0) {
-    // Version-based logic
-    let activeVersionName = 'original';
-    for (const versionName of versionOrder) {
-      const versionElement = document.getElementById('version-' + versionName);
-      if (versionElement && versionElement.style.display === 'flex') {
-        activeVersionName = versionName;
-        break;
-      }
-    }
-
-    // Get the config for the active version
-    const config = versionConfig[activeVersionName];
-    if (!config) return;
-
-    albumArtImageId = config.albumArtImageId;
-    coverArtistDisplayId = config.coverArtistDisplayId;
-    activeVersionElement = document.getElementById('version-' + activeVersionName);
-  } else {
-    // Simple logic for pages without version system
-    albumArtImageId = 'album-art-image';
-    coverArtistDisplayId = 'cover-artist-display';
-    activeVersionElement = document.querySelector('.song-container') || document.body;
-  }
-
-  // Update the image source
-  const albumArtElement = document.getElementById(albumArtImageId);
-  if (albumArtElement) {
-    albumArtElement.src = '../../public/images/cover-art/' + filename;
-  }
-
-  // Remove active state from all album art tabs in the active version
-  if (activeVersionElement) {
-    activeVersionElement.querySelectorAll('.album-tab').forEach(el => {
-      el.classList.remove('active');
-    });
-  }
-
-  // Add active state to clicked tab
-  if (typeof event !== 'undefined' && event && event.target) {
-    event.target.classList.add('active');
-  }
-
-  // Update cover artist — keep existing text if the filename isn't in the map
-  const coverArtistDisplay = document.getElementById(coverArtistDisplayId);
-  if (coverArtistDisplay) {
-    const artist = getCoverArtist(filename);
-    if (artist !== null) {
-      coverArtistDisplay.textContent = artist;
-    }
-  }
+  const targetButton = (typeof event !== 'undefined' && event && event.target) ? event.target : null;
+  applyAlbumArtToScope(activeVersionElement, filename, targetButton);
 }
 
 // Initialize reference tooltips

@@ -1,6 +1,8 @@
 // Store full search results for filtering
 let fullSearchResults = [];
 let currentSearchQuery = '';
+let searchImageCsvPromise = null;
+let searchImageByPath = Object.create(null);
 
 function searchEscapeHtml(value) {
   return String(value || '')
@@ -94,6 +96,181 @@ async function fetchSearchText(path) {
   } catch (_error) {
     return null;
   }
+}
+
+function splitSearchCsvLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values.map((value) => String(value || '').trim());
+}
+
+function splitSearchPipeValues(value) {
+  return String(value || '')
+    .split(/\s*\|\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeSearchImagePath(value) {
+  let text = String(value || '').trim();
+  if (!text) {
+    return '';
+  }
+
+  if (/^https?:/i.test(text)) {
+    return text;
+  }
+
+  text = text.replace(/^\.\//, '/').replace(/^(\.\.\/)+/, '/');
+  if (!text.startsWith('/')) {
+    text = '/' + text;
+  }
+
+  return text;
+}
+
+function isSearchTruthyFlag(value) {
+  const normalized = String(value || '').trim().toUpperCase();
+  return normalized === 'TRUE' || normalized === 'YES' || normalized === '1';
+}
+
+function findSearchSongCsvHeaderIndex(headers, aliases) {
+  const lowered = headers.map((header) => String(header || '').trim().toLowerCase());
+  for (const alias of aliases) {
+    const index = lowered.indexOf(String(alias || '').trim().toLowerCase());
+    if (index !== -1) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function buildSearchImageMapFromSongCsv(csvText) {
+  const map = Object.create(null);
+  const lines = String(csvText || '').split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
+    return map;
+  }
+
+  const headers = splitSearchCsvLine(lines[0]);
+  const pathIndex = findSearchSongCsvHeaderIndex(headers, ['page_path', 'Path']);
+  const artIndex = findSearchSongCsvHeaderIndex(headers, ['album_art_paths', 'Album Path', 'Album Art']);
+  if (pathIndex === -1 || artIndex === -1) {
+    return map;
+  }
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitSearchCsvLine(lines[index]);
+    const pagePath = String(values[pathIndex] || '').trim();
+    if (!pagePath || pagePath.includes('#')) {
+      continue;
+    }
+
+    const firstArt = splitSearchPipeValues(values[artIndex])[0] || '';
+    if (!firstArt) {
+      continue;
+    }
+
+    map['/music/' + pagePath.replace(/^\/+/, '')] = '/public/images/cover-art/' + firstArt;
+  }
+
+  return map;
+}
+
+function buildSearchImageMapFromMotifCsv(csvText) {
+  const map = Object.create(null);
+  const lines = String(csvText || '').split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
+    return map;
+  }
+
+  const headers = splitSearchCsvLine(lines[0]).map((header) => header.toLowerCase());
+  const motifIdIndex = headers.indexOf('motif id');
+  const motifImageIndex = headers.indexOf('motif image (page and map)');
+  const hasPageIndex = headers.indexOf('has page');
+  if (motifIdIndex === -1 || motifImageIndex === -1 || hasPageIndex === -1) {
+    return map;
+  }
+
+  let firstMotifImagePath = '';
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitSearchCsvLine(lines[index]);
+    const motifId = String(values[motifIdIndex] || '').trim();
+    if (!motifId || !isSearchTruthyFlag(values[hasPageIndex])) {
+      continue;
+    }
+
+    const imagePath = normalizeSearchImagePath(values[motifImageIndex]);
+    if (!imagePath) {
+      continue;
+    }
+
+    if (!firstMotifImagePath) {
+      firstMotifImagePath = imagePath;
+    }
+
+    const motifPath = '/motifs/' + motifId + '.html';
+    if (!map[motifPath]) {
+      map[motifPath] = imagePath;
+    }
+  }
+
+  if (firstMotifImagePath) {
+    map['/motifs.html'] = firstMotifImagePath;
+  }
+
+  return map;
+}
+
+function ensureSearchImageCsvLoaded(basePath) {
+  if (searchImageCsvPromise) {
+    return searchImageCsvPromise;
+  }
+
+  const songCsvUrl = (basePath || '') + '/public/music/JamiePedia Data - Songs.csv';
+  const motifCsvUrl = (basePath || '') + '/public/motifs/JamiePedia Data - Motifs.csv';
+
+  searchImageCsvPromise = Promise.all([
+    fetch(songCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
+    fetch(motifCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : '')
+  ]).then(([songCsvText, motifCsvText]) => {
+    const songMap = buildSearchImageMapFromSongCsv(songCsvText);
+    const motifMap = buildSearchImageMapFromMotifCsv(motifCsvText);
+    searchImageByPath = Object.assign(Object.create(null), motifMap, songMap);
+    return searchImageByPath;
+  }).catch(() => {
+    searchImageByPath = Object.create(null);
+    return searchImageByPath;
+  });
+
+  return searchImageCsvPromise;
 }
 
 function getSearchSongVariantSlugs(doc, fileEntry) {
@@ -197,6 +374,7 @@ async function getSearchSongExternalContent(basePath, doc, fileEntry) {
 async function searchFile(fileEntry, query) {
   try {
     const basePath = window.location.pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
+    await ensureSearchImageCsvLoaded(basePath);
     const response = await fetch(basePath + fileEntry.path);
     if (!response.ok) return null;
     
@@ -273,23 +451,31 @@ async function searchFile(fileEntry, query) {
     if (lowerTextWithBr.includes(lowerQuery)) {
       // Extract cover art image
       let coverSrc = basePath + '/public/images/cover-art/as.png'; // default fallback
-      
-      // Try to find cover image from songs (album-art-image ID)
-      const coverImg = doc.getElementById('album-art-image');
-      if (coverImg && coverImg.getAttribute('src')) {
-        const imagePath = coverImg.getAttribute('src');
-        const resolvedCoverSrc = resolveSearchImageSrc(basePath, fileEntry.path, imagePath);
-        if (resolvedCoverSrc) {
-          coverSrc = resolvedCoverSrc;
+      const csvCoverPath = searchImageByPath[fileEntry.path] || '';
+      if (csvCoverPath) {
+        const resolvedCsvCover = resolveSearchImageSrc(basePath, fileEntry.path, csvCoverPath);
+        if (resolvedCsvCover) {
+          coverSrc = resolvedCsvCover;
         }
-      } else {
-        // Try to find cover image from album pages (album-cover-container class)
-        const albumCoverContainer = doc.querySelector('.album-cover-container img');
-        if (albumCoverContainer && albumCoverContainer.getAttribute('src')) {
-          const imagePath = albumCoverContainer.getAttribute('src');
+      }
+      
+      if (!csvCoverPath) {
+        // Fallback to page HTML images when CSV has no mapping.
+        const coverImg = doc.getElementById('album-art-image');
+        if (coverImg && coverImg.getAttribute('src')) {
+          const imagePath = coverImg.getAttribute('src');
           const resolvedCoverSrc = resolveSearchImageSrc(basePath, fileEntry.path, imagePath);
           if (resolvedCoverSrc) {
             coverSrc = resolvedCoverSrc;
+          }
+        } else {
+          const albumCoverContainer = doc.querySelector('.album-cover-container img');
+          if (albumCoverContainer && albumCoverContainer.getAttribute('src')) {
+            const imagePath = albumCoverContainer.getAttribute('src');
+            const resolvedCoverSrc = resolveSearchImageSrc(basePath, fileEntry.path, imagePath);
+            if (resolvedCoverSrc) {
+              coverSrc = resolvedCoverSrc;
+            }
           }
         }
       }
