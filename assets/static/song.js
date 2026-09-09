@@ -46,6 +46,16 @@ function normalizeCurrentSongPathForRows() {
     .replace(/\/$/, '');
 }
 
+function getSongRowPathValue(row) {
+  return String((row || {}).page_path || (row || {}).path_id || (row || {}).path || '').trim();
+}
+
+function getSongPathPointer(value) {
+  const normalized = normalizeSongRowPath(value);
+  const basePath = String(normalized || '').split('#')[0];
+  return basePath.split('/').filter(Boolean).pop() || '';
+}
+
 function normalizeSongRowPath(value) {
   const raw = String(value || '').trim();
   if (!raw) {
@@ -66,14 +76,20 @@ function normalizeSongRowPath(value) {
 }
 
 function songHasEmbedLinkForRow(row) {
-  const normalizedRowPath = normalizeSongRowPath((row || {}).page_path || '');
+  const normalizedRowPath = normalizeSongRowPath(getSongRowPathValue(row));
+  const rowPointer = getSongPathPointer(getSongRowPathValue(row));
   if (!normalizedRowPath || !window.SongData || !Array.isArray(window.SongData.allSongs)) {
     return false;
   }
 
   const match = window.SongData.allSongs.find((song) => {
     const normalizedSongPath = normalizeSongRowPath((song || {}).path || '');
-    return normalizedSongPath === normalizedRowPath;
+    if (normalizedSongPath === normalizedRowPath) {
+      return true;
+    }
+
+    const songPointer = getSongPathPointer((song || {}).path || '');
+    return !!rowPointer && songPointer === rowPointer;
   });
 
   return !!String((match || {}).youtubeId || '').trim();
@@ -81,19 +97,25 @@ function songHasEmbedLinkForRow(row) {
 
 function getSongRowsForCurrentPage() {
   const currentPath = normalizeCurrentSongPathForRows();
+  const currentPointer = String(currentPath || '').split('/').filter(Boolean).pop() || '';
   const rows = Array.isArray(window.__songSidebarCsvRows) ? window.__songSidebarCsvRows : [];
   if (!currentPath || !rows.length) {
     return [];
   }
 
   return rows.filter((row) => {
-    const normalized = normalizeSongRowPath((row || {}).page_path || '');
+    const normalized = normalizeSongRowPath(getSongRowPathValue(row));
     if (!normalized) {
       return false;
     }
 
     const basePath = normalized.split('#')[0];
-    return basePath === currentPath;
+    if (basePath === currentPath) {
+      return true;
+    }
+
+    const rowPointer = basePath.split('/').filter(Boolean).pop() || '';
+    return !!rowPointer && rowPointer === currentPointer;
   });
 }
 
@@ -116,10 +138,48 @@ function getDeclaredVersionOrder() {
 }
 
 function getVersionRows(songRows) {
-  return (Array.isArray(songRows) ? songRows : []).filter((row) => {
+  const rows = Array.isArray(songRows) ? songRows : [];
+  if (!rows.length) {
+    return [];
+  }
+
+  const mainRow = rows.find((row) => String((row || {}).alt_tab || '').trim() === 'Main Tab')
+    || rows.find((row) => String((row || {}).alt_tab || '').trim() === 'Nothing')
+    || rows.find((row) => {
+      const normalized = normalizeSongRowPath(getSongRowPathValue(row));
+      return normalized && normalized.indexOf('#') === -1;
+    })
+    || rows[0]
+    || null;
+
+  const mainKey = normalizeSongRowPath(getSongRowPathValue(mainRow));
+  const altRows = [];
+  const seenAltKeys = new Set();
+
+  rows.forEach((row) => {
     const mode = String((row || {}).alt_tab || '').trim();
-    return mode === 'Main Tab' || mode === 'Alt Tab';
+    const normalized = normalizeSongRowPath(getSongRowPathValue(row));
+    const isMainMode = mode === 'Main Tab' || mode === 'Nothing';
+    const isAltMode = mode === 'Alt Tab';
+    const isHashVariant = normalized.indexOf('#') !== -1;
+
+    if (!normalized || normalized === mainKey || isMainMode) {
+      return;
+    }
+
+    if (!isAltMode && !isHashVariant) {
+      return;
+    }
+
+    if (seenAltKeys.has(normalized)) {
+      return;
+    }
+
+    seenAltKeys.add(normalized);
+    altRows.push(row);
   });
+
+  return mainRow ? [mainRow].concat(altRows) : altRows;
 }
 
 function buildInternalVersionOrder(songRows) {
@@ -157,6 +217,7 @@ function buildSongContainerShellHtml(versionName, isOriginal) {
     '      <div class="cover-art-credit">Cover art by: <span id="cover-artist-display' + suffix + '"></span></div>',
     '    </div>',
     '    <div class="song-nav-buttons"></div>',
+    '    <div class="song-info-sidebar"></div>',
     '  </div>',
     '</div>'
   ].join('\n');
@@ -241,16 +302,12 @@ function loadVersionConfig(songRows) {
     return;
   }
 
-  const baseRow = rows.find((row) => String((row || {}).alt_tab || '').trim() === 'Nothing')
-    || rows.find((row) => String((row || {}).alt_tab || '').trim() === 'Main Tab')
-    || rows.find((row) => String((row || {}).page_path || '').indexOf('#') === -1)
-    || null;
-  const orderedRows = versionRows.length > 1 ? versionRows : (baseRow ? [baseRow] : []);
+  const orderedRows = versionRows;
 
   versionOrder.forEach((versionName, index) => {
     const row = orderedRows[index] || null;
     const albumArtPaths = splitSongDataValues((row || {}).album_art_paths || '');
-    const normalizedPagePath = String((row || {}).page_path || '').trim();
+    const normalizedPagePath = getSongRowPathValue(row);
     const hashToken = normalizedPagePath.includes('#')
       ? normalizeVersionHashToken(normalizedPagePath.split('#')[1])
       : '';
@@ -477,21 +534,29 @@ function renderSongPresentationIntoScope(scope, row) {
 
   const albumTabs = scope.querySelector('.album-tabs');
   if (albumTabs) {
-    const labels = splitSongDataValues(row.album_tab_labels || '');
+    const labels = splitSongDataValues(row.album_tab_labels || '').map((label) => String(label || '').trim());
+    const hasAnyLabel = labels.some(Boolean);
     const rowArtPaths = splitSongDataValues(row.album_art_paths || '');
     const fallbackArt = getFallbackCoverArtFilename();
     const artPaths = rowArtPaths.length ? rowArtPaths : (fallbackArt ? [fallbackArt] : []);
+    const albumTabsContainer = scope.querySelector('.album-tabs-container');
     albumTabs.innerHTML = '';
 
-    artPaths.forEach((artPath, index) => {
-      const button = document.createElement('button');
-      button.className = 'album-tab' + (index === 0 ? ' active' : '');
-      button.textContent = labels[index] || labels[0] || 'Cover';
-      button.addEventListener('click', function () {
-        applyAlbumArtToScope(scope, artPath, button);
+    if (albumTabsContainer) {
+      albumTabsContainer.style.display = hasAnyLabel ? '' : 'none';
+    }
+
+    if (hasAnyLabel) {
+      artPaths.forEach((artPath, index) => {
+        const button = document.createElement('button');
+        button.className = 'album-tab' + (index === 0 ? ' active' : '');
+        button.textContent = labels[index] || labels[0] || '';
+        button.addEventListener('click', function () {
+          applyAlbumArtToScope(scope, artPath, button);
+        });
+        albumTabs.appendChild(button);
       });
-      albumTabs.appendChild(button);
-    });
+    }
 
     if (artPaths[0]) {
       applyAlbumArtToScope(scope, artPaths[0], albumTabs.querySelector('.album-tab'));
@@ -532,8 +597,89 @@ function renderSongPagePresentation() {
     return;
   }
 
-  const baseRow = rows.find((row) => String((row || {}).page_path || '').indexOf('#') === -1) || rows[0];
+  const baseRow = rows.find((row) => getSongRowPathValue(row).indexOf('#') === -1) || rows[0];
   renderSongPresentationIntoScope(getVersionScope('original'), baseRow);
+}
+
+function getSongTitleForDocument(row) {
+  const raw = String((row || {}).page_title || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  return splitSongDataValues(raw).join(' ') || raw;
+}
+
+function applySongDocumentState(row, themeIdOverride) {
+  if (!row || typeof row !== 'object') {
+    return;
+  }
+
+  const pageTitle = getSongTitleForDocument(row);
+  if (pageTitle) {
+    document.title = pageTitle;
+
+    const titleMeta = document.querySelector('meta[name="title"]');
+    if (titleMeta) {
+      titleMeta.setAttribute('content', pageTitle);
+    }
+
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) {
+      ogTitle.setAttribute('content', pageTitle);
+    }
+
+    const twitterTitle = document.querySelector('meta[property="twitter:title"]');
+    if (twitterTitle) {
+      twitterTitle.setAttribute('content', pageTitle);
+    }
+  }
+
+  const themeId = String(themeIdOverride || row.version_theme || row.theme || '').trim();
+  if (!themeId) {
+    return;
+  }
+
+  if (typeof window.applyThemeById === 'function') {
+    window.applyThemeById(themeId);
+  } else {
+    document.documentElement.setAttribute('data-theme-id', themeId);
+  }
+}
+
+function syncSongDocumentStateToActiveVersion() {
+  if (versionOrder && versionOrder.length > 0) {
+    const activeVersionName = getActiveVersionName();
+    const config = versionConfig[activeVersionName] || versionConfig.original || null;
+    if (config && config.row) {
+      applySongDocumentState(config.row, config.theme);
+    }
+    return;
+  }
+
+  const rows = getSongRowsForCurrentPage();
+  if (!rows.length) {
+    return;
+  }
+
+  const baseRow = rows.find((row) => getSongRowPathValue(row).indexOf('#') === -1) || rows[0];
+  if (baseRow) {
+    applySongDocumentState(baseRow);
+  }
+}
+
+function refreshSongRowDependentUi() {
+  if (typeof window.initializeSongSidebarData === 'function') {
+    window.initializeSongSidebarData();
+  }
+
+  if (typeof window.initializeTracklistSidebar === 'function') {
+    window.initializeTracklistSidebar();
+  }
+
+  if (typeof window.initializeDataNavButtons === 'function') {
+    window.initializeDataNavButtons();
+  }
 }
 
 function switchVersion(versionName, options) {
@@ -593,9 +739,8 @@ function switchVersion(versionName, options) {
   // Preserve the current tab when changing versions, defaulting to Connections.
   switchTab(nextTabName || 'motifs');
 
-  if (typeof window.initializeSongSidebarData === 'function') {
-    window.initializeSongSidebarData();
-  }
+  syncSongDocumentStateToActiveVersion();
+  refreshSongRowDependentUi();
 }
 
 
@@ -858,7 +1003,14 @@ function buildPublicTextPath(folder, slug, extension) {
   if (!slug) {
     return '';
   }
-  return '../../public/' + folder + '/' + slug + '.' + extension;
+  const folderByType = {
+    summaries: 'songs/summaries',
+    annotations: 'songs/annotations',
+    extended: 'songs/extended',
+    lyrics: 'songs/lyrics'
+  };
+  const mappedFolder = folderByType[folder] || folder;
+  return '../../public/' + mappedFolder + '/' + slug + '.' + extension;
 }
 
 function fetchTextFile(path) {
@@ -1356,7 +1508,7 @@ function initializeCoverArtistCredits() {
   });
 }
 
-const coverArtistCsvPath = '../../public/music/JamiePedia Data - Cover Artists.csv';
+const coverArtistCsvPath = '../../public/csv/JamiePedia Data - Cover Artists.csv';
 let coverArtistsByFilename = {};
 let coverArtistsLoadPromise = null;
 
@@ -1464,18 +1616,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const hashVersionName = getCurrentHashVersionName();
     if (hashVersionName && versionConfig[hashVersionName]) {
-      switchVersion(hashVersionName, { skipHashUpdate: true });
+      switchVersion(hashVersionName, { skipHashUpdate: true, preserveTab: false });
     } else {
       // Load connections as default tab
       switchTab('motifs');
+      syncSongDocumentStateToActiveVersion();
     }
 
     // song.js now rebuilds .song-main-col at runtime; rehydrate sidebar fields
     // after that render pass so load.js's earlier DOMContentLoaded injection
     // cannot be lost due to replacement.
-    if (typeof window.initializeSongSidebarData === 'function') {
-      window.initializeSongSidebarData();
-    }
+    refreshSongRowDependentUi();
 
     const activeVersionName = getActiveVersionName();
     const lyricsSubtabsContainerId = activeVersionName === 'original'

@@ -69,7 +69,7 @@
           tile.className = 'album-tile';
 
           const link = document.createElement('a');
-          link.href = 'motifs/' + (motif.pageSlug || motif.id) + '.html';
+          link.href = 'motifs/' + (motif.pageSlug || motif.id);
           tile.appendChild(link);
 
           const hasVariations = Array.isArray(motif.variations) && motif.variations.length > 0;
@@ -155,7 +155,7 @@
             return false;
           }
 
-          const path = 'motifs/' + safeSlug + '.html';
+          const path = 'motifs/' + safeSlug;
 
           try {
             const response = await fetch(path, { cache: 'no-store' });

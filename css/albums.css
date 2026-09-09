@@ -3,10 +3,82 @@ html {
   background-color: var(--theme-color-keyword_white);
 }
 
-.bodybar {
-  height: auto;
+.album-main-col {
+  margin-left: auto;
+  margin-right: auto;
+  width: 800px;
+}
+
+.album-main-col > .bodybar {
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.album-page-tabs-container {
+  margin: 0;
+  width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  padding-left: 4px;
+}
+
+.song-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  align-items: end;
+}
+
+.song-tab {
+  font-family: "Nunito", sans-serif;
+  padding: 2px 16px;
+  height: 100%;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1em;
+  color: var(--theme-color-brand_frame);
+  background-color: var(--theme-color-background_base);
+  font-weight: 500;
+  border: 3px solid var(--theme-color-brand_frame);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
+  border-radius: 4px 4px 0px 0px;
+}
+
+.song-tab:hover {
+  color: var(--theme-color-accent_hover);
+}
+
+.song-tab.active {
+  padding: 4px 16px;
+  color: var(--theme-color-link_default);
+  border: 3px solid var(--theme-color-link_default);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
+  font-weight: bold;
+}
+
+.tabs-spacer {
+  flex-grow: 1;
+}
+
+.album-body-panel {
   padding: 20px;
   box-sizing: border-box;
+}
+
+.album-tab-content {
+  display: none;
+  line-height: 1.6;
+  font-size: 1em;
+  margin-top: 20px;
+}
+
+.album-tab-content.active {
+  display: block;
 }
 
 .back-button {
@@ -14,15 +86,27 @@ html {
 }
 
 .album-header {
+  display: none;
+}
+
+.album-layout {
   display: flex;
   gap: 30px;
   align-items: flex-start;
-  margin-bottom: 30px;
+}
+
+.album-page-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.album-page-right {
+  width: 280px;
+  flex-shrink: 0;
 }
 
 .album-info {
-  flex: 1;
-  order: 1;
+  margin-bottom: 0;
 }
 
 .album-info h1 {
@@ -54,9 +138,7 @@ html {
 }
 
 .album-cover-container {
-  order: 2;
-  flex-shrink: 0;
-  width: 280px;
+  width: 100%;
 }
 
 .album-cover-container img {
@@ -134,29 +216,70 @@ html {
   color: var(--theme-color-accent_hover);
 }
 
-@media (max-width: 900px) {
-  .album-header {
-    flex-direction: column;
-  }
+.album-info-sidebar {
+  margin-top: 16px;
+}
 
-  .album-cover-container {
-    order: 1;
-    width: min(260px, 100%);
-  }
+.song-info-block.album-info-block {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--theme-color-border_card_soft);
+}
 
-  .album-info {
-    order: 2;
-  }
+.song-info-block.album-info-block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.song-info-label.album-info-label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 0.95em;
+}
+
+.song-info-content.album-info-content {
+  font-size: 0.9em;
+  color: var(--theme-color-text_info);
+  line-height: 1.5;
+}
+
+.album-info-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.album-info-links a {
+  color: var(--theme-color-meta_theme_color);
+  text-decoration: none;
+  font-size: 0.9em;
+}
+
+.album-info-links a:hover {
+  text-decoration: underline;
+}
+
+.album-sidebar-empty {
+  color: var(--theme-color-text_muted);
 }
 
 .album-summary-section {
-  margin-top: 28px;
+  margin-top: 0;
 }
 
 .album-summary-content {
   color: var(--theme-page-text);
   font-size: 1em;
   line-height: 1.7;
+}
+
+.song-empty-box {
+  border: 2px dashed var(--theme-color-border_empty_state);
+  border-radius: 6px;
+  padding: 10px;
+  color: var(--theme-color-text_muted);
+  background: var(--theme-color-background_base);
 }
 
 .album-summary-content p {
@@ -192,4 +315,31 @@ html {
   color: var(--theme-page-text);
   font-size: 1.2em;
   line-height: 1.25;
+}
+
+@media (max-width: 900px) {
+  .album-main-col {
+    width: 100%;
+  }
+
+  .album-page-tabs-container,
+  .album-main-col > .bodybar {
+    width: 100%;
+  }
+
+  .album-header {
+    display: none;
+  }
+
+  .album-layout {
+    flex-direction: column;
+  }
+
+  .album-page-right {
+    width: min(280px, 100%);
+  }
+
+  .album-cover-container {
+    width: 100%;
+  }
 }

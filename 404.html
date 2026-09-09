@@ -180,7 +180,7 @@
           return;
         }
 
-        var lyricsPath = getSiteBase(path) + '/public/lyrics/' + slug + '.lrc';
+        var lyricsPath = getSiteBase(path) + '/public/songs/lyrics/' + slug + '.lrc';
         fetch(lyricsPath, { cache: 'no-store' })
           .then(function (response) {
             if (!response.ok) {

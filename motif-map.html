@@ -526,7 +526,7 @@
                   title: entry.variationId ? (motif.name + ' (' + entry.variationId + ')') : (motif.name || entry.motifId),
                   color: motif.color || '#ef8a85',
                   imageUrl: resolveMotifImageUrl(motif),
-                  pagePath: motif.pageSlug ? ('motifs/' + motif.pageSlug + '.html') : ('motifs/' + (motif.id || entry.motifId) + '.html'),
+                  pagePath: motif.pageSlug ? ('motifs/' + motif.pageSlug) : ('motifs/' + (motif.id || entry.motifId)),
                   x: 0,
                   y: 0,
                   linkedSongIds: new Set(),

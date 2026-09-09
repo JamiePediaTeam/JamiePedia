@@ -252,6 +252,19 @@ function motifEscapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+function formatMotifSongTitleHtml(value) {
+  const parts = String(value || '')
+    .split(/\s*\|\s*/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return motifEscapeHtml(String(value || '').trim());
+  }
+
+  return parts.map((part) => motifEscapeHtml(part)).join('<br>');
+}
+
 function motifPageScriptBaseUrl() {
   const current = document.currentScript;
   if (current && current.src) {
@@ -297,6 +310,8 @@ function makeMotifEmptyBoxHtml(label) {
 
 async function loadMotifSummaryText(motifId) {
   const candidates = [
+    '../public/motifs/summaries/' + motifId + '.txt',
+    '../public/motifs/motif-summaries/' + motifId + '.txt',
     '../public/motif-summaries/' + motifId + '.txt',
     '../public/summaries/' + motifId + '.txt'
   ];
@@ -1969,16 +1984,21 @@ function motifTranscriptResetPlaybackEngine() {
 
 async function loadMotifTranscriptPlaybackData(slugCandidates) {
   for (const slug of slugCandidates) {
-    const path = '../public/motifs/' + slug + '.playback.json';
+    const candidates = [
+      '../public/motifs/transcriptions/' + slug + '.playback.json',
+      '../public/motifs/' + slug + '.playback.json'
+    ];
     try {
-      const response = await fetch(path, { cache: 'no-store' });
-      if (!response.ok) {
-        continue;
-      }
+      for (const path of candidates) {
+        const response = await fetch(path, { cache: 'no-store' });
+        if (!response.ok) {
+          continue;
+        }
 
-      const payload = await response.json();
-      if (payload && Array.isArray(payload.notes) && payload.notes.length > 0) {
-        return { playbackData: payload, sourcePath: path };
+        const payload = await response.json();
+        if (payload && Array.isArray(payload.notes) && payload.notes.length > 0) {
+          return { playbackData: payload, sourcePath: path };
+        }
       }
     } catch (_error) {
       // Continue trying remaining candidates.
@@ -2353,15 +2373,20 @@ async function renderMotifTranscriptFallback(xmlText, mount) {
 
 async function loadMotifTranscriptXmlText(slugCandidates) {
   for (const slug of slugCandidates) {
-    const path = '../public/motifs/' + slug + '.xml';
+    const candidates = [
+      '../public/motifs/transcriptions/' + slug + '.xml',
+      '../public/motifs/' + slug + '.xml'
+    ];
     try {
-      const response = await fetch(path, { cache: 'no-store' });
-      if (!response.ok) {
-        continue;
-      }
-      const text = await response.text();
-      if (String(text || '').trim()) {
-        return { xmlText: text, sourcePath: path };
+      for (const path of candidates) {
+        const response = await fetch(path, { cache: 'no-store' });
+        if (!response.ok) {
+          continue;
+        }
+        const text = await response.text();
+        if (String(text || '').trim()) {
+          return { xmlText: text, sourcePath: path };
+        }
       }
     } catch (_error) {
       // Continue trying remaining candidates.
@@ -2585,10 +2610,26 @@ function buildMotifTranscriptSlugCandidates(motif, motifPageId, variationId = ''
     return baseCandidates;
   }
 
+  const variationSuffixCandidates = motifTranscriptUnique([
+    variationKey,
+    motif.pageSlug && variationKey.startsWith(motif.pageSlug + '-')
+      ? variationKey.slice(motif.pageSlug.length + 1)
+      : '',
+    motif.id && variationKey.startsWith(motif.id + '-')
+      ? variationKey.slice(motif.id.length + 1)
+      : '',
+    motifPageId && variationKey.startsWith(motifPageId + '-')
+      ? variationKey.slice(motifPageId.length + 1)
+      : ''
+  ]);
+
   const variationCandidates = motifTranscriptUnique([
-    motif.pageSlug ? motif.pageSlug + '-' + variationKey : '',
-    motif.id ? motif.id + '-' + variationKey : '',
-    motifPageId ? motifPageId + '-' + variationKey : ''
+    ...variationSuffixCandidates,
+    ...variationSuffixCandidates.flatMap((suffix) => [
+      motif.pageSlug ? motif.pageSlug + '-' + suffix : '',
+      motif.id ? motif.id + '-' + suffix : '',
+      motifPageId ? motifPageId + '-' + suffix : ''
+    ])
   ]);
 
   return variationCandidates.concat(baseCandidates);
@@ -2689,7 +2730,7 @@ function buildTimelineRow(song, motif, index, refs, options = {}) {
   const left = document.createElement(song.path ? 'a' : 'div');
   left.className = 'motif-song-pill';
   left.style.borderColor = song.color || '#351854';
-  left.textContent = song.title;
+  left.innerHTML = formatMotifSongTitleHtml(song.title);
   if (song.path) {
     left.href = song.path;
   }
@@ -3076,10 +3117,10 @@ function renderMotifPage() {
       if (firstSong.path) {
         const link = document.createElement('a');
         link.href = firstSong.path;
-        link.textContent = firstSong.title;
+        link.innerHTML = formatMotifSongTitleHtml(firstSong.title);
         firstAppearsNode.appendChild(link);
       } else {
-        firstAppearsNode.textContent = firstSong.title;
+        firstAppearsNode.innerHTML = formatMotifSongTitleHtml(firstSong.title);
       }
     } else {
       firstAppearsNode.textContent = 'Unknown';

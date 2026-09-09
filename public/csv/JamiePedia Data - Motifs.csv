@@ -1,0 +1,27 @@
+Motif Name,Category ID,Motif ID,Motif Image (Page and Map),is variation,Type?,Has Page,reference link,motif color
+Paisley Pudge,paisley-pudge,paisley-pudge-a,../public/images/motif-art/paisley-pudge.png,FALSE,Motif,TRUE,,F391CC
+Paisley Pudge,paisley-pudge,paisley-pudge-b,,TRUE,Motif,TRUE,,734590
+Kalia Vibte,,kalia-vibte,../public/images/motif-art/kalia-vibte.png,FALSE,Motif,TRUE,,B1785B
+Errianna Nollau,,erri-nollau,../public/images/motif-art/errianna-nollau.png,FALSE,Motif,TRUE,,FFFFFF
+Constant Companions,,constant-companions,../public/images/cover-art/cc.png,FALSE,Motif,TRUE,,FA0B06
+Gummyworm,gummyworm,gummyworm-a,../public/images/motif-art/gummyworm.png,TRUE,Motif,TRUE,,4BE22A
+Gummyworm,gummyworm,gummyworm-b,../public/images/motif-art/gummyworm.png,TRUE,Motif,TRUE,,F7EC6F
+Space Center,space-center,space-center-a,../public/images/cover-art/aa.png,TRUE,Motif,TRUE,,9EC7CD
+Space Center,space-center,space-center-b,,TRUE,Motif,TRUE,,9EC7CD
+Jya~,,jya,../public/images/motif-art/jya.png,FALSE,Sample,TRUE,,FCE73E
+Let The Bass Go,,let-the-bass-go,../public/images/motif-art/letthebassgo.png,FALSE,Sample,TRUE,,1F1F1F
+PP Aliteration,,pp-alliteration,../public/images/cover-art/pjscpfp.jpg,FALSE,Lyrical,TRUE,,F391CC
+Where Hearts Thaw,,where-hearts-thaw,,FALSE,Motif,TRUE,,615858
+The Patterns of Clouds,,patterns-of-clouds,../public/images/cover-art/tpoc.jpg,FALSE,Motif,TRUE,,FFFFFF
+Autumn Every Day,,autumn-every-day,../public/images/cover-art/aed.png,FALSE,Motif,TRUE,,E05C43
+On Fire,,on-fire,,FALSE,Motif,TRUE,,FFFFFF
+Jijo,,jijo,,FALSE,Motif,TRUE,,FFFFFF
+Decree,,decree,,FALSE,Motif,TRUE,,FFFFFF
+When Spring Comes,,when-spring-comes,../public/images/cover-art/wscrr.png,FALSE,Motif,TRUE,,FFFFFF
+Jerma Woo,,jerma-woo,../public/images/motif-art/jerma.png,FALSE,Sample,TRUE,,FFFFFF
+Say it Ain't So,,say-it-aint-so,../public/images/motif-art/weezer.png,FALSE,Lyrical,FALSE,https://en.wikipedia.org/wiki/Weezer_(Blue_Album),00ACE6
+Anew Again,anew-again,anew-again,../public/images/cover-art/aa.png,FALSE,Lyrical,FALSE,,9EC7CD
+Fantasize,,fantasize,,FALSE,Motif,TRUE,,FA4333
+Honor Majesty,,honor-majesty,,FALSE,Motif,TRUE,,E31C2C
+"My Darlling, My Companion",,my-darling-my-companion,,FALSE,Motif,FALSE,,FFFFFF
+Destiny,destiny,destiny,../public/images/cover-art/destiny.jpg,TRUE,Motif,TRUE,,EB9139

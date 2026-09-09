@@ -290,6 +290,27 @@ function songMotifsEscapeRegExp(value) {
   return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function songMotifsNormalizeLyricLine(value) {
+  return String(value || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\|/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function songMotifsRenderLyricText(value) {
+  return songMotifsEscapeHtml(String(value || ''))
+    .replace(/\r\n/g, '\n')
+    .replace(/\|/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('<br>');
+}
+
 function songMotifsNormalizeSiteHref(value) {
   const text = String(value || '').trim();
   if (!text) {
@@ -362,7 +383,7 @@ function songMotifsResolveReferenceTarget(referenceId) {
 
 function songMotifsResolveMotifHref(motif, motifId) {
   if (motif && motif.hasPage !== false) {
-    return '../../motifs/' + ((motif && motif.pageSlug) ? motif.pageSlug : (motif ? motif.id : motifId)) + '.html';
+    return '../../motifs/' + ((motif && motif.pageSlug) ? motif.pageSlug : (motif ? motif.id : motifId));
   }
 
   if (motif && motif.referenceLink) {
@@ -404,18 +425,24 @@ function songMotifsGetKaraokeLyricHighlights(entry) {
   const entryStart = Number(entry.time) || 0;
   const entryEnd = Number(entry.endTime) > entryStart ? Number(entry.endTime) : entryStart;
   const entryText = String(entry.text || '');
+  const normalizedEntryText = songMotifsNormalizeLyricLine(entryText);
 
   return state.lyricalRefs.filter((ref) => {
     const refStart = songMotifTimeToSeconds(ref.startTime);
     const refEndRaw = songMotifTimeToSeconds(ref.endTime);
     const refEnd = refEndRaw >= refStart ? refEndRaw : refStart;
-    const refLyrics = String(ref.lyrics || '').trim();
-    if (!refLyrics) {
+    const refLyricsLines = Array.isArray(ref.lyricsLines) && ref.lyricsLines.length > 0
+      ? ref.lyricsLines
+      : String(ref.lyrics || '').split(/\s*\|\s*/);
+    const normalizedRefLyricsLines = refLyricsLines
+      .map((line) => songMotifsNormalizeLyricLine(line))
+      .filter(Boolean);
+    if (normalizedRefLyricsLines.length === 0) {
       return false;
     }
 
     const overlapsLine = refStart <= (entryEnd + 0.02) && refEnd >= (entryStart - 0.02);
-    const lyricPresent = entryText.toLowerCase().includes(refLyrics.toLowerCase());
+    const lyricPresent = normalizedRefLyricsLines.some((line) => normalizedEntryText.includes(line));
     return overlapsLine && lyricPresent;
   });
 }
@@ -425,14 +452,26 @@ function songMotifsBuildKaraokeLineHtml(entry) {
     return ' ';
   }
 
+  const normalizedEntryText = songMotifsNormalizeLyricLine(entry.text);
+
   const highlights = songMotifsGetKaraokeLyricHighlights(entry)
     .filter((ref, index, list) => {
-      const key = String(ref.motifId || '').toLowerCase() + '|' + String(ref.lyrics || '').toLowerCase();
+      const refLyricsKey = Array.isArray(ref.lyricsLines) && ref.lyricsLines.length > 0
+        ? ref.lyricsLines.join('|')
+        : String(ref.lyrics || '');
+      const key = String(ref.motifId || '').toLowerCase() + '|' + songMotifsNormalizeLyricLine(refLyricsKey);
       return list.findIndex((candidate) => {
-        return String(candidate.motifId || '').toLowerCase() + '|' + String(candidate.lyrics || '').toLowerCase() === key;
+        const candidateLyricsKey = Array.isArray(candidate.lyricsLines) && candidate.lyricsLines.length > 0
+          ? candidate.lyricsLines.join('|')
+          : String(candidate.lyrics || '');
+        return String(candidate.motifId || '').toLowerCase() + '|' + songMotifsNormalizeLyricLine(candidateLyricsKey) === key;
       }) === index;
     })
-    .sort((a, b) => String(b.lyrics || '').length - String(a.lyrics || '').length);
+    .sort((a, b) => {
+      const aLyrics = Array.isArray(a.lyricsLines) && a.lyricsLines.length > 0 ? a.lyricsLines.join(' ') : String(a.lyrics || '');
+      const bLyrics = Array.isArray(b.lyricsLines) && b.lyricsLines.length > 0 ? b.lyricsLines.join(' ') : String(b.lyrics || '');
+      return bLyrics.length - aLyrics.length;
+    });
 
   if (highlights.length === 0) {
     return songMotifsEscapeHtml(entry.text);
@@ -445,7 +484,14 @@ function songMotifsBuildKaraokeLineHtml(entry) {
     const color = target.type === 'song'
       ? (target.song && target.song.color ? target.song.color : '#ef8a85')
       : (target.motif && target.motif.color ? target.motif.color : '#ef8a85');
-    const escapedLyrics = songMotifsEscapeHtml(ref.lyrics);
+    const refLyricsLines = Array.isArray(ref.lyricsLines) && ref.lyricsLines.length > 0
+      ? ref.lyricsLines
+      : String(ref.lyrics || '').split(/\s*\|\s*/);
+    const matchText = refLyricsLines.find((line) => normalizedEntryText.includes(songMotifsNormalizeLyricLine(line)))
+      || refLyricsLines[0]
+      || ref.lyrics
+      || '';
+    const escapedLyrics = songMotifsEscapeHtml(matchText);
     const pattern = new RegExp(songMotifsEscapeRegExp(escapedLyrics), 'g');
     rendered = rendered.replace(
       pattern,
@@ -681,7 +727,7 @@ function songMotifsLoadKaraokeEntries() {
     return Promise.resolve([]);
   }
 
-  const path = '../../public/lyrics/' + file + '.lrc';
+  const path = '../../public/songs/lyrics/' + file + '.lrc';
   return fetch(path, { cache: 'no-store' })
     .then((response) => {
       if (!response.ok) {
@@ -725,6 +771,64 @@ function buildSongMotifsVolumeControl() {
 function songMotifsFindSong() {
   if (!window.SongData || !window.SongData.allSongs) {
     return null;
+  }
+
+  const toComparableSongPath = (value) => {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) {
+      return '';
+    }
+
+    const normalized = raw
+      .replace(/^https?:\/\/[^/]+/i, '')
+      .replace(/^\.{1,2}\//, '/')
+      .replace(/\.html$/i, '')
+      .replace(/\/+$/, '');
+
+    return normalized.startsWith('/') ? normalized : ('/' + normalized);
+  };
+
+  const expectedPath = toComparableSongPath(window.location.pathname || '');
+  if (expectedPath) {
+    const directMatch = window.SongData.allSongs.find((song) => {
+      const songPath = toComparableSongPath((song || {}).path || '');
+      return songPath === expectedPath;
+    });
+
+    if (directMatch) {
+      return directMatch;
+    }
+  }
+
+  const currentBaseSlug = songMotifsGetBaseSongSlug();
+  const currentHashToken = songMotifsNormalizeVersionHashToken(window.location.hash || '');
+  if (currentBaseSlug) {
+    const slugMatch = window.SongData.allSongs.find((song) => {
+      const normalizedSongPath = toComparableSongPath((song || {}).path || '');
+      if (!normalizedSongPath) {
+        return false;
+      }
+
+      const splitIndex = normalizedSongPath.indexOf('#');
+      const pathPart = splitIndex === -1 ? normalizedSongPath : normalizedSongPath.slice(0, splitIndex);
+      const hashPart = splitIndex === -1 ? '' : normalizedSongPath.slice(splitIndex + 1);
+      const songSlug = pathPart.split('/').filter(Boolean).pop() || '';
+
+      if (songSlug !== currentBaseSlug) {
+        return false;
+      }
+
+      const songHashToken = songMotifsNormalizeVersionHashToken(hashPart);
+      if (!songHashToken) {
+        return !currentHashToken;
+      }
+
+      return songHashToken === currentHashToken;
+    });
+
+    if (slugMatch) {
+      return slugMatch;
+    }
   }
 
   const expectedCandidates = songMotifsResolveSongPathCandidates();
@@ -842,7 +946,7 @@ function songMotifsGroupReferenceList(refs, keyPrefix) {
     const song = target.song;
     const referenceType = target.type;
     const isVariationMotif = referenceType === 'motif' && motif && Array.isArray(motif.variations) && motif.variations.length > 0;
-    const variationId = isVariationMotif ? (ref.variationId || '') : '';
+    const variationId = isVariationMotif ? (ref.variationId || ref.motifId || '') : '';
     const canonicalReferenceId = target.canonicalId;
     const key = keyPrefix + '::' + referenceType + '::' + canonicalReferenceId + '::' + variationId;
 

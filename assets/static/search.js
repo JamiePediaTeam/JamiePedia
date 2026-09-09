@@ -179,7 +179,7 @@ function buildSearchImageMapFromSongCsv(csvText) {
   }
 
   const headers = splitSearchCsvLine(lines[0]);
-  const pathIndex = findSearchSongCsvHeaderIndex(headers, ['page_path', 'Path']);
+  const pathIndex = findSearchSongCsvHeaderIndex(headers, ['path id', 'path_id', 'page_path', 'Path']);
   const artIndex = findSearchSongCsvHeaderIndex(headers, ['album_art_paths', 'Album Path', 'Album Art']);
   if (pathIndex === -1 || artIndex === -1) {
     return map;
@@ -236,7 +236,7 @@ function buildSearchImageMapFromMotifCsv(csvText) {
       firstMotifImagePath = imagePath;
     }
 
-    const motifPath = '/motifs/' + motifId + '.html';
+    const motifPath = '/motifs/' + motifId;
     if (!map[motifPath]) {
       map[motifPath] = imagePath;
     }
@@ -254,8 +254,8 @@ function ensureSearchImageCsvLoaded(basePath) {
     return searchImageCsvPromise;
   }
 
-  const songCsvUrl = (basePath || '') + '/public/music/JamiePedia Data - Songs.csv';
-  const motifCsvUrl = (basePath || '') + '/public/motifs/JamiePedia Data - Motifs.csv';
+  const songCsvUrl = (basePath || '') + '/public/csv/JamiePedia Data - Songs.csv';
+  const motifCsvUrl = (basePath || '') + '/public/csv/JamiePedia Data - Motifs.csv';
 
   searchImageCsvPromise = Promise.all([
     fetch(songCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
@@ -344,10 +344,10 @@ async function getSearchSongExternalContent(basePath, doc, fileEntry) {
 
   await Promise.all(slugs.map(async (slug) => {
     const [summaryText, annotatedText, extendedText, lrcText] = await Promise.all([
-      fetchSearchText(resolveSearchPath(basePath, '/public/summaries/' + slug + '.txt')),
-      fetchSearchText(resolveSearchPath(basePath, '/public/annotations/' + slug + '.txt')),
-      fetchSearchText(resolveSearchPath(basePath, '/public/extended/' + slug + '.txt')),
-      fetchSearchText(resolveSearchPath(basePath, '/public/lyrics/' + slug + '.lrc'))
+      fetchSearchText(resolveSearchPath(basePath, '/public/songs/summaries/' + slug + '.txt')),
+      fetchSearchText(resolveSearchPath(basePath, '/public/songs/annotations/' + slug + '.txt')),
+      fetchSearchText(resolveSearchPath(basePath, '/public/songs/extended/' + slug + '.txt')),
+      fetchSearchText(resolveSearchPath(basePath, '/public/songs/lyrics/' + slug + '.lrc'))
     ]);
 
     if (summaryText) {

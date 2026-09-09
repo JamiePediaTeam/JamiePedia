@@ -18,7 +18,7 @@
     const songs = allMusicFiles
       .filter((item) => item && item.album !== 'Album' && item.album !== 'Motifs' && typeof item.path === 'string')
       .map((item) => item.path)
-      .filter((path) => /^\/music\/.+\.html$/i.test(path));
+      .filter((path) => /^\/music\/.+\.html(?:#.+)?$/i.test(path));
 
     const motifs = allMusicFiles
       .filter((item) => item && item.album === 'Motifs' && typeof item.path === 'string')

@@ -112,7 +112,7 @@ function songLyricsBuildLrcPath(slugOverride) {
   if (!slug) {
     return '';
   }
-  return '../../public/lyrics/' + slug + '.lrc';
+  return '../../public/songs/lyrics/' + slug + '.lrc';
 }
 
 function songLyricsRenderRawLines(container, rawLines) {

@@ -5,6 +5,8 @@
   "scripts": {
     "start": "node server.js",
     "serve": "node server.js",
+    "build:albums-csv": "node scripts/generate-albums-csv.js",
+    "build:music-csv": "node scripts/reformat-music-csv.js",
     "build:transcripts": "node scripts/generate-transcript-playback-json.js",
     "build:art-previews": "node scripts/generate-art-previews.js"
   },

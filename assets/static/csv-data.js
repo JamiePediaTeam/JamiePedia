@@ -63,6 +63,14 @@ function normalizeJamiePediaText(value) {
   return String(value || '').trim();
 }
 
+function splitJamiePediaLyricLines(value) {
+  return String(value || '')
+    .replace(/\r\n/g, '\n')
+    .split(/\s*\|\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function normalizeJamiePediaBool(value) {
   const text = normalizeJamiePediaText(value).toUpperCase();
   return text === 'TRUE' || text === '1' || text === 'YES';
@@ -210,8 +218,8 @@ function currentScriptBaseUrl() {
   return script && script.src ? script.src : window.location.href;
 }
 
-function loadJamiePediaCsvText() {
-  const csvPath = encodeURI('../../public/motifs/JamiePedia Data - Motifs.csv');
+function loadJamiePediaCsvText(csvRelativePath, errorLabel) {
+  const csvPath = encodeURI(csvRelativePath);
   const csvUrl = new URL(csvPath, currentScriptBaseUrl());
   const request = new XMLHttpRequest();
   request.open('GET', csvUrl.href, false);
@@ -221,7 +229,72 @@ function loadJamiePediaCsvText() {
     return request.responseText || '';
   }
 
-  throw new Error('Unable to load JamiePedia motifs CSV');
+  throw new Error('Unable to load JamiePedia ' + errorLabel + ' CSV');
+}
+
+function tryLoadJamiePediaCsvText(csvRelativePath, errorLabel) {
+  try {
+    return loadJamiePediaCsvText(csvRelativePath, errorLabel);
+  } catch (_error) {
+    return '';
+  }
+}
+
+function normalizeSongPathId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  const hashIndex = raw.indexOf('#');
+  const pathPart = hashIndex === -1 ? raw : raw.slice(0, hashIndex);
+  const hashPart = hashIndex === -1 ? '' : raw.slice(hashIndex + 1).trim();
+
+  const cleanedPath = pathPart
+    .replace(/^\.{1,2}\//, '')
+    .replace(/^\/?music\//i, '')
+    .replace(/\.html$/i, '')
+    .replace(/\/+$/, '')
+    .trim();
+
+  if (!cleanedPath) {
+    return '';
+  }
+
+  return hashPart ? (cleanedPath + '#' + hashPart) : cleanedPath;
+}
+
+function buildSongPathFromPathId(pathId) {
+  const normalized = normalizeSongPathId(pathId);
+  if (!normalized) {
+    return '';
+  }
+
+  const hashIndex = normalized.indexOf('#');
+  const pathPart = hashIndex === -1 ? normalized : normalized.slice(0, hashIndex);
+  const hashPart = hashIndex === -1 ? '' : normalized.slice(hashIndex + 1).trim();
+
+  const href = '/music/' + pathPart;
+  return hashPart ? (href + '#' + hashPart) : href;
+}
+
+function deriveSongId(pathId, title) {
+  const source = String(pathId || '').split('#')[0].trim() || String(title || '').trim();
+  if (!source) {
+    return '';
+  }
+
+  return source
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/__+/g, '_');
+}
+
+function splitJamiePediaPipeValues(value) {
+  return String(value || '')
+    .split(/\s*\|\s*/)
+    .map((item) => item.trim());
 }
 
 class MotifReference {
@@ -235,6 +308,7 @@ class MotifReference {
     this.isLyrical = !!options.isLyrical;
     this.isSample = !!options.isSample;
     this.lyrics = options.lyrics || '';
+    this.lyricsLines = Array.isArray(options.lyricsLines) ? options.lyricsLines : [];
   }
 }
 
@@ -256,6 +330,7 @@ class Motif {
     this.id = id;
     this.name = name;
     this.image = image;
+    this.categoryId = options.categoryId || id;
     this.aliases = aliases;
     this.color = color;
     this.hasPage = options.hasPage !== false;
@@ -301,45 +376,136 @@ function readJamiePediaRowValue(row, index) {
   return row[index];
 }
 
-function createJamiePediaData() {
-  const csvRows = parseJamiePediaCsv(loadJamiePediaCsvText());
-  const headerRow = csvRows[0] || [];
-  const getColumnIndex = buildJamiePediaColumnLookup(headerRow);
-  const dataRows = csvRows.slice(1).filter((row) => row.some((cell) => normalizeJamiePediaText(cell) !== ''));
+function splitMotifCsvTables(csvRows) {
+  const motifHeaderRow = csvRows[0] || [];
+  let referenceHeaderIndex = -1;
 
-  const columns = {
-    motifName: getColumnIndex('Motif Name'),
-    motifId: getColumnIndex('Motif ID', 0),
-    motifImage: getColumnIndex('Motif Image (Page and Map)'),
-    motifIsVariation: getColumnIndex('is variation'),
-    motifType: getColumnIndex('Type?'),
-    motifIsLyrical: getColumnIndex('Is Lyrical'),
-    motifHasPage: getColumnIndex('Has Page'),
-    motifReferenceLink: getColumnIndex('reference link'),
-    motifColor: getColumnIndex('motif color'),
-    motifVariationLetter: getColumnIndex('variation letter', 0),
-    songName: getColumnIndex('Song Name'),
-    songId: getColumnIndex('Song ID', 0),
-    songFile: getColumnIndex('Song File'),
-    songEmbedType: getColumnIndex('Embed Type'),
-    songEmbedLink: getColumnIndex('Embed Link'),
-    songColor: getColumnIndex('Song Color'),
-    refSongId: getColumnIndex('Song ID', 1),
-    refMotifId: getColumnIndex('Motif ID', 1),
-    refStartTime: getColumnIndex('Start Time', 0),
-    refEndTime: getColumnIndex('End Time', 0),
-    refDefinition: getColumnIndex('Definition'),
-    refVariation: getColumnIndex('Variation'),
-    refVariationLetter: getColumnIndex('Variation Letter', 1),
-    lyricalSongId: getColumnIndex('Song ID', 2),
-    lyricalMotifId: getColumnIndex('Motif Id', 2),
-    lyricalStartTime: getColumnIndex('Start Time', 1),
-    lyricalEndTime: getColumnIndex('End Time', 1),
-    lyricalLyrics: getColumnIndex('Lyrics'),
-    sampleSongId: getColumnIndex('Song ID', 3),
-    sampleMotifId: getColumnIndex('Motif Id', 3),
-    sampleStartTime: getColumnIndex('Start Time', 2),
-    sampleEndTime: getColumnIndex('End Time', 2)
+  for (let index = 1; index < csvRows.length; index += 1) {
+    const normalized = (csvRows[index] || []).map((cell) => normalizeJamiePediaHeader(cell));
+    if (normalized[0] === 'song id' && normalized.includes('motif id') && normalized.includes('start time') && normalized.includes('end time')) {
+      referenceHeaderIndex = index;
+      break;
+    }
+  }
+
+  const motifDataRows = [];
+  const motifRowsEnd = referenceHeaderIndex >= 0 ? referenceHeaderIndex : csvRows.length;
+  for (let index = 1; index < motifRowsEnd; index += 1) {
+    const row = csvRows[index] || [];
+    if (row.some((cell) => normalizeJamiePediaText(cell) !== '')) {
+      motifDataRows.push(row);
+    }
+  }
+
+  const referenceHeaderRow = referenceHeaderIndex >= 0 ? (csvRows[referenceHeaderIndex] || []) : [];
+  const referenceDataRows = [];
+
+  if (referenceHeaderIndex >= 0) {
+    for (let index = referenceHeaderIndex + 1; index < csvRows.length; index += 1) {
+      const row = csvRows[index] || [];
+      if (row.some((cell) => normalizeJamiePediaText(cell) !== '')) {
+        referenceDataRows.push(row);
+      }
+    }
+  }
+
+  return {
+    motifHeaderRow,
+    motifDataRows,
+    referenceHeaderRow,
+    referenceDataRows
+  };
+}
+
+function createJamiePediaData() {
+  const motifsRows = parseJamiePediaCsv(loadJamiePediaCsvText('../../public/csv/JamiePedia Data - Motifs.csv', 'motifs'));
+  const motifTables = splitMotifCsvTables(motifsRows);
+  const getMotifColumnIndex = buildJamiePediaColumnLookup(motifTables.motifHeaderRow);
+  let referenceHeaderRow = motifTables.referenceHeaderRow || [];
+  let referenceDataRows = motifTables.referenceDataRows || [];
+
+  const referencesCsvText = tryLoadJamiePediaCsvText('../../public/csv/JamiePedia Data - References.csv', 'references');
+  if (String(referencesCsvText || '').trim()) {
+    const parsedReferencesRows = parseJamiePediaCsv(referencesCsvText);
+    const parsedReferenceHeaderRow = parsedReferencesRows[0] || [];
+    const parsedReferenceDataRows = parsedReferencesRows
+      .slice(1)
+      .filter((row) => row.some((cell) => normalizeJamiePediaText(cell) !== ''));
+
+    const testLookup = buildJamiePediaColumnLookup(parsedReferenceHeaderRow);
+    const hasCoreReferenceColumns = testLookup('Song ID') >= 0
+      && testLookup('Motif ID') >= 0
+      && testLookup('Start Time') >= 0
+      && testLookup('End Time') >= 0;
+
+    if (hasCoreReferenceColumns) {
+      referenceHeaderRow = parsedReferenceHeaderRow;
+      referenceDataRows = parsedReferenceDataRows;
+    }
+  }
+
+  const getReferenceColumnIndex = buildJamiePediaColumnLookup(referenceHeaderRow);
+
+  const songsRows = parseJamiePediaCsv(loadJamiePediaCsvText('../../public/csv/JamiePedia Data - Songs.csv', 'songs'));
+  const songsHeaderRow = songsRows[0] || [];
+  const getSongColumnIndex = buildJamiePediaColumnLookup(songsHeaderRow);
+  const songDataRows = songsRows.slice(1).filter((row) => row.some((cell) => normalizeJamiePediaText(cell) !== ''));
+
+  const motifColumns = {
+    motifName: getMotifColumnIndex('Motif Name'),
+    motifId: getMotifColumnIndex('Motif ID', 0),
+    motifCategoryId: getMotifColumnIndex('Category ID'),
+    motifImage: getMotifColumnIndex('Motif Image (Page and Map)'),
+    motifIsVariation: getMotifColumnIndex('is variation'),
+    motifType: getMotifColumnIndex('Type?'),
+    motifIsLyrical: getMotifColumnIndex('Is Lyrical'),
+    motifHasPage: getMotifColumnIndex('Has Page'),
+    motifReferenceLink: getMotifColumnIndex('reference link'),
+    motifColor: getMotifColumnIndex('motif color')
+  };
+
+  const referenceColumns = {
+    songId: getReferenceColumnIndex('Song ID'),
+    motifId: getReferenceColumnIndex('Motif ID'),
+    startTime: getReferenceColumnIndex('Start Time'),
+    endTime: getReferenceColumnIndex('End Time'),
+    definition: getReferenceColumnIndex('Definition'),
+    type: getReferenceColumnIndex('Type'),
+    variation: getReferenceColumnIndex('Variation'),
+    variationLetter: getReferenceColumnIndex('Variation Letter'),
+    rhythmic: getReferenceColumnIndex('Rhythmic'),
+    lyrical: getReferenceColumnIndex('Lyrical'),
+    sample: getReferenceColumnIndex('Sample'),
+    lyrics: getReferenceColumnIndex('Lyrics')
+  };
+
+  const legacyReferenceColumns = {
+    rhythmicSongId: getReferenceColumnIndex('Song ID', 0),
+    rhythmicMotifId: getReferenceColumnIndex('Motif ID', 0),
+    rhythmicStart: getReferenceColumnIndex('Start Time', 0),
+    rhythmicEnd: getReferenceColumnIndex('End Time', 0),
+    rhythmicDefinition: getReferenceColumnIndex('Definition', 0),
+    rhythmicVariation: getReferenceColumnIndex('Variation', 0),
+    rhythmicVariationLetter: getReferenceColumnIndex('Variation Letter', 0),
+
+    lyricalSongId: getReferenceColumnIndex('Song ID', 1),
+    lyricalMotifId: getReferenceColumnIndex('Motif/Song ID', 0),
+    lyricalStart: getReferenceColumnIndex('Start Time', 1),
+    lyricalEnd: getReferenceColumnIndex('End Time', 1),
+    lyricalLyrics: getReferenceColumnIndex('Lyrics', 0),
+
+    sampleSongId: getReferenceColumnIndex('Song ID', 2),
+    sampleMotifId: getReferenceColumnIndex('Motif/Song ID', 1),
+    sampleStart: getReferenceColumnIndex('Start Time', 2),
+    sampleEnd: getReferenceColumnIndex('End Time', 2)
+  };
+
+  const songColumns = {
+    title: getSongColumnIndex('Page Title'),
+    pathId: getSongColumnIndex('path id'),
+    songId: getSongColumnIndex('song id'),
+    embedLink: getSongColumnIndex('Embed Link'),
+    songColor: getSongColumnIndex('Song Color')
   };
 
   const motifRecords = new Map();
@@ -348,206 +514,362 @@ function createJamiePediaData() {
   const sampleRefsBySongId = new Map();
   const lyricalRefsBySongId = new Map();
 
-  dataRows.forEach((row) => {
-    const motifId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifId));
-    const motifName = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifName));
-    const motifImage = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifImage));
-    const motifIsVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifIsVariation));
-    const motifType = normalizeJamiePediaMotifType(readJamiePediaRowValue(row, columns.motifType));
-    const legacyIsLyrical = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifIsLyrical));
+  songDataRows.forEach((row) => {
+    const title = normalizeJamiePediaText(readJamiePediaRowValue(row, songColumns.title));
+    const pathId = normalizeSongPathId(readJamiePediaRowValue(row, songColumns.pathId));
+    const songId = normalizeJamiePediaText(readJamiePediaRowValue(row, songColumns.songId)) || deriveSongId(pathId, title);
+    const embedLink = normalizeJamiePediaText(readJamiePediaRowValue(row, songColumns.embedLink));
+    const color = normalizeJamiePediaColor(readJamiePediaRowValue(row, songColumns.songColor), '#351854');
+    const path = buildSongPathFromPathId(pathId);
+
+    if (!songId && !title && !pathId) {
+      return;
+    }
+
+    const recordId = songId || deriveSongId(pathId, title);
+    if (!recordId) {
+      return;
+    }
+
+    if (!songRecords.has(recordId)) {
+      songRecords.set(recordId, {
+        id: recordId,
+        title: title || recordId,
+        path: path || '',
+        embedLink: embedLink || '',
+        color
+      });
+      return;
+    }
+
+    const songRecord = songRecords.get(recordId);
+    if (title) songRecord.title = title;
+    if (path) songRecord.path = path;
+    if (embedLink) songRecord.embedLink = embedLink;
+    if (color) songRecord.color = color;
+  });
+
+  motifTables.motifDataRows.forEach((row) => {
+    const motifId = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifId));
+    const motifName = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifName));
+    const motifCategoryId = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifCategoryId)) || motifId;
+    const motifImage = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifImage));
+    const motifIsVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, motifColumns.motifIsVariation));
+    const motifType = normalizeJamiePediaMotifType(readJamiePediaRowValue(row, motifColumns.motifType));
+    const legacyIsLyrical = normalizeJamiePediaBool(readJamiePediaRowValue(row, motifColumns.motifIsLyrical));
     const motifIsLyrical = motifType === 'lyrical' || legacyIsLyrical;
-    const motifHasPage = columns.motifHasPage >= 0
-      ? normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.motifHasPage))
+    const motifHasPage = motifColumns.motifHasPage >= 0
+      ? normalizeJamiePediaBool(readJamiePediaRowValue(row, motifColumns.motifHasPage))
       : true;
-    const motifReferenceLink = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifReferenceLink));
-    const motifColor = normalizeJamiePediaColor(readJamiePediaRowValue(row, columns.motifColor), '#ef8a85');
-    const motifVariationLetter = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.motifVariationLetter));
+    const motifReferenceLink = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifReferenceLink));
+    const motifColor = normalizeJamiePediaColor(readJamiePediaRowValue(row, motifColumns.motifColor), '#ef8a85');
 
-    if (motifId) {
-      if (!motifRecords.has(motifId)) {
-        motifRecords.set(motifId, {
-          id: motifId,
-          name: motifName || motifId,
-          image: motifImage || null,
-          color: motifColor || null,
-          isVariation: motifIsVariation,
-          motifType,
-          isLyrical: motifIsLyrical,
-          hasPage: motifHasPage,
-          referenceLink: motifReferenceLink,
-          variationLetters: new Set(),
-          variationColors: new Map(),
-          rowCount: 0
-        });
-      }
-
-      const motifRecord = motifRecords.get(motifId);
-      motifRecord.rowCount += 1;
-      if (motifName) motifRecord.name = motifName;
-      if (motifImage) motifRecord.image = motifImage;
-      if (motifColor && !motifRecord.color) motifRecord.color = motifColor;
-      if (motifIsVariation) motifRecord.isVariation = true;
-      if (motifType) motifRecord.motifType = motifType;
-      motifRecord.isLyrical = motifRecord.motifType === 'lyrical' || motifRecord.isLyrical || motifIsLyrical;
-      if (columns.motifHasPage >= 0) motifRecord.hasPage = motifHasPage;
-      if (motifReferenceLink) motifRecord.referenceLink = motifReferenceLink;
-      if (motifVariationLetter) {
-        motifRecord.variationLetters.add(motifVariationLetter);
-        if (motifColor) motifRecord.variationColors.set(motifVariationLetter, motifColor);
-      }
+    if (!motifId) {
+      return;
     }
 
-    const songName = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songName));
-    const songId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songId));
-    const songFile = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songFile));
-    const songEmbedType = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songEmbedType));
-    const songEmbedLink = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.songEmbedLink));
-    const songColor = normalizeJamiePediaColor(readJamiePediaRowValue(row, columns.songColor), '#351854');
+    motifRecords.set(motifId, {
+      id: motifId,
+      categoryId: motifCategoryId,
+      name: motifName || motifId,
+      image: motifImage || null,
+      color: motifColor || '#ef8a85',
+      isVariation: motifIsVariation,
+      motifType,
+      isLyrical: motifIsLyrical,
+      hasPage: motifHasPage,
+      referenceLink: motifReferenceLink
+    });
+  });
 
-    if (songId) {
-      if (!songRecords.has(songId)) {
-        songRecords.set(songId, {
-          id: songId,
-          title: songName || songId,
-          path: songFile || '',
-          embedType: songEmbedType || '',
-          embedLink: songEmbedLink || '',
-          color: songColor,
-          motifRefs: []
-        });
-      }
-
-      const songRecord = songRecords.get(songId);
-      if (songName) songRecord.title = songName;
-      if (songFile) songRecord.path = songFile;
-      if (songEmbedType) songRecord.embedType = songEmbedType;
-      if (songEmbedLink) songRecord.embedLink = songEmbedLink;
-      if (songColor) songRecord.color = songColor;
+  function resolveVariationMotifId(targetId, isVariation, variationLetter) {
+    const rawTarget = normalizeJamiePediaText(targetId);
+    if (!rawTarget) {
+      return '';
     }
 
-    const refSongId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refSongId));
-    const refMotifId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refMotifId));
-    const startTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refStartTime));
-    const endTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refEndTime));
-    const isDefinition = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.refDefinition));
-    const isVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, columns.refVariation));
-    const variationId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.refVariationLetter));
-
-    if (refSongId && refMotifId && startTime && endTime) {
-      if (!refsBySongId.has(refSongId)) {
-        refsBySongId.set(refSongId, []);
-      }
-
-      refsBySongId.get(refSongId).push(new MotifReference(
-        refMotifId,
-        startTime,
-        endTime,
-        isVariation,
-        isDefinition,
-        variationId
-      ));
+    if (motifRecords.has(rawTarget)) {
+      return rawTarget;
     }
 
-    const lyricalSongId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalSongId));
-    const lyricalMotifId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalMotifId));
-    const lyricalStartTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalStartTime));
-    const lyricalEndTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalEndTime));
-    const lyricalLyrics = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.lyricalLyrics));
+    const normalizedTarget = rawTarget.toLowerCase();
+    const normalizedLetter = normalizeJamiePediaText(variationLetter).toLowerCase();
+    const variationEnabled = !!isVariation;
 
-    if (lyricalSongId && lyricalMotifId && lyricalStartTime && lyricalEndTime) {
-      if (!lyricalRefsBySongId.has(lyricalSongId)) {
-        lyricalRefsBySongId.set(lyricalSongId, []);
-      }
-
-      lyricalRefsBySongId.get(lyricalSongId).push(new MotifReference(
-        lyricalMotifId,
-        lyricalStartTime,
-        lyricalEndTime,
-        false,
-        false,
-        '',
-        {
-          isLyrical: true,
-          lyrics: lyricalLyrics
-        }
-      ));
+    if (!variationEnabled || !normalizedLetter) {
+      return rawTarget;
     }
 
-    const sampleSongId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.sampleSongId));
-    const sampleMotifId = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.sampleMotifId));
-    const sampleStartTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.sampleStartTime));
-    const sampleEndTime = normalizeJamiePediaText(readJamiePediaRowValue(row, columns.sampleEndTime));
+    const exactMatch = normalizedTarget + '-' + normalizedLetter;
+    if (motifRecords.has(exactMatch)) {
+      return exactMatch;
+    }
 
-    if (sampleSongId && sampleMotifId && sampleStartTime && sampleEndTime) {
-      if (!sampleRefsBySongId.has(sampleSongId)) {
-        sampleRefsBySongId.set(sampleSongId, []);
+    const candidate = Array.from(motifRecords.values()).find((record) => {
+      const categoryId = String(record.categoryId || '').toLowerCase();
+      const motifId = String(record.id || '').toLowerCase();
+      if (!categoryId || !motifId) {
+        return false;
       }
 
-      sampleRefsBySongId.get(sampleSongId).push(new MotifReference(
-        sampleMotifId,
-        sampleStartTime,
-        sampleEndTime,
-        false,
-        false,
-        '',
-        {
-          isSample: true
-        }
-      ));
+      if (categoryId !== normalizedTarget) {
+        return false;
+      }
+
+      return motifId.endsWith('-' + normalizedLetter);
+    });
+
+    return candidate ? candidate.id : rawTarget;
+  }
+
+  function ensureSongRef(songId) {
+    const normalizedSongId = String(songId || '').trim();
+    if (!normalizedSongId) {
+      return '';
     }
+
+    if (!songRecords.has(normalizedSongId)) {
+      songRecords.set(normalizedSongId, {
+        id: normalizedSongId,
+        title: normalizedSongId,
+        path: '',
+        embedLink: '',
+        color: '#351854'
+      });
+    }
+
+    return normalizedSongId;
+  }
+
+  function pushRhythmicReference(songId, targetId, startTime, endTime, isDefinition) {
+    if (!songId || !targetId || !startTime || !endTime) {
+      return;
+    }
+
+    if (!refsBySongId.has(songId)) {
+      refsBySongId.set(songId, []);
+    }
+
+    refsBySongId.get(songId).push(new MotifReference(
+      targetId,
+      startTime,
+      endTime,
+      false,
+      !!isDefinition,
+      targetId
+    ));
+  }
+
+  function pushLyricalReference(songId, targetId, startTime, endTime, lyricText) {
+    if (!songId || !targetId || !startTime || !endTime) {
+      return;
+    }
+
+    if (!lyricalRefsBySongId.has(songId)) {
+      lyricalRefsBySongId.set(songId, []);
+    }
+
+    lyricalRefsBySongId.get(songId).push(new MotifReference(
+      targetId,
+      startTime,
+      endTime,
+      false,
+      false,
+      targetId,
+      {
+        isLyrical: true,
+        lyrics: lyricText,
+        lyricsLines: splitJamiePediaLyricLines(lyricText)
+      }
+    ));
+  }
+
+  function pushSampleReference(songId, targetId, startTime, endTime) {
+    if (!songId || !targetId || !startTime || !endTime) {
+      return;
+    }
+
+    if (!sampleRefsBySongId.has(songId)) {
+      sampleRefsBySongId.set(songId, []);
+    }
+
+    sampleRefsBySongId.get(songId).push(new MotifReference(
+      targetId,
+      startTime,
+      endTime,
+      false,
+      false,
+      targetId,
+      {
+        isSample: true
+      }
+    ));
+  }
+
+  function normalizeReferenceType(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) {
+      return '';
+    }
+
+    if (raw === 'rhythmic' || raw === 'rhythm' || raw === 'rhymic') {
+      return 'rhythmic';
+    }
+    if (raw === 'lyrical' || raw === 'lyrics' || raw === 'lyric') {
+      return 'lyrical';
+    }
+    if (raw === 'sample' || raw === 'sampling') {
+      return 'sample';
+    }
+
+    return '';
+  }
+
+  const hasUnifiedReferenceTypeColumn = referenceColumns.type >= 0;
+  const hasUnifiedReferenceToggles = referenceColumns.rhythmic >= 0
+    || referenceColumns.lyrical >= 0
+    || referenceColumns.sample >= 0;
+
+  referenceDataRows.forEach((row) => {
+    if (hasUnifiedReferenceTypeColumn || hasUnifiedReferenceToggles) {
+      const songId = ensureSongRef(readJamiePediaRowValue(row, referenceColumns.songId));
+      const rawTargetId = normalizeJamiePediaText(readJamiePediaRowValue(row, referenceColumns.motifId));
+      const startTime = normalizeJamiePediaText(readJamiePediaRowValue(row, referenceColumns.startTime));
+      const endTime = normalizeJamiePediaText(readJamiePediaRowValue(row, referenceColumns.endTime));
+      if (!songId || !rawTargetId || !startTime || !endTime) {
+        return;
+      }
+
+      const isVariation = referenceColumns.variation >= 0
+        ? normalizeJamiePediaBool(readJamiePediaRowValue(row, referenceColumns.variation))
+        : false;
+      const variationLetter = referenceColumns.variationLetter >= 0
+        ? readJamiePediaRowValue(row, referenceColumns.variationLetter)
+        : '';
+      const targetId = resolveVariationMotifId(rawTargetId, isVariation, variationLetter);
+
+      const normalizedType = normalizeReferenceType(readJamiePediaRowValue(row, referenceColumns.type));
+      const isRhythmic = referenceColumns.rhythmic >= 0
+        ? normalizeJamiePediaBool(readJamiePediaRowValue(row, referenceColumns.rhythmic))
+        : (normalizedType ? normalizedType === 'rhythmic' : true);
+      const isLyrical = referenceColumns.lyrical >= 0
+        ? normalizeJamiePediaBool(readJamiePediaRowValue(row, referenceColumns.lyrical))
+        : normalizedType === 'lyrical';
+      const isSample = referenceColumns.sample >= 0
+        ? normalizeJamiePediaBool(readJamiePediaRowValue(row, referenceColumns.sample))
+        : normalizedType === 'sample';
+      const isDefinition = normalizeJamiePediaBool(readJamiePediaRowValue(row, referenceColumns.definition));
+      const lyricText = normalizeJamiePediaText(readJamiePediaRowValue(row, referenceColumns.lyrics));
+
+      if (isRhythmic || (!isLyrical && !isSample)) {
+        pushRhythmicReference(songId, targetId, startTime, endTime, isDefinition);
+      }
+      if (isLyrical) {
+        pushLyricalReference(songId, targetId, startTime, endTime, lyricText);
+      }
+      if (isSample) {
+        pushSampleReference(songId, targetId, startTime, endTime);
+      }
+      return;
+    }
+
+    const rhythmicSongId = ensureSongRef(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicSongId));
+    const rhythmicTargetRaw = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicMotifId));
+    const rhythmicStart = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicStart));
+    const rhythmicEnd = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicEnd));
+    const rhythmicIsDefinition = normalizeJamiePediaBool(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicDefinition));
+    const rhythmicIsVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicVariation));
+    const rhythmicVariationLetter = readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicVariationLetter);
+    const rhythmicTarget = resolveVariationMotifId(rhythmicTargetRaw, rhythmicIsVariation, rhythmicVariationLetter);
+    pushRhythmicReference(rhythmicSongId, rhythmicTarget, rhythmicStart, rhythmicEnd, rhythmicIsDefinition);
+
+    const lyricalSongId = ensureSongRef(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalSongId));
+    const lyricalTargetRaw = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalMotifId));
+    const lyricalStart = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalStart));
+    const lyricalEnd = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalEnd));
+    const lyricalText = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalLyrics));
+    const lyricalTarget = resolveVariationMotifId(lyricalTargetRaw, false, '');
+    pushLyricalReference(lyricalSongId, lyricalTarget, lyricalStart, lyricalEnd, lyricalText);
+
+    const sampleSongId = ensureSongRef(readJamiePediaRowValue(row, legacyReferenceColumns.sampleSongId));
+    const sampleTargetRaw = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.sampleMotifId));
+    const sampleStart = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.sampleStart));
+    const sampleEnd = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.sampleEnd));
+    const sampleTarget = resolveVariationMotifId(sampleTargetRaw, false, '');
+    pushSampleReference(sampleSongId, sampleTarget, sampleStart, sampleEnd);
   });
 
   const allMotifs = [];
   const motifAliasMap = new Map([
-    ['kalia-vibte', ['bittersweet-kalia-vibte']],
-    ['space-center', ['space-center-a', 'space-center-b']]
+    ['kalia-vibte', ['bittersweet-kalia-vibte']]
   ]);
 
+  const motifGroups = new Map();
   motifRecords.forEach((record) => {
-    const variationLetters = Array.from(record.variationLetters);
-    const shouldBuildVariations = variationLetters.length > 0;
-    const variationColors = buildVariationColors(record.color, variationLetters.length);
-    const variations = shouldBuildVariations
-      ? variationLetters.map((letter, index) => ({
-          id: letter,
-          label: letter,
-          color: record.variationColors.get(letter) || variationColors[index] || record.color
-        }))
+    const key = record.categoryId || record.id;
+    if (!motifGroups.has(key)) {
+      motifGroups.set(key, []);
+    }
+    motifGroups.get(key).push(record);
+  });
+
+  motifGroups.forEach((group, categoryId) => {
+    if (!Array.isArray(group) || group.length === 0) {
+      return;
+    }
+
+    const primary = group.find((item) => !item.isVariation) || group[0];
+    const variationPalette = buildVariationColors(primary.color || '#ef8a85', group.length);
+    const hasVariations = group.length > 1;
+    const variations = hasVariations
+      ? group.map((item, index) => {
+          const suffix = item.id.startsWith(categoryId + '-')
+            ? item.id.slice(categoryId.length + 1)
+            : '';
+          const derivedLabel = suffix
+            ? suffix.toUpperCase()
+            : (item.name && item.name !== primary.name ? item.name : String(index + 1));
+          return {
+            id: item.id,
+            label: derivedLabel,
+            color: item.color || variationPalette[index] || primary.color || '#ef8a85'
+          };
+        })
       : [];
 
-    const motif = new Motif(
-      record.id,
-      record.name,
-      record.image,
-      motifAliasMap.get(record.id) || [],
-      record.color,
-      shouldBuildVariations
-        ? {
-            hasPage: record.hasPage,
-          referenceLink: record.referenceLink,
-            motifType: record.motifType,
-            isLyrical: record.isLyrical,
-            pageSlug: record.id === 'kalia-vibte' ? 'bittersweet-kalia-vibte' : record.id,
-            variationGroup: record.id,
-            iconText: record.name,
-            iconColor: record.color,
-            variations
-          }
-        : {
-            hasPage: record.hasPage,
-            referenceLink: record.referenceLink,
-            motifType: record.motifType,
-            isLyrical: record.isLyrical,
-            pageSlug: record.id === 'kalia-vibte' ? 'bittersweet-kalia-vibte' : record.id
-          }
-    );
+    const aliases = [];
+    (motifAliasMap.get(categoryId) || []).forEach((alias) => aliases.push(alias));
+    group.forEach((item) => {
+      if (item.id !== categoryId) {
+        aliases.push(item.id);
+      }
+    });
 
-    allMotifs.push(motif);
+    const uniqueAliases = Array.from(new Set(aliases.filter(Boolean)));
+    const fallbackImage = group.find((item) => !!item.image);
+
+    allMotifs.push(new Motif(
+      categoryId,
+      primary.name,
+      primary.image || (fallbackImage ? fallbackImage.image : null),
+      uniqueAliases,
+      primary.color || '#ef8a85',
+      {
+        categoryId,
+        hasPage: primary.hasPage,
+        referenceLink: primary.referenceLink,
+        motifType: primary.motifType,
+        isLyrical: group.some((item) => item.isLyrical),
+        pageSlug: categoryId === 'kalia-vibte' ? 'bittersweet-kalia-vibte' : categoryId,
+        variationGroup: categoryId,
+        variations
+      }
+    ));
   });
 
   const allSongs = [];
   songRecords.forEach((record) => {
-    const song = new Song(
+    allSongs.push(new Song(
       record.title,
       record.path,
       record.embedLink,
@@ -556,8 +878,7 @@ function createJamiePediaData() {
       record.id,
       sampleRefsBySongId.get(record.id) || [],
       lyricalRefsBySongId.get(record.id) || []
-    );
-    allSongs.push(song);
+    ));
   });
 
   return {
@@ -570,10 +891,22 @@ function createJamiePediaData() {
       return allMotifs.find((motif) => motif.id === id || motif.aliases.includes(id));
     },
     getSongsWithMotifId(motifId) {
+      const target = String(motifId || '').trim();
+      if (!target) {
+        return [];
+      }
+
+      const motif = allMotifs.find((item) => item.id === target || item.aliases.includes(target));
+      const acceptedIds = new Set([target]);
+      if (motif) {
+        acceptedIds.add(motif.id);
+        (motif.aliases || []).forEach((alias) => acceptedIds.add(alias));
+      }
+
       return allSongs.filter((song) =>
-        song.motifRefs.some((ref) => ref.motifId === motifId)
-        || song.sampleRefs.some((ref) => ref.motifId === motifId)
-        || song.lyricalRefs.some((ref) => ref.motifId === motifId)
+        song.motifRefs.some((ref) => acceptedIds.has(ref.motifId))
+        || song.sampleRefs.some((ref) => acceptedIds.has(ref.motifId))
+        || song.lyricalRefs.some((ref) => acceptedIds.has(ref.motifId))
       );
     }
   };
