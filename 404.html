@@ -96,45 +96,206 @@
 
     <script>
       (function () {
+        function getSiteBase(pathname) {
+          var source = String(pathname || '');
+          return source.indexOf('/JamiePedia/') !== -1 ? '/JamiePedia' : '';
+        }
+
+        function stripSiteBase(pathname, siteBase) {
+          var source = String(pathname || '/');
+          if (!source.startsWith('/')) {
+            source = '/' + source;
+          }
+
+          if (siteBase && source === siteBase) {
+            return '/';
+          }
+
+          if (siteBase && source.indexOf(siteBase + '/') === 0) {
+            return source.slice(siteBase.length) || '/';
+          }
+
+          return source;
+        }
+
+        function withSiteBase(pathname, siteBase) {
+          var source = String(pathname || '/');
+          if (!source.startsWith('/')) {
+            source = '/' + source;
+          }
+
+          if (!siteBase) {
+            return source;
+          }
+
+          if (source === '/') {
+            return siteBase + '/';
+          }
+
+          if (source === siteBase || source.indexOf(siteBase + '/') === 0) {
+            return source;
+          }
+
+          return siteBase + source;
+        }
+
+        function toExtensionlessPath(pathname) {
+          var source = String(pathname || '/').split('?')[0].split('#')[0];
+          if (!source.startsWith('/')) {
+            source = '/' + source;
+          }
+
+          if (source === '/index.html') {
+            return '/';
+          }
+
+          source = source.replace(/\/index\.html$/i, '/').replace(/\.html$/i, '');
+          if (source.length > 1 && source.endsWith('/')) {
+            source = source.slice(0, -1);
+          }
+
+          return source || '/';
+        }
+
+        function splitCsvLine(line) {
+          var values = [];
+          var current = '';
+          var inQuotes = false;
+
+          for (var index = 0; index < line.length; index += 1) {
+            var char = line[index];
+            var next = line[index + 1];
+
+            if (char === '"') {
+              if (inQuotes && next === '"') {
+                current += '"';
+                index += 1;
+              } else {
+                inQuotes = !inQuotes;
+              }
+              continue;
+            }
+
+            if (char === ',' && !inQuotes) {
+              values.push(current);
+              current = '';
+              continue;
+            }
+
+            current += char;
+          }
+
+          values.push(current);
+          return values.map(function (value) { return String(value || '').trim(); });
+        }
+
+        function parseCsvRows(text) {
+          var lines = String(text || '')
+            .split(/\r?\n/)
+            .map(function (line) { return line.trim(); })
+            .filter(Boolean);
+
+          if (lines.length < 2) {
+            return { headers: [], rows: [] };
+          }
+
+          var headers = splitCsvLine(lines[0]).map(function (header) { return header.toLowerCase(); });
+          var rows = [];
+          for (var index = 1; index < lines.length; index += 1) {
+            rows.push(splitCsvLine(lines[index]));
+          }
+
+          return { headers: headers, rows: rows };
+        }
+
+        function normalizeSongRoutePath(rawPath) {
+          var source = String(rawPath || '').trim();
+          if (!source) {
+            return '';
+          }
+
+          var hashless = source.split('#')[0].split('?')[0].trim();
+          if (!hashless) {
+            return '';
+          }
+
+          var withMusicPrefix = hashless.indexOf('/music/') === 0
+            ? hashless
+            : '/music/' + hashless.replace(/^\/+/, '');
+
+          var normalized = withMusicPrefix.replace(/\.html$/i, '').replace(/\/index$/i, '');
+          if (normalized.length > 1) {
+            normalized = normalized.replace(/\/+$/, '');
+          }
+
+          return normalized || '/';
+        }
+
+        function normalizeAlbumRoutePath(rawPath) {
+          var normalized = normalizeSongRoutePath(rawPath);
+          if (!/^\/music\/[^/]+$/.test(normalized) || normalized === '/music') {
+            return '';
+          }
+          return normalized;
+        }
+
+        function normalizeMotifRoutePath(rawPath) {
+          var source = String(rawPath || '').trim();
+          if (!source) {
+            return '';
+          }
+
+          var hashless = source.split('#')[0].split('?')[0].trim();
+          if (!hashless) {
+            return '';
+          }
+
+          var withPrefix = hashless.indexOf('/motifs/') === 0
+            ? hashless
+            : '/motifs/' + hashless.replace(/^\/+/, '');
+
+          var normalized = withPrefix.replace(/\.html$/i, '').replace(/\/index$/i, '');
+          if (normalized.length > 1) {
+            normalized = normalized.replace(/\/+$/, '');
+          }
+
+          if (!/^\/motifs\/[^/]+$/.test(normalized) || normalized === '/motifs') {
+            return '';
+          }
+
+          return normalized;
+        }
+
         function getSourcePath(pathname) {
           return String(pathname || '').replace(/\/raw\/?$/i, '');
         }
 
-        function getSiteBase(pathname) {
-          const parts = String(pathname || '').split('/').filter(Boolean);
-          const musicIndex = parts.indexOf('music');
-          if (musicIndex > 0) {
-            return '/' + parts.slice(0, musicIndex).join('/');
-          }
-          return '';
-        }
-
         function getSongSlug(sourcePath) {
-          const file = String(sourcePath || '').split('/').pop() || '';
+          var file = String(sourcePath || '').split('/').pop() || '';
           return file.replace(/\.html$/i, '').toLowerCase();
         }
 
         function parseLrcRawLines(text) {
-          const lines = String(text || '').split(/\r?\n/);
-          const entries = [];
+          var lines = String(text || '').split(/\r?\n/);
+          var entries = [];
 
           lines.forEach(function (line) {
-            const timestamps = line.match(/\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]/g);
+            var timestamps = line.match(/\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]/g);
             if (!timestamps) {
               return;
             }
 
-            const lyric = line.replace(/\[[^\]]+\]/g, '').trim();
+            var lyric = line.replace(/\[[^\]]+\]/g, '').trim();
             timestamps.forEach(function (stamp) {
-              const clean = stamp.slice(1, -1);
-              const match = clean.match(/^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
+              var clean = stamp.slice(1, -1);
+              var match = clean.match(/^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
               if (!match) {
                 return;
               }
 
-              const mins = Number(match[1]);
-              const secs = Number(match[2]);
-              const frac = Number('0.' + String(match[3] || '0').padEnd(3, '0'));
+              var mins = Number(match[1]);
+              var secs = Number(match[2]);
+              var frac = Number('0.' + String(match[3] || '0').padEnd(3, '0'));
               entries.push({
                 time: mins * 60 + secs + frac,
                 text: lyric
@@ -142,11 +303,11 @@
             });
           });
 
-          const seen = new Set();
+          var seen = new Set();
           return entries
             .sort(function (a, b) { return a.time - b.time; })
             .filter(function (entry) {
-              const key = entry.time.toFixed(3) + '|' + entry.text;
+              var key = entry.time.toFixed(3) + '|' + entry.text;
               if (seen.has(key)) {
                 return false;
               }
@@ -168,33 +329,227 @@
           document.body.appendChild(pre);
         }
 
-        var path = window.location.pathname || '';
-        if (!/\/raw\/?$/i.test(path)) {
-          return;
+        function renderShellHtml(html) {
+          if (!html) {
+            return false;
+          }
+          document.open();
+          document.write(html);
+          document.close();
+          return true;
         }
 
-        var sourcePath = getSourcePath(path);
-        var slug = getSongSlug(sourcePath);
-        if (!slug) {
-          renderRawText('Raw lyrics unavailable.', 'Raw Lyrics');
-          return;
-        }
-
-        var lyricsPath = getSiteBase(path) + '/public/songs/lyrics/' + slug + '.lrc';
-        fetch(lyricsPath, { cache: 'no-store' })
-          .then(function (response) {
+        async function fetchText(pathname) {
+          try {
+            var response = await fetch(pathname, { cache: 'no-store' });
             if (!response.ok) {
-              throw new Error('Missing lyrics');
+              return '';
             }
-            return response.text();
-          })
-          .then(function (text) {
-            var rawLines = parseLrcRawLines(text);
-            renderRawText(rawLines.length > 0 ? rawLines.join('\n') : 'This song has no raw lyrics.', slug + ' raw lyrics');
-          })
-          .catch(function () {
-            renderRawText('This song has no raw lyrics.', slug + ' raw lyrics');
+            return await response.text();
+          } catch (_error) {
+            return '';
+          }
+        }
+
+        async function tryRenderShell(shellPath, siteBase) {
+          var html = await fetchText(withSiteBase(shellPath, siteBase));
+          return renderShellHtml(html);
+        }
+
+        async function tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase) {
+          var normalized = toExtensionlessPath(pathWithoutBase);
+          if (normalized === '/') {
+            return false;
+          }
+
+          var candidates = [normalized + '.html', normalized + '/index.html'];
+          for (var index = 0; index < candidates.length; index += 1) {
+            var html = await fetchText(withSiteBase(candidates[index], siteBase));
+            if (html) {
+              return renderShellHtml(html);
+            }
+          }
+
+          return false;
+        }
+
+        async function getKnownSongRoutes(siteBase) {
+          var text = await fetchText(withSiteBase('/public/csv/JamiePedia Data - Songs.csv', siteBase));
+          if (!text) {
+            return new Set();
+          }
+
+          var parsed = parseCsvRows(text);
+          var headers = parsed.headers;
+          var rows = parsed.rows;
+          var knownRoutes = new Set();
+          var pathIndex = headers.findIndex(function (header) {
+            return ['path id', 'path_id', 'path', 'page_path'].includes(header);
           });
+          var albumIdIndex = headers.findIndex(function (header) {
+            return ['album_id', 'album id'].includes(header);
+          });
+
+          if (pathIndex === -1) {
+            return knownRoutes;
+          }
+
+          rows.forEach(function (values) {
+            var rawPath = String(values[pathIndex] || '').trim();
+            var normalized = normalizeSongRoutePath(rawPath);
+            if (!normalized) {
+              return;
+            }
+
+            knownRoutes.add(normalized);
+
+            if (albumIdIndex === -1 || normalized.indexOf('/', '/music/'.length) !== -1) {
+              return;
+            }
+
+            var baseSlug = normalized.replace(/^\/music\//, '');
+            String(values[albumIdIndex] || '')
+              .split(/\s*\|\s*/)
+              .map(function (value) { return String(value || '').trim(); })
+              .filter(function (value) { return value && value.toLowerCase() !== 'x'; })
+              .forEach(function (albumId) {
+                var legacy = normalizeSongRoutePath('/music/' + albumId + '/' + baseSlug);
+                if (legacy) {
+                  knownRoutes.add(legacy);
+                }
+              });
+          });
+
+          return knownRoutes;
+        }
+
+        async function getKnownAlbumRoutes(siteBase) {
+          var text = await fetchText(withSiteBase('/public/csv/JamiePedia Data - Albums.csv', siteBase));
+          if (!text) {
+            return new Set();
+          }
+
+          var parsed = parseCsvRows(text);
+          var headers = parsed.headers;
+          var rows = parsed.rows;
+          var knownRoutes = new Set();
+          var pathIndex = headers.findIndex(function (header) {
+            return ['album_id', 'album id', 'path id', 'path_id', 'path', 'page_path'].includes(header);
+          });
+
+          if (pathIndex === -1) {
+            return knownRoutes;
+          }
+
+          rows.forEach(function (values) {
+            var normalized = normalizeAlbumRoutePath(values[pathIndex] || '');
+            if (normalized) {
+              knownRoutes.add(normalized);
+            }
+          });
+
+          return knownRoutes;
+        }
+
+        async function getKnownMotifRoutes(siteBase) {
+          var text = await fetchText(withSiteBase('/public/csv/JamiePedia Data - Motifs.csv', siteBase));
+          if (!text) {
+            return new Set();
+          }
+
+          var parsed = parseCsvRows(text);
+          var headers = parsed.headers;
+          var rows = parsed.rows;
+          var knownRoutes = new Set();
+          var motifIdIndex = headers.indexOf('motif id');
+          var categoryIdIndex = headers.indexOf('category id');
+          var hasPageIndex = headers.indexOf('has page');
+
+          if (hasPageIndex === -1) {
+            return knownRoutes;
+          }
+
+          rows.forEach(function (values) {
+            var motifId = String(values[motifIdIndex] || '').trim();
+            var categoryId = String(values[categoryIdIndex] || '').trim();
+            var hasPage = String(values[hasPageIndex] || '').trim().toUpperCase();
+
+            if (!motifId || ['TRUE', 'YES', '1'].indexOf(hasPage) === -1) {
+              return;
+            }
+
+            var pageSlug = categoryId === 'kalia-vibte'
+              ? 'bittersweet-kalia-vibte'
+              : (categoryId || motifId);
+
+            var normalized = normalizeMotifRoutePath('/motifs/' + pageSlug);
+            if (normalized) {
+              knownRoutes.add(normalized);
+            }
+          });
+
+          return knownRoutes;
+        }
+
+        async function bootstrapGithubPagesRoute() {
+          var fullPath = window.location.pathname || '/';
+          var siteBase = getSiteBase(fullPath);
+          var pathWithoutBase = stripSiteBase(fullPath, siteBase);
+          var rawRouteRequested = /\/raw\/?$/i.test(pathWithoutBase);
+
+          if (rawRouteRequested) {
+            var sourcePath = getSourcePath(pathWithoutBase);
+            var slug = getSongSlug(sourcePath);
+            if (!slug) {
+              renderRawText('Raw lyrics unavailable.', 'Raw Lyrics');
+              return;
+            }
+
+            var lyricsPath = withSiteBase('/public/lyrics/' + slug + '.lrc', siteBase);
+            var lyricsText = await fetchText(lyricsPath);
+            if (!lyricsText) {
+              renderRawText('This song has no raw lyrics.', slug + ' raw lyrics');
+              return;
+            }
+
+            var rawLines = parseLrcRawLines(lyricsText);
+            renderRawText(rawLines.length > 0 ? rawLines.join('\n') : 'This song has no raw lyrics.', slug + ' raw lyrics');
+            return;
+          }
+
+          var normalized = toExtensionlessPath(pathWithoutBase);
+          if (normalized.indexOf('/music/') === 0) {
+            var songRoutes = await getKnownSongRoutes(siteBase);
+            if (songRoutes.has(normalized)) {
+              await tryRenderShell('/music/song-shell.html', siteBase);
+              return;
+            }
+
+            var albumRoutes = await getKnownAlbumRoutes(siteBase);
+            if (albumRoutes.has(normalized)) {
+              await tryRenderShell('/music/album-shell.html', siteBase);
+              return;
+            }
+
+            return;
+          }
+
+          if (normalized.indexOf('/motifs/') === 0) {
+            var motifRoutes = await getKnownMotifRoutes(siteBase);
+            if (motifRoutes.has(normalized)) {
+              await tryRenderShell('/motifs/motif-shell.html', siteBase);
+              return;
+            }
+
+            return;
+          }
+
+          if (await tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase)) {
+            return;
+          }
+        }
+
+        bootstrapGithubPagesRoute();
       })();
     </script>
   </body>
