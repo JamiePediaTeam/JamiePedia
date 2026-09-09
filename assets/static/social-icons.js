@@ -1,13 +1,16 @@
 // Add icons to social media links
 function addSocialMediaIcons() {
+  const siteBase = window.location.pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
+  const resolveLocalIconUrl = (path) => siteBase + '/' + String(path || '').replace(/^\/+/, '');
+
   const iconMap = {
     youtube: { url: 'https://youtube.com/favicon.ico', label: 'YouTube' },
     youtu: { url: 'https://youtube.com/favicon.ico', label: 'YouTube' },
     bandcamp: { url: 'https://s4.bcbits.com/client-bundle/1/PageLayout_1/favicon-78ff127104384a042453aca8d73be7dc.static/favicon/favicon-16x16.png', label: 'Bandcamp' },
     bluesky: { url: 'https://bsky.app/favicon.ico', label: 'Bluesky' },
-    'x.com': { url: 'public/images/x.png', label: 'X' },
-    twitter: { url: 'public/images/x.png', label: 'X' },
-    soundcloud: { url: 'public/images/sc.ico', label: 'SoundCloud' },
+    'x.com': { url: resolveLocalIconUrl('public/images/x.png'), label: 'X' },
+    twitter: { url: resolveLocalIconUrl('public/images/x.png'), label: 'X' },
+    soundcloud: { url: resolveLocalIconUrl('public/images/sc.ico'), label: 'SoundCloud' },
     tumblr: { url: 'https://tumblr.com/favicon.ico', label: 'Tumblr' },
     spotify: { url: 'https://open.spotify.com/favicon.ico', label: 'Spotify' },
     'music.apple.com': { url: 'https://music.apple.com/favicon.ico', label: 'Apple Music' },

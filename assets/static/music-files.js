@@ -6,7 +6,7 @@ const musicFilePaths = [];
 window.musicFilePaths = musicFilePaths;
 
 const staticMiscEntries = [
-  { album: 'Motifs', path: '/motifs.html' }
+  { album: 'Motifs', path: '/motifs' }
 ];
 
 function getBasePath() {
@@ -116,6 +116,37 @@ function findSongCsvHeaderIndex(headers, aliases) {
   return -1;
 }
 
+function resolveMotifPageSlug(categoryId, motifId) {
+  const normalizedCategoryId = String(categoryId || '').trim().toLowerCase();
+  const normalizedMotifId = String(motifId || '').trim().toLowerCase();
+  const baseSlug = normalizedCategoryId || normalizedMotifId;
+  if (baseSlug === 'kalia-vibte') {
+    return 'bittersweet-kalia-vibte';
+  }
+  return baseSlug;
+}
+
+function buildMotifSearchTitle(motifName, categoryId, motifId) {
+  const baseName = String(motifName || '').trim();
+  const normalizedCategoryId = String(categoryId || '').trim().toLowerCase();
+  const normalizedMotifId = String(motifId || '').trim().toLowerCase();
+
+  if (!baseName) {
+    return normalizedMotifId;
+  }
+
+  if (!normalizedCategoryId || !normalizedMotifId || !normalizedMotifId.startsWith(normalizedCategoryId + '-')) {
+    return baseName;
+  }
+
+  const suffix = normalizedMotifId.slice(normalizedCategoryId.length + 1).trim();
+  if (!suffix) {
+    return baseName;
+  }
+
+  return baseName + ' ' + suffix.toUpperCase();
+}
+
 function parseSongEntriesFromCsv(text, albumTitleById) {
   const lines = String(text || '').split(/\r?\n/).filter(Boolean);
   if (lines.length < 2) {
@@ -125,6 +156,7 @@ function parseSongEntriesFromCsv(text, albumTitleById) {
   const headers = splitCsvLine(lines[0]);
   const pathIndex = findSongCsvHeaderIndex(headers, ['path id', 'path_id', 'page_path', 'Path']);
   const albumIdIndex = findSongCsvHeaderIndex(headers, ['album_id']);
+  const pageTitleIndex = findSongCsvHeaderIndex(headers, ['page title', 'page_title', 'title']);
 
   if (pathIndex === -1) {
     return [];
@@ -140,12 +172,16 @@ function parseSongEntriesFromCsv(text, albumTitleById) {
       continue;
     }
 
-    const pathId = pathIdRaw.split('#')[0].split('?')[0].trim().replace(/\.html$/i, '').split('/').filter(Boolean).pop() || '';
-    if (!pathId) {
+    const rawWithoutQuery = pathIdRaw.split('?')[0].trim().replace(/\.html$/i, '');
+    const hashIndex = rawWithoutQuery.indexOf('#');
+    const rawPathPart = hashIndex === -1 ? rawWithoutQuery : rawWithoutQuery.slice(0, hashIndex);
+    const rawHashPart = hashIndex === -1 ? '' : rawWithoutQuery.slice(hashIndex + 1).trim();
+    const pathSlug = rawPathPart.split('/').filter(Boolean).pop() || '';
+    if (!pathSlug) {
       continue;
     }
 
-    const normalizedPagePath = '/music/' + pathId;
+    const normalizedPagePath = '/music/' + pathSlug + (rawHashPart ? ('#' + rawHashPart) : '');
     if (seenPaths.has(normalizedPagePath)) {
       continue;
     }
@@ -157,7 +193,12 @@ function parseSongEntriesFromCsv(text, albumTitleById) {
       ? String(albumTitleById.get(normalizedAlbumId) || '').trim()
       : '';
     const album = derivedAlbum || 'Collection';
-    entries.push({ album, path: normalizedPagePath });
+    const pageTitle = String(pageTitleIndex >= 0 ? (values[pageTitleIndex] || '') : '').trim();
+    entries.push({
+      album,
+      path: normalizedPagePath,
+      title: pageTitle
+    });
   }
 
   return entries;
@@ -170,6 +211,8 @@ function parseMotifEntriesFromCsv(text) {
   }
 
   const headers = splitCsvLine(lines[0]).map((header) => header.toLowerCase());
+  const motifNameIndex = headers.indexOf('motif name');
+  const categoryIdIndex = headers.indexOf('category id');
   const motifIdIndex = headers.indexOf('motif id');
   const hasPageIndex = headers.indexOf('has page');
 
@@ -183,16 +226,26 @@ function parseMotifEntriesFromCsv(text) {
   for (let index = 1; index < lines.length; index += 1) {
     const values = splitCsvLine(lines[index]);
     const motifId = String(values[motifIdIndex] || '').trim();
+    const categoryId = String(categoryIdIndex >= 0 ? (values[categoryIdIndex] || '') : '').trim();
+    const motifName = String(motifNameIndex >= 0 ? (values[motifNameIndex] || '') : '').trim();
     const hasPage = isTruthyFlag(values[hasPageIndex]);
 
     if (!motifId || !hasPage || seenMotifIds.has(motifId)) {
       continue;
     }
 
+    const pageSlug = resolveMotifPageSlug(categoryId, motifId);
+    if (!pageSlug) {
+      continue;
+    }
+
     seenMotifIds.add(motifId);
     entries.push({
       album: 'Motifs',
-      path: '/motifs/' + motifId
+      title: buildMotifSearchTitle(motifName, categoryId, motifId),
+      path: '/motifs/' + pageSlug,
+      motifId: motifId,
+      motifCategoryId: String(categoryId || motifId).trim().toLowerCase()
     });
   }
 

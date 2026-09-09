@@ -9,6 +9,10 @@ html {
   background-color: var(--theme-color-keyword_white);
   overflow-x: auto;
 }
+html:not([data-theme-ready]) {
+  background-image: none !important;
+  background-color: #f7f4ef;
+}
 body {
   width: 900px;
   position: relative;
@@ -77,6 +81,14 @@ h1 {
   width: 400px;
   position: relative;
   padding: 10px;
+}
+
+.navi a {
+  color: var(--theme-color-meta_theme_color);
+}
+
+.navi a:hover {
+  color: var(--theme-color-accent_hover);
 }
 .bodylanding {
   margin-top: 175px;
@@ -178,6 +190,16 @@ h1 {
   width: 120px;
 }
 
+.tracklist-album-title,
+.tracklist-list a {
+  color: var(--theme-color-meta_theme_color);
+}
+
+.tracklist-album-title:hover,
+.tracklist-list a:hover {
+  color: var(--theme-color-accent_hover);
+}
+
 /* Stack wrapper: used on album/motif pages where sidebar1 is absolutely positioned */
 .sidebar-stack {
   position: absolute;
@@ -226,7 +248,7 @@ h1 {
 }
 
 .tracklist-item a {
-  color: var(--theme-color-link_default);
+  color: var(--theme-color-meta_theme_color);
   text-decoration: none;
   line-height: 26px;
   display: block;

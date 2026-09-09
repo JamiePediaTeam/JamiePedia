@@ -362,13 +362,25 @@ html {
   line-height: 1.5;
 }
 
+.song-info-content a {
+  color: var(--theme-color-meta_theme_color);
+}
+
+.song-info-content a:hover {
+  color: var(--theme-color-accent_hover);
+}
+
 .song-links {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  align-items: flex-start;
 }
 
 .song-links a {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
   color: var(--theme-color-meta_theme_color);
   text-decoration: none;
   font-size: 0.9em;
@@ -376,6 +388,16 @@ html {
 
 .song-links a:hover {
   text-decoration: underline;
+}
+
+.tracklist-album-title,
+.tracklist-list a {
+  color: var(--theme-color-meta_theme_color);
+}
+
+.tracklist-album-title:hover,
+.tracklist-list a:hover {
+  color: var(--theme-color-accent_hover);
 }
 
 .album-tabs-container {

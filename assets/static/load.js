@@ -201,6 +201,19 @@ const themeColumnAliases = {
 };
 
 let loadedThemeRows = [];
+let themeCssLink = null;
+
+function ensureThemeCssLoaded() {
+  if (themeCssLink) {
+    return themeCssLink;
+  }
+
+  themeCssLink = document.createElement('link');
+  themeCssLink.rel = 'stylesheet';
+  themeCssLink.href = basePath + '/css/theme.css';
+  document.head.appendChild(themeCssLink);
+  return themeCssLink;
+}
 
 function findThemeRowById(themeId) {
   const requested = String(themeId || '').trim();
@@ -418,8 +431,12 @@ async function loadThemeFromCsv() {
     }
 
     applyThemeById(requestedThemeId);
+    ensureThemeCssLoaded();
+    root.setAttribute('data-theme-ready', 'true');
   } catch (_error) {
     // Keep defaults if theme data cannot be fetched.
+    ensureThemeCssLoaded();
+    root.setAttribute('data-theme-ready', 'true');
   }
 }
 
@@ -449,10 +466,12 @@ musicFilesScript.onload = function() {
         $("#sidebar").load(basePath + "/assets/static/sidebar.html", function() {
           normalizeInternalAnchorTargets(document.getElementById('sidebar'));
           initializeTracklistSidebar();
+          if (typeof addSocialMediaIcons === 'function') {
+            addSocialMediaIcons();
+          }
         });
         $("#linkbox").load(basePath + "/assets/static/linkbox.html", function() {
           normalizeInternalAnchorTargets(document.getElementById('linkbox'));
-          // After jQuery loads content, add icons to any new links
           if (typeof addSocialMediaIcons === 'function') {
             addSocialMediaIcons();
           }
@@ -481,11 +500,6 @@ const socialIconsLink = document.createElement('link');
 socialIconsLink.rel = 'stylesheet';
 socialIconsLink.href = basePath + '/css/social-icons.css';
 document.head.appendChild(socialIconsLink);
-
-const themeLink = document.createElement('link');
-themeLink.rel = 'stylesheet';
-themeLink.href = basePath + '/css/theme.css';
-document.head.appendChild(themeLink);
 
 loadThemeFromCsv();
 
@@ -1787,6 +1801,47 @@ function deriveSongSidebarAppearsOnLines(row) {
   return lines;
 }
 
+function escapeSongSidebarHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildSongSidebarAppearsOnHtml(row) {
+  const sourceRow = getSongSidebarMainRowForCurrentPage() || row;
+  const albumIds = splitSongSidebarValues((sourceRow || {}).album_id || '');
+  const trackValues = splitSongSidebarValues((sourceRow || {}).album_track || '');
+  const totals = getSongSidebarAlbumTrackTotals(window.__songSidebarCsvRows || []);
+
+  const lines = [];
+  albumIds.forEach((albumIdRaw, index) => {
+    const albumId = String(albumIdRaw || '').trim();
+    if (!albumId || albumId.toLowerCase() === 'x') {
+      return;
+    }
+
+    const trackNumber = parseSongSidebarTrackNumber(trackValues[index] || trackValues[0] || '');
+    const normalizedAlbumId = albumId.toLowerCase();
+    const totalTracks = Number(totals.get(normalizedAlbumId) || 0);
+    const displayTotal = totalTracks > 0 ? totalTracks : (Number.isFinite(trackNumber) ? trackNumber : 0);
+    const albumTitle = getSongSidebarAlbumTitleById(albumId) || albumId;
+    const albumHref = typeof window.toSiteHref === 'function' ? window.toSiteHref('/music/' + normalizedAlbumId) : '/music/' + normalizedAlbumId;
+
+    let label = albumTitle;
+    if (Number.isFinite(trackNumber) && displayTotal > 0) {
+      label = String(trackNumber) + '/' + String(displayTotal) + ' - ' + albumTitle;
+    } else if (displayTotal > 0) {
+      label = '?/' + String(displayTotal) + ' - ' + albumTitle;
+    }
+
+    lines.push('<a href="' + escapeSongSidebarHtml(albumHref) + '">' + escapeSongSidebarHtml(label) + '</a>');
+  });
+
+  return lines.join('<br>');
+}
+
 function getActiveSongSidebarScope() {
   const versionContainers = Array.from(document.querySelectorAll('.song-container[id^="version-"]'));
   if (!versionContainers.length) {
@@ -1918,8 +1973,7 @@ function createSongSidebarLinks(labelsValue, linksValue) {
 
 function buildSongSidebarValueHtml(fieldKey, value, row) {
   if (fieldKey === 'appears_on') {
-    const lines = deriveSongSidebarAppearsOnLines(row);
-    return lines.join('<br>');
+    return buildSongSidebarAppearsOnHtml(row);
   }
 
   const entries = splitSongSidebarValues(value);
@@ -2161,6 +2215,10 @@ function initializeSongSidebarData() {
       populateSongSidebarBlock(block, row, field.key);
     }
   });
+
+  if (typeof addSocialMediaIcons === 'function') {
+    addSocialMediaIcons();
+  }
 }
 
 window.initializeSongSidebarData = initializeSongSidebarData;
@@ -2460,6 +2518,10 @@ function initializeTracklistSidebar() {
         true
       );
       stickyWrapper.appendChild(sidebar2El);
+
+      if (typeof addSocialMediaIcons === 'function') {
+        addSocialMediaIcons();
+      }
     });
   });
 }
