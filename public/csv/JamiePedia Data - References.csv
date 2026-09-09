@@ -1,8 +1,6 @@
 Song ID,Motif ID,Start Time,End Time,Definition,Type,Lyrics
 AGGRANDICIZE,constant-companions,3:24,3:28,FALSE,rhythmic,
-
-BI
-RDBRAIN,constant-companions,1:29,1:37,FALSE,rhythmic,
+BIRDBRAIN,constant-companions,1:29,1:37,FALSE,rhythmic,
 BREEZE_BLOWS,constant-companions,1:37,1:43,FALSE,rhythmic,
 BREEZE_BLOWS,constant-companions,1:43,1:48,FALSE,rhythmic,
 CADMIUM_COLORS,kalia-vibte,1:39,1:44.7,FALSE,rhythmic,
@@ -96,7 +94,7 @@ DANCE_DELIGHTFUL,kalia-vibte,2:41,2:44,FALSE,rhythmic,
 DANCE_DELIGHTFUL,constant-companions,2:44,2:50,FALSE,rhythmic,
 DANCE_DELIGHTFUL,gummyworm-a,3:33,3:38,FALSE,rhythmic,
 DANCE_DELIGHTFUL,let-the-bass-go,0:24.5,0:24.5,FALSE,sample,
-DESTINY,DESTINY,3:30,3:45,FALSE,lyrical,Maybe you could stay here just a little longer And make the time pass slower Maybe you could make this last forever And you could be my lover
+DESTINY,destiny,3:30,3:45,FALSE,lyrical,Maybe you could stay here just a little longer And make the time pass slower Maybe you could make this last forever And you could be my lover
 DYAD,constant-companions,0:56,1:01.5,TRUE,rhythmic,
 DYAD,constant-companions,1:42,1:47,FALSE,rhythmic,
 DYAD,constant-companions,2:33,2:37,FALSE,rhythmic,
@@ -156,8 +154,10 @@ MANIFESTO,fantasize,2:09,2:11,FALSE,rhythmic,
 MANIFESTO,constant-companions,2:11,2:14,FALSE,rhythmic,
 MANIFESTO,constant-companions,2:36,2:54,FALSE,rhythmic,
 MY_DARLING_MY_COMPANION,constant-companions,3:20,3:29,FALSE,rhythmic,
-MY_DARLING_MY_COMPANION,destiny,4:10,4:24,FALSE,lyrical,Maybe you could stay here just a little longer And make the time pass slower Maybe you could make tMY_DARLING_MY_COMPANION,destiny,4:10,4:24,FALSE,lyrical,Maybe you could stay here just a little longer | Make the time pass slower | Maybe you could make this last forever | And you could be my lover
-cal,"(Oh gummyworm, gotta make it hurt)"
+MY_DARLING_MY_COMPANION,destiny,4:10,4:24,FALSE,lyrical,Maybe you could stay here just a little longer | Make the time pass slower | Maybe you could make this last forever | And you could be my lover
+NOT_QUITE_THERE,gummyworm-a,1:33,1:43,FALSE,rhythmic,
+NOT_QUITE_THERE,gummyworm-b,2:03,2:06.5,FALSE,rhythmic,
+NOT_QUITE_THERE,GUMMYWORM,2:04,2:06.5,FALSE,lyrical,"(Oh gummyworm, gotta make it hurt)"
 NOT_QUITE_THERE,bittersweet-kalia-vibte,2:11,2:16,FALSE,rhythmic,
 NOT_QUITE_THERE,gummyworm-a,3:15,3:26,FALSE,rhythmic,
 NOT_QUITE_THERE,gummyworm-a,3:26,3:42,FALSE,rhythmic,
