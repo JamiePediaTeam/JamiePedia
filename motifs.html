@@ -149,22 +149,6 @@
           return section;
         }
 
-        async function motifPageExists(slug) {
-          const safeSlug = String(slug || '').trim();
-          if (!safeSlug) {
-            return false;
-          }
-
-          const path = 'motifs/' + safeSlug;
-
-          try {
-            const response = await fetch(path, { cache: 'no-store' });
-            return response.ok;
-          } catch (_error) {
-            return false;
-          }
-        }
-
         const sectionsRoot = document.getElementById('motifSections');
         const motifs = window.MotifData && Array.isArray(window.MotifData.allMotifs) ? window.MotifData.allMotifs : [];
 
@@ -180,13 +164,7 @@
           return Boolean(String(motif.pageSlug || motif.id || '').trim());
         });
 
-        const verifiedMotifs = [];
-        for (const motif of motifsWithPages) {
-          const slug = String(motif.pageSlug || motif.id || '').trim();
-          if (await motifPageExists(slug)) {
-            verifiedMotifs.push(motif);
-          }
-        }
+        const verifiedMotifs = motifsWithPages;
 
         const categorized = {
           motif: [],
