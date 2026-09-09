@@ -10,9 +10,11 @@
     <link rel="icon" type="image/x-icon" href="/public/images/favicon.ico">
     <link href="/styles.css" rel="stylesheet" type="text/css" media="all">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-    <script src="/assets/static/load.js"></script>
     <style>
+      body.not-found-booting #notFoundBody {
+        visibility: hidden;
+      }
+
       body {
         background: transparent;
       }
@@ -65,7 +67,7 @@
       }
     </style>
   </head>
-  <body>
+  <body class="not-found-booting">
     <a href="/"><div class="head"></div></a>
     <div class="navi">
       <span id="navi"></span>
@@ -546,6 +548,10 @@
 
           if (await tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase)) {
             return;
+          }
+
+          if (document.body) {
+            document.body.classList.remove('not-found-booting');
           }
         }
 
