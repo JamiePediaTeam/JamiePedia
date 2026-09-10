@@ -455,28 +455,97 @@ musicFilesScript.onload = function() {
     const searchScript = document.createElement('script');
     searchScript.src = basePath + '/assets/static/search.js';
     searchScript.onload = function() {
-      // Initialize search after navibar loads
-      $(function(){
-        $("#navi").load(basePath + "/assets/static/navibar.html", function() {
-          normalizeInternalAnchorTargets(document.getElementById('navi'));
+      const loadFragment = function (elementId, fragmentPath, afterLoad) {
+        const target = document.getElementById(elementId);
+        if (!target) {
+          return Promise.resolve(false);
+        }
+
+        const executeEmbeddedScripts = function (scope) {
+          const scripts = Array.from((scope && scope.querySelectorAll) ? scope.querySelectorAll('script') : []);
+          scripts.forEach((script) => {
+            const replacement = document.createElement('script');
+            Array.from(script.attributes || []).forEach((attr) => {
+              replacement.setAttribute(attr.name, attr.value);
+            });
+            replacement.textContent = script.textContent || '';
+            script.parentNode.replaceChild(replacement, script);
+          });
+        };
+
+        return fetch(fragmentPath, { cache: 'no-store' })
+          .then((response) => (response.ok ? response.text() : ''))
+          .then((html) => {
+            if (!html) {
+              return false;
+            }
+
+            target.innerHTML = html;
+            executeEmbeddedScripts(target);
+            normalizeInternalAnchorTargets(target);
+            if (typeof afterLoad === 'function') {
+              afterLoad(target);
+            }
+            return true;
+          })
+          .catch(() => false);
+      };
+
+      const runSharedLoads = function () {
+        loadFragment('navi', basePath + '/assets/static/navibar.html', function () {
           if (typeof initializeSearch === 'function') {
             initializeSearch();
           }
         });
-        $("#sidebar").load(basePath + "/assets/static/sidebar.html", function() {
-          normalizeInternalAnchorTargets(document.getElementById('sidebar'));
+
+        loadFragment('sidebar', basePath + '/assets/static/sidebar.html', function () {
+          const sidebarRoot = document.getElementById('sidebar');
+          if (sidebarRoot) {
+            Array.from(sidebarRoot.querySelectorAll('a[onclick*="goToPage"]')).forEach((anchor) => {
+              const handler = String(anchor.getAttribute('onclick') || '');
+              const match = handler.match(/goToPage\(\s*['\"]([^'\"]+)['\"]\s*\)/i);
+              if (!match) {
+                return;
+              }
+
+              anchor.setAttribute('href', toSiteHref(match[1] || '/'));
+              anchor.removeAttribute('onclick');
+            });
+
+            const randomButton = sidebarRoot.querySelector('button[onclick*="goToRandomSong"]');
+            if (randomButton) {
+              randomButton.removeAttribute('onclick');
+              randomButton.addEventListener('click', function () {
+                if (!Array.isArray(window.musicFilePaths) || window.musicFilePaths.length === 0) {
+                  return;
+                }
+
+                const randomEntry = window.musicFilePaths[Math.floor(Math.random() * window.musicFilePaths.length)];
+                if (randomEntry && randomEntry.path) {
+                  window.location.href = toSiteHref(randomEntry.path);
+                }
+              });
+            }
+          }
+
           initializeTracklistSidebar();
           if (typeof addSocialMediaIcons === 'function') {
             addSocialMediaIcons();
           }
         });
-        $("#linkbox").load(basePath + "/assets/static/linkbox.html", function() {
-          normalizeInternalAnchorTargets(document.getElementById('linkbox'));
+
+        loadFragment('linkbox', basePath + '/assets/static/linkbox.html', function () {
           if (typeof addSocialMediaIcons === 'function') {
             addSocialMediaIcons();
           }
         });
-      });
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runSharedLoads, { once: true });
+      } else {
+        runSharedLoads();
+      }
     };
     document.head.appendChild(searchScript);
   };
@@ -1004,6 +1073,8 @@ function populateAlbumPageCoverCredits() {
 }
 
 let albumsCsvRowsCache = null;
+const closeupAvailabilityBySlug = Object.create(null);
+const closeupAvailabilityPendingBySlug = Object.create(null);
 let albumsCsvLoadingPromise = null;
 
 const albumCsvHeaderAliases = {
@@ -1621,6 +1692,55 @@ function ensureSongSidebarCsvLoaded(onReady) {
     .catch(() => {});
 }
 
+function ensureSongCloseupAvailabilityLoaded(row, onReady) {
+  const slug = getCurrentSongSidebarSlug(row);
+  if (!slug) {
+    if (typeof onReady === 'function') {
+      onReady();
+    }
+    return;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(closeupAvailabilityBySlug, slug)) {
+    if (typeof onReady === 'function') {
+      onReady();
+    }
+    return;
+  }
+
+  if (!Array.isArray(closeupAvailabilityPendingBySlug[slug])) {
+    closeupAvailabilityPendingBySlug[slug] = [];
+  }
+
+  if (typeof onReady === 'function') {
+    closeupAvailabilityPendingBySlug[slug].push(onReady);
+  }
+
+  if (closeupAvailabilityPendingBySlug[slug].length > 1) {
+    return;
+  }
+
+  const textPath = basePath + '/public/close%20ups/text/' + encodeURIComponent(slug) + '.txt';
+  fetch(textPath, { cache: 'no-store' })
+    .then((response) => {
+      closeupAvailabilityBySlug[slug] = Boolean(response && response.ok);
+    })
+    .catch(() => {
+      closeupAvailabilityBySlug[slug] = false;
+    })
+    .finally(() => {
+      const callbacks = closeupAvailabilityPendingBySlug[slug] || [];
+      closeupAvailabilityPendingBySlug[slug] = [];
+      callbacks.forEach((callback) => {
+        try {
+          callback();
+        } catch (_error) {
+          // Ignore callback errors so sidebar hydration can continue.
+        }
+      });
+    });
+}
+
 const songSidebarFieldOrder = [
   { key: 'appears_on', label: 'Appears On', aliases: ['appears on'] },
   { key: 'release_date', label: 'Release Date', aliases: ['release date'] },
@@ -1939,6 +2059,39 @@ function getSongSidebarMainRowForCurrentPage() {
   }) || scopedRows.find((row) => !getSongSidebarRowPathValue(row).includes('#')) || current;
 }
 
+function getCurrentSongSidebarSlug(row) {
+  const sourceRow = getSongSidebarMainRowForCurrentPage() || row || null;
+  const fromRow = getSongSidebarPrimaryPathId(sourceRow);
+  if (fromRow) {
+    return String(fromRow).toLowerCase();
+  }
+
+  const currentPath = toExtensionlessPath(window.location.pathname);
+  const parts = currentPath.split('/').filter(Boolean);
+  if (parts.length >= 2 && parts[0] === 'music') {
+    return String(parts[1] || '').toLowerCase();
+  }
+
+  return '';
+}
+
+function getAutomaticSongCloseupHref(row) {
+  const slug = getCurrentSongSidebarSlug(row);
+  if (!slug) {
+    return '';
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(closeupAvailabilityBySlug, slug)) {
+    return '';
+  }
+
+  if (!closeupAvailabilityBySlug[slug]) {
+    return '';
+  }
+
+  return '/music/' + slug + '/close-up';
+}
+
 function createSongSidebarLinks(labelsValue, linksValue) {
   const labels = Array.isArray(labelsValue) ? labelsValue : splitSongSidebarValues(labelsValue);
   const links = Array.isArray(linksValue) ? linksValue : splitSongSidebarValues(linksValue);
@@ -2030,6 +2183,9 @@ function populateSongSidebarBlock(block, row, key) {
       hasContent = legacy.labels.length > 0 || legacy.links.some((entry) => String(entry || '').trim());
     }
   } else {
+    if (key === 'close_up') {
+      hasContent = !!getAutomaticSongCloseupHref(row);
+    } else
     if (key === 'appears_on') {
       hasContent = deriveSongSidebarAppearsOnLines(row).length > 0;
     } else {
@@ -2086,22 +2242,17 @@ function populateSongSidebarBlock(block, row, key) {
     return;
   }
 
-  const value = key === 'appears_on'
-    ? '__computed__'
-    : String(row[key] || '').trim();
-  if (!value) {
-    if (contentEl) {
-      contentEl.textContent = '';
-    }
-    return;
-  }
-
   if (key === 'close_up') {
-    const parsed = parseLegacySongSidebarPairs(value);
-    const labels = parsed.labels.length ? parsed.labels : splitSongSidebarValues(value);
-    const links = parsed.links.some((entry) => String(entry || '').trim())
-      ? parsed.links
-      : splitSongSidebarValues(value);
+    const closeupHref = getAutomaticSongCloseupHref(row);
+    if (!closeupHref) {
+      if (contentEl) {
+        contentEl.textContent = '';
+      }
+      return;
+    }
+
+    const labels = ['View Close-up'];
+    const links = [closeupHref];
     const linkContainer = createSongSidebarLinks(labels, links);
     if (contentEl && contentEl.classList && contentEl.classList.contains('song-links')) {
       contentEl.replaceWith(linkContainer);
@@ -2114,6 +2265,16 @@ function populateSongSidebarBlock(block, row, key) {
       } else {
         block.appendChild(linkContainer);
       }
+    }
+    return;
+  }
+
+  const value = key === 'appears_on'
+    ? '__computed__'
+    : String(row[key] || '').trim();
+  if (!value) {
+    if (contentEl) {
+      contentEl.textContent = '';
     }
     return;
   }
@@ -2183,7 +2344,6 @@ function getOrCreateSongSidebarBlock(sidebarScope, field) {
 }
 
 function initializeSongSidebarData() {
-  const currentPath = toExtensionlessPath(window.location.pathname);
   if (!document.querySelector('.song-page-wrapper')) {
     return;
   }
@@ -2204,6 +2364,14 @@ function initializeSongSidebarData() {
 
   const row = getSongSidebarRowForCurrentPage();
   if (!row) {
+    return;
+  }
+
+  const slug = getCurrentSongSidebarSlug(row);
+  if (slug && !Object.prototype.hasOwnProperty.call(closeupAvailabilityBySlug, slug)) {
+    ensureSongCloseupAvailabilityLoaded(row, function () {
+      initializeSongSidebarData();
+    });
     return;
   }
 

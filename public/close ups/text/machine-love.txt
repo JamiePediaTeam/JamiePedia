@@ -1,0 +1,88 @@
+[theme:blue]
+Constant Companions Closeup #11: MACHINE LOVE
+
+(also on bandcamp and spotify!)
+
+Starting Up…
+Welcome back to the Constant Companions Closeups - a series of in-depth dives into the songs off of my latest album, Constant Companions! Yesterday was the title track, My Darling, My Companion, which means today is the final track on the album - a song about the truths that lay in hiding within artifice, and a computer falling in love - Machine Love!
+
+Before we get started on this particularly long closeup - I’ll be doing a follow-up post after this one, answering various miscellaneous questions I’ve gotten over the course of writing these! If you’ve got anything you wanna hear more from me about, album-related or otherwise, feel free to reply to this post or send me an ask! It may very well end up part of the bonus closeup :~)
+
+—
+
+Let’s circle back to the very first track, Dyad.
+
+machine love (first bounce)
+In that track’s closeup, I mentioned the main sonic touchstones of this release relative to my previous ones being guitars and vocal synths. The whole guitar rock thing I think I’ve gone into detail enough about, what with all the inspirations I’ve rattled off in other posts, but there likely is still a burning question for some long-time listeners.
+
+Why vocal synths? Why am I not singing on like half of this album? I thought you were a singer, Jamie Paige, so what is this Hatsune Miku robot Vocaloid crap?
+
+Truth be told, the Vocaloid scene and community has always been a massive source of inspiration for me. So much of my favorite music ever, music that inspires me or touches my heart or makes me go apeshit, has been sung by synthesized vocalists in a language I don’t even speak. I grew up with it, and it’s grown up with me - music just as intricate, mind-boggling, twisted, fun, and ridiculously creative is being put out every single day by vocal synth producers, and nowadays it’s coming from English speaking musicians in droves!
+
+Before this year began, I’d made at least one major contribution to the culture, but in spite of my genuine adoration of everything vocal synth related, I felt like I was just looking in from the other side. Caught between worlds, existing outside of any communities, simply gesturing vaguely towards what I wanted to do.
+
+But I wanted more! I wanted to make the same kinds of things that stirred my heart and made me want to write! I wanted to sing with those same voices! I wanted it to be true - to be like you!
+
+—
+
+song of the eared robot (machine love minicover)
+I won’t lie to you and tell you Kasane Teto has always been my favorite vocal synth. That title used to go to GUMI, and in general, I wasn’t particularly attached to any UTAU voicebanks as a younger vocal synth fan. (Nowadays, I genuinely open up OpenUTAU just as much as SynthV because I’ve fallen deeply in love with Adachi Rei, but that’s a story for my next album.) Obviously, I knew of Teto, and found her presence in things like Triple Baka delightful, but for the most part, she was mostly something of an oddity, a wayward piece of vocal synth history that had her Fans like any other.
+
+However, there was one Teto song I’ve been inexplicably attached to since the moment I first heard it - Song of the Eared Robot, by nwp8861. I was introduced via this particular cover, which I love, but I quickly gravitated to the original. Something about the warbly, childish nature of her very first voicebank, the ambitiously orchestrated and unabashedly digital instrumental, the lyrics referencing fundamental frequencies and Markov chains and compiling code all just spoke to me!
+
+That song stuck with me, laying in a part of my heart that had been collecting dust, all the way to April of 2023.
+
+Now, yes, Teto wasn’t always my favorite, and I had other vocal synths I was attached to, but I don’t live under a rock, and I still understood how monumental the announcement of Kasane Teto’s Synth V voicebank was - to the point that I interrupted a call full of FFXIV-playing friends who knew barely anything about vocal synths and gave them an impromptu TED talk because I was so excited.
+
+
+(An excerpt of a summary of that night’s events, written the morning after. i was up my own ass a little bit but in my defense Kasane Teto had just been announced for Synthesizer V)
+
+I was watching, in real time, a dream made manifest. It’s literally one of the Bits with Teto! That she’d be a Vocaloid one day too! And here she was, on the fan favorite engine, sounding genuinely fucking incredible. Especially in hindsight, it’s such a beautiful and perfect twist of fate for her.
+
+I saw myself in her. A weird little outcast, explosively reborn and thrust straight into a community’s open arms with love. I wanted it to be true - To be like that, too.
+
+It didn’t fully hit until later, hearing another cover of a song I’d almost forgotten.
+
+Machine Love, my love letter to the entire world of unbridled creativity and artistry surrounding vocal synths filtered through one sentimental little song, was fully written by the start of May, maybe 4 days after I had gotten my hands on Teto SV and long before a certain compilation album was even a glint in my eye.
+
+<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/album/1tEsHuH8lXl4kyGCt5r3Pr?utm_source=generator&si=5dbd96b2ceea463e" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+
+If you haven’t heard DAEMON/DOLL yet, you really, really, really should go listen to it - yes, I mastered this album, many of my friends and collaborators are featured, and I have two entire songs on it, but I genuinely mean it when I say I believe it’s some of the best fucking music that’s come out this year in general. In many respects, it also feels like a companion (hah) to Constant Companions.
+
+I had finished writing Machine Love by this point, but it was working on this album in its entirety - discovering artists like Anh Duy, Eggtan, and beat_shobon through it, and hearing everyone in top form making this twin-drilled chimera fucker sing her heart out - that not only made me confident in my decision to go down this artistic path, but that made me fall completely in love with Kasane Teto. And honestly, how could I not? She feels like a microcosm of everything that makes vocal synths so special, this community of creatives all leaving their marks and touchstones along the trail of a great big shared folk mythos. Yeah, maybe the folk hero we’re all collectively mythologizing is an anime girl, but yknow maybe Odysseus could take some branding cues from hatsune miku idfk
+
+Basically, even if he says he wants to kill me, I owe fucking everything to rice for inviting me to work on DAEMON/DOLL.
+
+
+—
+
+On that note, my vision for Machine Love’s MV was pretty clear from the beginning.
+
+
+
+the actual factual setup for the above shot, which was done entirely in-camera with my laptop, a tv, and two video files manually synced using VLC
+
+The fundamental idea was always there - live-action shots of animation playing back on various screens, edited together to feel somewhat seamless. However, I really struggled with what exactly was going to be on said screens for a while; Big commissions were very far out of my budget, but I knew this song needed something grandiose.
+
+Ultimately, what I arrived at was exactly the kind of scrappy, DIY bullshit it was always meant to be.
+
+
+I asked my Twitter mutuals for help. And spent a couple months in Final Cut Pro and Apple Motion hell turning all the Teto art I got into a bunch of tiny little mini MVs, some of them parodying real vocal synth MVs, some of simply just evocative of vocal synth MVs, all of them painstakingly edited by yours truly and filmed with the help of some friends over the next couple months across two states and many more cities just to be painstakingly edited and synced up again by yours truly.
+
+THE NEXT MV I DO WILL BE SMALLER IN SCOPE
+—
+
+And with that, I believe that’s the album!
+
+There’s a reason it ends with Machine Love, and not with the title track. I do think that in some respects My Darling, My Companion would have made a better closer, but that song only really resolves one of the thematic strands running through the album.
+
+There isn’t really a definitive answer to the specific question “Baby, do you know what you wanna hear?”, but it evokes a theme running through the entire album - wanting something, knowing that you want something, and simply needing to find the courage to do it or say it or be it. My Darling, My Companion is in many ways a declaration of intent, an acceptance of what needs to happen, but Machine Love, to me, is that action being done. The words being said!
+
+And now, if I may give this a somewhat selfish tint - with the explosive response my works from this album have gotten, my contributions to things like DAEMON/DOLL and Flavor Foley, the collaborations I’ve done and that I still have in the pipeline, the friends I’ve made and the community I’ve found a spot for myself in, and the newfound voices that I can lay my heart bare with -
+
+Well, shit, I know what I wanna hear, and I’ve gotten to hear it. I’m a vocaloP. It’s real!
+
+Thank you all so goddamn much for reading and listening. I’ll see you back here either tomorrow or Monday for the bonus AMA post thing!! Make art and be gay, motherfuckers.
+
+❤️💚
+

@@ -10,6 +10,7 @@
     <link rel="icon" type="image/x-icon" href="/public/images/favicon.ico">
     <link href="/styles.css" rel="stylesheet" type="text/css" media="all">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
+    <script src="/assets/static/load.js"></script>
     <style>
       body.not-found-booting #notFoundBody {
         visibility: hidden;
@@ -17,6 +18,103 @@
 
       body {
         background: transparent;
+      }
+
+      html:not([data-theme-ready]) {
+        background-color: #f7f4ef;
+      }
+
+      html:not([data-theme-ready]) body {
+        width: 900px;
+        position: relative;
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 150px;
+        padding-right: 0;
+        overflow-x: visible;
+        color: #1f1f1f;
+      }
+
+      html:not([data-theme-ready]) .table {
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+        border-spacing: 0;
+        border-collapse: collapse;
+        width: 800px;
+      }
+
+      html:not([data-theme-ready]) .table td {
+        vertical-align: top;
+        border: none;
+        padding: 0;
+        position: relative;
+      }
+
+      html:not([data-theme-ready]) .head {
+        margin-top: 30px;
+        margin-left: auto;
+        margin-right: auto;
+        border: 3px solid #351854;
+        border-radius: 5px;
+        height: 150px;
+        width: 800px;
+        position: relative;
+        padding: 10px;
+        background-color: #ffffff;
+      }
+
+      html:not([data-theme-ready]) .navi {
+        margin-top: 20px;
+        margin-left: auto;
+        margin-right: auto;
+        border: 3px solid #351854;
+        border-radius: 5px;
+        height: 20px;
+        width: 400px;
+        position: relative;
+        padding: 10px;
+        background-color: #ffffff;
+      }
+
+      html:not([data-theme-ready]) .bodybar {
+        border: 3px solid #351854;
+        border-radius: 5px;
+        padding: 10px;
+        width: 800px;
+        min-height: 222px;
+        margin-left: -13px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        position: relative;
+        background-color: #ffffff;
+      }
+
+      html:not([data-theme-ready]) .sidebar1 {
+        border: 3px solid #351854;
+        border-radius: 5px;
+        padding: 10px;
+        width: 120px;
+        height: auto;
+        position: absolute;
+        left: -180px;
+        top: 20px;
+        z-index: 9;
+        background-color: #ffffff;
+      }
+
+      html:not([data-theme-ready]) .footer {
+        margin-top: 20px;
+        margin-bottom: 30px;
+        margin-left: auto;
+        margin-right: auto;
+        border: 3px solid #351854;
+        border-radius: 5px;
+        height: 20px;
+        width: 400px;
+        position: relative;
+        padding: 10px;
+        background-color: #ffffff;
       }
 
       .not-found-layout {
@@ -49,9 +147,21 @@
         width: 220px;
         max-width: 100%;
         height: auto;
-        border: 3px solid var(--theme-color-brand_frame);
+        border: 3px solid #351854;
         border-radius: 6px;
-        background: var(--theme-color-background_base);
+        background: #ffffff;
+      }
+
+      .not-found-copy a {
+        color: #ff7e73;
+      }
+
+      .not-found-copy a:hover {
+        color: #f05e55;
+      }
+
+      #notFoundBody {
+        box-sizing: border-box;
       }
 
       @media (max-width: 760px) {
@@ -231,6 +341,33 @@
           }
 
           return normalized || '/';
+        }
+
+        function normalizeCloseupRoutePath(rawPath) {
+          var source = String(rawPath || '').trim();
+          if (!source) {
+            return '';
+          }
+
+          var hashless = source.split('#')[0].split('?')[0].trim();
+          if (!hashless) {
+            return '';
+          }
+
+          var withMusicPrefix = hashless.indexOf('/music/') === 0
+            ? hashless
+            : '/music/' + hashless.replace(/^\/+/, '');
+
+          var normalized = withMusicPrefix.replace(/\.html$/i, '').replace(/\/index$/i, '');
+          if (normalized.length > 1) {
+            normalized = normalized.replace(/\/+$/, '');
+          }
+
+          if (!/^\/music\/[^/]+\/close-up$/i.test(normalized)) {
+            return '';
+          }
+
+          return normalized;
         }
 
         function normalizeAlbumRoutePath(rawPath) {
@@ -425,6 +562,28 @@
           return knownRoutes;
         }
 
+        async function getKnownCloseupRoutes(siteBase) {
+          var songRoutes = await getKnownSongRoutes(siteBase);
+          var knownRoutes = new Set();
+
+          for (var route of songRoutes) {
+            var songSlug = String(route || '').replace(/^\/music\//i, '').split('/')[0].trim();
+            if (!songSlug) {
+              continue;
+            }
+
+            var text = await fetchText(withSiteBase('/public/close ups/text/' + songSlug + '.txt', siteBase));
+            if (text) {
+              var normalized = normalizeCloseupRoutePath('/music/' + songSlug + '/close-up');
+              if (normalized) {
+                knownRoutes.add(normalized);
+              }
+            }
+          }
+
+          return knownRoutes;
+        }
+
         async function getKnownAlbumRoutes(siteBase) {
           var text = await fetchText(withSiteBase('/public/csv/JamiePedia Data - Albums.csv', siteBase));
           if (!text) {
@@ -494,6 +653,12 @@
         }
 
         async function bootstrapGithubPagesRoute() {
+          function revealNotFoundBody() {
+            if (document.body) {
+              document.body.classList.remove('not-found-booting');
+            }
+          }
+
           var fullPath = window.location.pathname || '/';
           var siteBase = getSiteBase(fullPath);
           var pathWithoutBase = stripSiteBase(fullPath, siteBase);
@@ -521,6 +686,12 @@
 
           var normalized = toExtensionlessPath(pathWithoutBase);
           if (normalized.indexOf('/music/') === 0) {
+            var closeupRoutes = await getKnownCloseupRoutes(siteBase);
+            if (closeupRoutes.has(normalized)) {
+              await tryRenderShell('/music/closeup-shell.html', siteBase);
+              return;
+            }
+
             var songRoutes = await getKnownSongRoutes(siteBase);
             if (songRoutes.has(normalized)) {
               await tryRenderShell('/music/song-shell.html', siteBase);
@@ -533,6 +704,7 @@
               return;
             }
 
+            revealNotFoundBody();
             return;
           }
 
@@ -543,6 +715,7 @@
               return;
             }
 
+            revealNotFoundBody();
             return;
           }
 
@@ -550,12 +723,14 @@
             return;
           }
 
+          revealNotFoundBody();
+        }
+
+        bootstrapGithubPagesRoute().catch(function () {
           if (document.body) {
             document.body.classList.remove('not-found-booting');
           }
-        }
-
-        bootstrapGithubPagesRoute();
+        });
       })();
     </script>
   </body>

@@ -6,9 +6,11 @@ const PORT = 3000;
 const SONGS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Songs.csv');
 const ALBUMS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Albums.csv');
 const MOTIFS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Motifs.csv');
+const CLOSEUPS_TEXT_DIR = path.join(__dirname, 'public', 'close ups', 'text');
 const SONG_SHELL_PATH = path.join(__dirname, 'music/song-shell.html');
 const ALBUM_SHELL_PATH = path.join(__dirname, 'music/album-shell.html');
 const MOTIF_SHELL_PATH = path.join(__dirname, 'motifs/motif-shell.html');
+const CLOSEUP_SHELL_PATH = path.join(__dirname, 'music/closeup-shell.html');
 
 function splitCsvLine(line) {
   const values = [];
@@ -64,6 +66,34 @@ function normalizeSongRoutePath(rawPath) {
   }
 
   return normalized || '/';
+}
+
+function normalizeCloseupRoutePath(rawPath) {
+  const source = String(rawPath || '').trim();
+  if (!source) {
+    return '';
+  }
+
+  const hashless = source.split('#')[0].split('?')[0].trim();
+  if (!hashless) {
+    return '';
+  }
+
+  const withMusicPrefix = hashless.startsWith('/music/')
+    ? hashless
+    : '/music/' + hashless.replace(/^\/+/, '');
+
+  let normalized = withMusicPrefix.replace(/\.html$/i, '');
+  normalized = normalized.replace(/\/index$/i, '');
+  if (normalized.length > 1) {
+    normalized = normalized.replace(/\/+$/, '');
+  }
+
+  if (!/^\/music\/[^/]+\/close-up$/i.test(normalized)) {
+    return '';
+  }
+
+  return normalized;
 }
 
 function normalizeAlbumRoutePath(rawPath) {
@@ -282,6 +312,39 @@ function getKnownMotifRoutes() {
   return loadKnownMotifRoutesFromCsv();
 }
 
+function loadKnownCloseupRoutesFromTextFiles() {
+  const knownRoutes = new Set();
+
+  try {
+    const entries = fs.readdirSync(CLOSEUPS_TEXT_DIR, { withFileTypes: true });
+
+    entries.forEach((entry) => {
+      if (!entry || !entry.name || !entry.isFile()) {
+        return;
+      }
+
+      const extension = path.extname(entry.name).toLowerCase();
+      if (extension !== '.txt') {
+        return;
+      }
+
+      const slug = path.basename(entry.name, extension);
+      const normalized = normalizeCloseupRoutePath('/music/' + slug + '/close-up');
+      if (normalized) {
+        knownRoutes.add(normalized);
+      }
+    });
+  } catch (_error) {
+    // Ignore missing close-up text directories and fall back to direct route checks.
+  }
+
+  return knownRoutes;
+}
+
+function getKnownCloseupRoutes() {
+  return loadKnownCloseupRoutesFromTextFiles();
+}
+
 function toRelativeRequestPath(requestPath) {
   if (requestPath === '/') {
     return 'index.html';
@@ -303,6 +366,10 @@ function getCandidatePaths(requestPath) {
 }
 
 function isKnownSongRouteRequest(requestPath) {
+  if (normalizeCloseupRoutePath(requestPath)) {
+    return false;
+  }
+
   const normalized = normalizeSongRoutePath(requestPath);
   if (!normalized) {
     return false;
@@ -329,16 +396,91 @@ function isKnownMotifRouteRequest(requestPath) {
   return getKnownMotifRoutes().has(normalized);
 }
 
+function isKnownCloseupRouteRequest(requestPath) {
+  const normalized = normalizeCloseupRoutePath(requestPath);
+  if (!normalized) {
+    return false;
+  }
+
+  return getKnownCloseupRoutes().has(normalized);
+}
+
 function detectContentType(filePath) {
   if (filePath.endsWith('.css')) return 'text/css';
   if (filePath.endsWith('.js')) return 'application/javascript';
   if (filePath.endsWith('.csv')) return 'text/csv';
+  if (filePath.endsWith('.mp3')) return 'audio/mpeg';
+  if (filePath.endsWith('.wav')) return 'audio/wav';
+  if (filePath.endsWith('.m4a')) return 'audio/mp4';
+  if (filePath.endsWith('.flac')) return 'audio/flac';
+  if (filePath.endsWith('.ogg')) return 'audio/ogg';
+  if (filePath.endsWith('.mp4')) return 'video/mp4';
+  if (filePath.endsWith('.webm')) return 'video/webm';
   if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) return 'image/jpeg';
   if (filePath.endsWith('.png')) return 'image/png';
   if (filePath.endsWith('.gif')) return 'image/gif';
   if (filePath.endsWith('.webp')) return 'image/webp';
   if (filePath.endsWith('.ico')) return 'image/x-icon';
   return 'text/html';
+}
+
+function isRangeMediaFile(filePath) {
+  return /\.(mp3|wav|m4a|flac|ogg|mp4|webm)$/i.test(String(filePath || ''));
+}
+
+function serveFileWithRange(req, res, filePath, contentType) {
+  fs.stat(filePath, (statErr, stats) => {
+    if (statErr || !stats || !stats.isFile()) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('404 - File Not Found', 'utf-8');
+      return;
+    }
+
+    const total = stats.size;
+    const range = String((req.headers && req.headers.range) || '').trim();
+
+    if (range && /^bytes=\d*-\d*$/i.test(range)) {
+      const match = range.match(/^bytes=(\d*)-(\d*)$/i);
+      const rawStart = match && match[1] ? Number(match[1]) : NaN;
+      const rawEnd = match && match[2] ? Number(match[2]) : NaN;
+
+      let start = Number.isFinite(rawStart) ? rawStart : 0;
+      let end = Number.isFinite(rawEnd) ? rawEnd : (total - 1);
+
+      if (start < 0) {
+        start = 0;
+      }
+      if (end >= total) {
+        end = total - 1;
+      }
+
+      if (start > end || start >= total) {
+        res.writeHead(416, {
+          'Content-Range': 'bytes */' + total,
+          'Accept-Ranges': 'bytes'
+        });
+        res.end();
+        return;
+      }
+
+      res.writeHead(206, {
+        'Content-Type': contentType,
+        'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': String(end - start + 1)
+      });
+
+      fs.createReadStream(filePath, { start, end }).pipe(res);
+      return;
+    }
+
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Content-Length': String(total),
+      'Accept-Ranges': 'bytes'
+    });
+    fs.createReadStream(filePath).pipe(res);
+  });
 }
 
 function readFirstExistingFile(candidates, callback) {
@@ -437,6 +579,21 @@ const server = http.createServer((req, res) => {
         return;
       }
 
+      if (!rawRouteRequested && isKnownCloseupRouteRequest(requestPath)) {
+        fs.readFile(CLOSEUP_SHELL_PATH, (shellErr, shellContent) => {
+          if (shellErr) {
+            console.error(`Error reading ${CLOSEUP_SHELL_PATH}:`, shellErr.message);
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('500 - Close-up shell missing', 'utf-8');
+            return;
+          }
+
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(shellContent, 'utf-8');
+        });
+        return;
+      }
+
       const fallbackPath = path.join(__dirname, '404.html');
       fs.readFile(fallbackPath, (fallbackErr, fallbackContent) => {
         if (fallbackErr) {
@@ -455,6 +612,11 @@ const server = http.createServer((req, res) => {
       });
     } else {
       const contentType = detectContentType(file.filePath);
+
+      if (isRangeMediaFile(file.filePath)) {
+        serveFileWithRange(req, res, file.filePath, contentType);
+        return;
+      }
       
       res.writeHead(200, { 'Content-Type': contentType });
       res.end(file.content, 'utf-8');
