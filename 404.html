@@ -647,11 +647,22 @@
         }
 
         async function bootstrapGithubPagesRoute() {
+          var revealTimer = null;
+
           function revealNotFoundBody() {
             if (document.body) {
               document.body.classList.remove('not-found-booting');
             }
+
+            if (revealTimer) {
+              clearTimeout(revealTimer);
+              revealTimer = null;
+            }
           }
+
+          revealTimer = setTimeout(function () {
+            revealNotFoundBody();
+          }, 4500);
 
           var fullPath = window.location.pathname || '/';
           var siteBase = getSiteBase(fullPath);

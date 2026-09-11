@@ -1604,7 +1604,7 @@ function getCoverArtist(filename) {
 // lookup on pages that load song.js.
 window.getCoverArtist = getCoverArtist;
 
-document.addEventListener('DOMContentLoaded', function() {
+function initializeSongPage() {
   Promise.all([ensureCoverArtistsLoaded(), ensureSongSidebarRowsLoaded()]).finally(() => {
     const songRows = getSongRowsForCurrentPage();
     buildSongMainColShell(songRows);
@@ -1659,7 +1659,13 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeSongPage, { once: true });
+} else {
+  initializeSongPage();
+}
 
 function formatSongLengthSeconds(totalSeconds) {
   const s = Math.floor(Math.max(0, Number(totalSeconds) || 0));

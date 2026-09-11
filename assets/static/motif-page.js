@@ -3205,4 +3205,8 @@ function renderMotifPage() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', renderMotifPage);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderMotifPage, { once: true });
+} else {
+  renderMotifPage();
+}

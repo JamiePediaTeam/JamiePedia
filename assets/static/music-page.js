@@ -464,5 +464,9 @@
       });
   }
 
-  document.addEventListener('DOMContentLoaded', buildMusicPageSections);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', buildMusicPageSections, { once: true });
+  } else {
+    buildMusicPageSections();
+  }
 })();

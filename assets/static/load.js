@@ -1552,7 +1552,14 @@ function initializeAlbumPageFromCsv(onReady) {
   });
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+let pageInitializersRan = false;
+
+function runPageInitializers() {
+  if (pageInitializersRan) {
+    return;
+  }
+  pageInitializersRan = true;
+
   initializeAlbumPageFromCsv(function () {
     initializeAlbumTabs();
     populateAlbumPageCoverCredits();
@@ -1562,7 +1569,13 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeDataNavButtons();
   });
   initializeSongSidebarData();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', runPageInitializers, { once: true });
+} else {
+  runPageInitializers();
+}
 
 function splitCsvLine(line) {
   const values = [];
