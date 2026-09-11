@@ -2942,6 +2942,26 @@ function createYouTubePlayers() {
   });
 }
 
+let motifYoutubeApiRequested = false;
+
+function ensureMotifYouTubeApiLoaded() {
+  if (PlayerStore.apiReady || (window.YT && window.YT.Player)) {
+    PlayerStore.apiReady = true;
+    createYouTubePlayers();
+    return;
+  }
+
+  if (motifYoutubeApiRequested) {
+    return;
+  }
+
+  motifYoutubeApiRequested = true;
+  const script = document.createElement('script');
+  script.src = 'https://www.youtube.com/iframe_api';
+  script.async = true;
+  document.head.appendChild(script);
+}
+
 window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
   PlayerStore.apiReady = true;
   createYouTubePlayers();
@@ -3202,6 +3222,8 @@ function renderMotifPage() {
 
   if (PlayerStore.apiReady || (window.YT && window.YT.Player)) {
     createYouTubePlayers();
+  } else {
+    ensureMotifYouTubeApiLoaded();
   }
 }
 
