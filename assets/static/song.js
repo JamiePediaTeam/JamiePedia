@@ -999,6 +999,28 @@ function buildVariantSongSlug(baseSlug, variantSuffix) {
   return normalizedBase + normalizedSuffix;
 }
 
+function buildLyricsSlugForVariant(baseSlug, variantSuffix) {
+  const normalizedSuffix = String(variantSuffix || '').trim().toLowerCase();
+  const isOriginal = !normalizedSuffix || normalizedSuffix === 'original';
+  const altMatch = normalizedSuffix.match(/^alt(\d+)$/);
+  const versionIndex = isOriginal ? 0 : (altMatch ? Number(altMatch[1]) : -1);
+
+  if (versionIndex >= 0 && Array.isArray(versionOrder) && versionOrder[versionIndex]) {
+    const versionName = versionOrder[versionIndex];
+    const config = versionConfig[versionName] || {};
+    const rowPath = getSongRowPathValue(config.row || null);
+    const normalized = normalizeSongRowPath(rowPath);
+    if (normalized) {
+      const pathIdSlug = normalized.replace(/^\/music\//i, '');
+      if (pathIdSlug) {
+        return pathIdSlug;
+      }
+    }
+  }
+
+  return buildVariantSongSlug(baseSlug, normalizedSuffix);
+}
+
 function buildPublicTextPath(folder, slug, extension) {
   if (!slug) {
     return '';
@@ -1010,7 +1032,7 @@ function buildPublicTextPath(folder, slug, extension) {
     lyrics: 'songs/lyrics'
   };
   const mappedFolder = folderByType[folder] || folder;
-  return '../../public/' + mappedFolder + '/' + slug + '.' + extension;
+  return '../../public/' + mappedFolder + '/' + encodeURIComponent(slug) + '.' + extension;
 }
 
 function fetchTextFile(path) {
@@ -1242,9 +1264,67 @@ function songLyricsFallbackParseTimestamp(value) {
   return mins * 60 + secs + frac;
 }
 
+function songLyricsFallbackParseOffsetSeconds(text) {
+  const lines = String(text || '').split(/\r?\n/);
+
+  function parseOffsetValue(rawValue) {
+    const source = String(rawValue || '').trim();
+    if (!source) {
+      return 0;
+    }
+
+    const sign = source.startsWith('-') ? -1 : 1;
+    const unsigned = source.replace(/^[+-]/, '').trim();
+    const parts = unsigned.split(':').map((part) => part.trim()).filter(Boolean);
+
+    // Supports mm:ss:cc|mmm, mm:ss, or plain milliseconds.
+    if (parts.length === 3) {
+      const mins = Number(parts[0]);
+      const secs = Number(parts[1]);
+      const fractionDigits = parts[2].replace(/\D/g, '');
+      if (!Number.isFinite(mins) || !Number.isFinite(secs) || !fractionDigits) {
+        return 0;
+      }
+
+      const fractionNumber = Number(fractionDigits);
+      const fraction = fractionDigits.length <= 2
+        ? (fractionNumber / 100)
+        : (fractionNumber / 1000);
+      return sign * ((mins * 60) + secs + fraction);
+    }
+
+    if (parts.length === 2) {
+      const mins = Number(parts[0]);
+      const secs = Number(parts[1]);
+      if (!Number.isFinite(mins) || !Number.isFinite(secs)) {
+        return 0;
+      }
+      return sign * ((mins * 60) + secs);
+    }
+
+    if (parts.length === 1 && /^\d+$/.test(parts[0])) {
+      return sign * (Number(parts[0]) / 1000);
+    }
+
+    return 0;
+  }
+
+  for (const line of lines) {
+    const match = String(line || '').trim().match(/^\[offset\s*:\s*([^\]]+)\]$/i);
+    if (!match) {
+      continue;
+    }
+
+    return parseOffsetValue(match[1]);
+  }
+
+  return 0;
+}
+
 function songLyricsFallbackParseRawLines(text) {
   const lines = String(text || '').split(/\r?\n/);
   const timedEntries = [];
+  const offsetSeconds = songLyricsFallbackParseOffsetSeconds(text);
 
   lines.forEach((line) => {
     const timestamps = [];
@@ -1263,7 +1343,7 @@ function songLyricsFallbackParseRawLines(text) {
 
     timestamps.forEach((stamp) => {
       timedEntries.push({
-        time: songLyricsFallbackParseTimestamp(stamp),
+        time: songLyricsFallbackParseTimestamp(stamp) + offsetSeconds,
         text: lyric
       });
     });
@@ -1443,9 +1523,10 @@ function loadSongTextContent() {
   const annotatedTasks = Array.from(document.querySelectorAll('[id^="lyrics-annotated"]')).map((container) => {
     const variantSuffix = getContainerVariantSuffix(container.id, 'lyrics-annotated');
     const scopedSlug = buildVariantSongSlug(baseSlug, variantSuffix);
+    const lyricsSlug = buildLyricsSlugForVariant(baseSlug, variantSuffix);
     return fetchScopedText('annotations', scopedSlug, 'txt').then((annotationsText) => {
       if (!annotationsText) {
-        return fetchScopedText('lyrics', scopedSlug, 'lrc').then((lrcText) => {
+        return fetchScopedText('lyrics', lyricsSlug, 'lrc').then((lrcText) => {
           if (!lrcText) {
             container.innerHTML = makeEmptyBoxHtml('annotated lyrics');
             return;

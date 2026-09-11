@@ -13,9 +13,67 @@ function songLyricsParseTimestamp(value) {
   return mins * 60 + secs + frac;
 }
 
+function songLyricsParseOffsetSeconds(text) {
+  const lines = String(text || '').split(/\r?\n/);
+
+  function parseOffsetValue(rawValue) {
+    const source = String(rawValue || '').trim();
+    if (!source) {
+      return 0;
+    }
+
+    const sign = source.startsWith('-') ? -1 : 1;
+    const unsigned = source.replace(/^[+-]/, '').trim();
+    const parts = unsigned.split(':').map((part) => part.trim()).filter(Boolean);
+
+    // Supports mm:ss:cc|mmm, mm:ss, or plain milliseconds.
+    if (parts.length === 3) {
+      const mins = Number(parts[0]);
+      const secs = Number(parts[1]);
+      const fractionDigits = parts[2].replace(/\D/g, '');
+      if (!Number.isFinite(mins) || !Number.isFinite(secs) || !fractionDigits) {
+        return 0;
+      }
+
+      const fractionNumber = Number(fractionDigits);
+      const fraction = fractionDigits.length <= 2
+        ? (fractionNumber / 100)
+        : (fractionNumber / 1000);
+      return sign * ((mins * 60) + secs + fraction);
+    }
+
+    if (parts.length === 2) {
+      const mins = Number(parts[0]);
+      const secs = Number(parts[1]);
+      if (!Number.isFinite(mins) || !Number.isFinite(secs)) {
+        return 0;
+      }
+      return sign * ((mins * 60) + secs);
+    }
+
+    if (parts.length === 1 && /^\d+$/.test(parts[0])) {
+      return sign * (Number(parts[0]) / 1000);
+    }
+
+    return 0;
+  }
+
+  for (const line of lines) {
+    const match = String(line || '').trim().match(/^\[offset\s*:\s*([^\]]+)\]$/i);
+    if (!match) {
+      continue;
+    }
+
+    return parseOffsetValue(match[1]);
+  }
+
+  return 0;
+}
+
 function songLyricsParseLrc(text) {
   const lines = String(text || '').split(/\r?\n/);
   const timedEntries = [];
+  const offsetSeconds = songLyricsParseOffsetSeconds(text);
 
   lines.forEach((line) => {
     const timestamps = [];
@@ -34,7 +92,7 @@ function songLyricsParseLrc(text) {
 
     timestamps.forEach((stamp) => {
       timedEntries.push({
-        time: songLyricsParseTimestamp(stamp),
+        time: songLyricsParseTimestamp(stamp) + offsetSeconds,
         text: lyric
       });
     });
@@ -66,6 +124,160 @@ function songLyricsGetCurrentSongSlug() {
   const pathname = window.location.pathname || '';
   const file = pathname.split('/').pop() || '';
   return file.replace(/\.html$/i, '').toLowerCase();
+}
+
+function songLyricsNormalizeHashToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^#/, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function songLyricsGetSongRowPathValue(row) {
+  return String((row || {}).page_path || (row || {}).path_id || (row || {}).path || '').trim();
+}
+
+function songLyricsNormalizeRowPath(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  if (typeof normalizeSongSidebarPathKey === 'function') {
+    return normalizeSongSidebarPathKey(raw);
+  }
+
+  const splitIndex = raw.indexOf('#');
+  const pathPart = splitIndex === -1 ? raw : raw.slice(0, splitIndex);
+  const hashPart = splitIndex === -1 ? '' : raw.slice(splitIndex + 1);
+  const withMusicPrefix = pathPart.startsWith('/music/')
+    ? pathPart
+    : ('/music/' + pathPart.replace(/^\/+/, ''));
+  const normalizedPath = withMusicPrefix.replace(/\.html$/i, '').replace(/\/$/, '');
+  const normalizedHash = songLyricsNormalizeHashToken(hashPart);
+  return normalizedHash ? (normalizedPath + '#' + normalizedHash) : normalizedPath;
+}
+
+function songLyricsGetRowsForCurrentPage() {
+  const rows = Array.isArray(window.__songSidebarCsvRows) ? window.__songSidebarCsvRows : [];
+  if (!rows.length) {
+    return [];
+  }
+
+  const currentPath = typeof toExtensionlessPath === 'function'
+    ? toExtensionlessPath(window.location.pathname || '')
+    : String(window.location.pathname || '').replace(/\.html$/i, '').replace(/\/$/, '');
+  const currentPointer = String(currentPath || '').split('/').filter(Boolean).pop() || '';
+
+  return rows.filter((row) => {
+    const normalized = songLyricsNormalizeRowPath(songLyricsGetSongRowPathValue(row));
+    if (!normalized) {
+      return false;
+    }
+
+    const basePath = normalized.split('#')[0];
+    if (basePath === currentPath) {
+      return true;
+    }
+
+    const rowPointer = basePath.split('/').filter(Boolean).pop() || '';
+    return !!rowPointer && rowPointer === currentPointer;
+  });
+}
+
+function songLyricsGetVersionRows(rows) {
+  const normalizedRows = Array.isArray(rows) ? rows : [];
+  if (!normalizedRows.length) {
+    return [];
+  }
+
+  const mainRow = normalizedRows.find((row) => String((row || {}).alt_tab || '').trim() === 'Main Tab')
+    || normalizedRows.find((row) => String((row || {}).alt_tab || '').trim() === 'Nothing')
+    || normalizedRows.find((row) => {
+      const normalized = songLyricsNormalizeRowPath(songLyricsGetSongRowPathValue(row));
+      return normalized && normalized.indexOf('#') === -1;
+    })
+    || normalizedRows[0]
+    || null;
+
+  const mainKey = songLyricsNormalizeRowPath(songLyricsGetSongRowPathValue(mainRow));
+  const altRows = [];
+  const seenAltKeys = new Set();
+
+  normalizedRows.forEach((row) => {
+    const mode = String((row || {}).alt_tab || '').trim();
+    const normalized = songLyricsNormalizeRowPath(songLyricsGetSongRowPathValue(row));
+    const isMainMode = mode === 'Main Tab' || mode === 'Nothing';
+    const isAltMode = mode === 'Alt Tab';
+    const isHashVariant = normalized.indexOf('#') !== -1;
+
+    if (!normalized || normalized === mainKey || isMainMode) {
+      return;
+    }
+
+    if (!isAltMode && !isHashVariant) {
+      return;
+    }
+
+    if (seenAltKeys.has(normalized)) {
+      return;
+    }
+
+    seenAltKeys.add(normalized);
+    altRows.push(row);
+  });
+
+  return mainRow ? [mainRow].concat(altRows) : altRows;
+}
+
+function songLyricsRowToPathIdSlug(row) {
+  const normalized = songLyricsNormalizeRowPath(songLyricsGetSongRowPathValue(row));
+  if (!normalized) {
+    return '';
+  }
+
+  const withoutPrefix = normalized.replace(/^\/music\//i, '');
+  return withoutPrefix || '';
+}
+
+function songLyricsResolveScopedSlug(baseSlug, variantSuffix) {
+  const normalizedSuffix = String(variantSuffix || '').trim().toLowerCase();
+  const rows = songLyricsGetVersionRows(songLyricsGetRowsForCurrentPage());
+  const isOriginal = !normalizedSuffix || normalizedSuffix === 'original';
+  const altMatch = normalizedSuffix.match(/^alt(\d+)$/);
+  const versionIndex = isOriginal ? 0 : (altMatch ? Number(altMatch[1]) : -1);
+
+  if (versionIndex >= 0 && rows[versionIndex]) {
+    const pathIdSlug = songLyricsRowToPathIdSlug(rows[versionIndex]);
+    if (pathIdSlug) {
+      return pathIdSlug;
+    }
+  }
+
+  return songLyricsBuildVariantSlug(baseSlug, normalizedSuffix);
+}
+
+function songLyricsResolveActiveSlug(baseSlug) {
+  const rows = songLyricsGetVersionRows(songLyricsGetRowsForCurrentPage());
+  if (!rows.length) {
+    return baseSlug;
+  }
+
+  const hashToken = songLyricsNormalizeHashToken(window.location.hash || '');
+  if (!hashToken) {
+    return songLyricsRowToPathIdSlug(rows[0]) || baseSlug;
+  }
+
+  const matched = rows.find((row) => {
+    const normalized = songLyricsNormalizeRowPath(songLyricsGetSongRowPathValue(row));
+    const rowHash = songLyricsNormalizeHashToken(normalized.split('#')[1] || '');
+    const tabNameToken = songLyricsNormalizeHashToken((row || {}).tab_name || '');
+    return rowHash === hashToken || tabNameToken === hashToken;
+  });
+
+  return songLyricsRowToPathIdSlug(matched || rows[0]) || baseSlug;
 }
 
 function songLyricsGetContainerVariantSuffix(containerId, idPrefix) {
@@ -104,7 +316,7 @@ function songLyricsBuildVariantSlug(baseSlug, variantSuffix) {
 function songLyricsGetScopedSlugForContainer(container) {
   const baseSlug = songLyricsGetCurrentSongSlug();
   const variantSuffix = songLyricsGetContainerVariantSuffix(container && container.id, 'lyrics-raw');
-  return songLyricsBuildVariantSlug(baseSlug, variantSuffix);
+  return songLyricsResolveScopedSlug(baseSlug, variantSuffix);
 }
 
 function songLyricsBuildLrcPath(slugOverride) {
@@ -112,7 +324,7 @@ function songLyricsBuildLrcPath(slugOverride) {
   if (!slug) {
     return '';
   }
-  return '../../public/songs/lyrics/' + slug + '.lrc';
+  return '../../public/songs/lyrics/' + encodeURIComponent(slug) + '.lrc';
 }
 
 function songLyricsRenderRawLines(container, rawLines) {
@@ -135,7 +347,8 @@ const SongLyrics = {
   _cacheBySlug: new Map(),
 
   loadCurrentSongLyrics(slugOverride) {
-    const slug = String(slugOverride || songLyricsGetCurrentSongSlug()).toLowerCase();
+    const resolvedDefaultSlug = songLyricsResolveActiveSlug(songLyricsGetCurrentSongSlug());
+    const slug = String(slugOverride || resolvedDefaultSlug).toLowerCase();
     if (!slug) {
       return Promise.resolve(null);
     }
