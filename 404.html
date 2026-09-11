@@ -562,26 +562,20 @@
           return knownRoutes;
         }
 
-        async function getKnownCloseupRoutes(siteBase) {
-          var songRoutes = await getKnownSongRoutes(siteBase);
-          var knownRoutes = new Set();
-
-          for (var route of songRoutes) {
-            var songSlug = String(route || '').replace(/^\/music\//i, '').split('/')[0].trim();
-            if (!songSlug) {
-              continue;
-            }
-
-            var text = await fetchText(withSiteBase('/public/close ups/text/' + songSlug + '.txt', siteBase));
-            if (text) {
-              var normalized = normalizeCloseupRoutePath('/music/' + songSlug + '/close-up');
-              if (normalized) {
-                knownRoutes.add(normalized);
-              }
-            }
+        async function hasKnownCloseupRoute(normalizedPath, siteBase) {
+          var normalized = normalizeCloseupRoutePath(normalizedPath);
+          if (!normalized) {
+            return false;
           }
 
-          return knownRoutes;
+          var match = normalized.match(/^\/music\/([^/]+)\/close-up$/i);
+          var songSlug = match && match[1] ? String(match[1]).trim() : '';
+          if (!songSlug) {
+            return false;
+          }
+
+          var text = await fetchText(withSiteBase('/public/close ups/text/' + songSlug + '.txt', siteBase));
+          return Boolean(text);
         }
 
         async function getKnownAlbumRoutes(siteBase) {
@@ -640,7 +634,7 @@
             }
 
             var pageSlug = categoryId === 'kalia-vibte'
-              ? 'bittersweet-kalia-vibte'
+              ? 'kalia-vibte'
               : (categoryId || motifId);
 
             var normalized = normalizeMotifRoutePath('/motifs/' + pageSlug);
@@ -686,21 +680,29 @@
 
           var normalized = toExtensionlessPath(pathWithoutBase);
           if (normalized.indexOf('/music/') === 0) {
-            var closeupRoutes = await getKnownCloseupRoutes(siteBase);
-            if (closeupRoutes.has(normalized)) {
-              await tryRenderShell('/music/closeup-shell.html', siteBase);
-              return;
-            }
-
-            var songRoutes = await getKnownSongRoutes(siteBase);
-            if (songRoutes.has(normalized)) {
-              await tryRenderShell('/music/song-shell.html', siteBase);
-              return;
+            if (normalizeCloseupRoutePath(normalized)) {
+              if (await hasKnownCloseupRoute(normalized, siteBase)) {
+                if (await tryRenderShell('/music/closeup-shell.html', siteBase)) {
+                  return;
+                }
+              }
             }
 
             var albumRoutes = await getKnownAlbumRoutes(siteBase);
             if (albumRoutes.has(normalized)) {
-              await tryRenderShell('/music/album-shell.html', siteBase);
+              if (await tryRenderShell('/music/album-shell.html', siteBase)) {
+                return;
+              }
+            }
+
+            var songRoutes = await getKnownSongRoutes(siteBase);
+            if (songRoutes.has(normalized)) {
+              if (await tryRenderShell('/music/song-shell.html', siteBase)) {
+                return;
+              }
+            }
+
+            if (await tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase)) {
               return;
             }
 
@@ -711,7 +713,12 @@
           if (normalized.indexOf('/motifs/') === 0) {
             var motifRoutes = await getKnownMotifRoutes(siteBase);
             if (motifRoutes.has(normalized)) {
-              await tryRenderShell('/motifs/motif-shell.html', siteBase);
+              if (await tryRenderShell('/motifs/motif-shell.html', siteBase)) {
+                return;
+              }
+            }
+
+            if (await tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase)) {
               return;
             }
 

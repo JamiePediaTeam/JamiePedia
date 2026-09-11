@@ -801,7 +801,7 @@ function createJamiePediaData() {
 
   const allMotifs = [];
   const motifAliasMap = new Map([
-    ['kalia-vibte', ['bittersweet-kalia-vibte']]
+    ['kalia-vibte', ['kalia-vibte']]
   ]);
 
   const motifGroups = new Map();
@@ -860,7 +860,7 @@ function createJamiePediaData() {
         referenceLink: primary.referenceLink,
         motifType: primary.motifType,
         isLyrical: group.some((item) => item.isLyrical),
-        pageSlug: categoryId === 'kalia-vibte' ? 'bittersweet-kalia-vibte' : categoryId,
+        pageSlug: categoryId === 'kalia-vibte' ? 'kalia-vibte' : categoryId,
         variationGroup: categoryId,
         variations
       }

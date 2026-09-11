@@ -285,7 +285,7 @@ function loadKnownMotifRoutesFromCsv() {
       }
 
       const pageSlug = categoryId === 'kalia-vibte'
-        ? 'bittersweet-kalia-vibte'
+        ? 'kalia-vibte'
         : (categoryId || motifId);
 
       const normalized = normalizeMotifRoutePath('/motifs/' + pageSlug);

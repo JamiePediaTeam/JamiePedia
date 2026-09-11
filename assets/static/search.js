@@ -382,7 +382,7 @@ function resolveSearchMotifPageSlug(categoryId, motifId) {
   const normalizedMotifId = String(motifId || '').trim().toLowerCase();
   const baseSlug = normalizedCategoryId || normalizedMotifId;
   if (baseSlug === 'kalia-vibte') {
-    return 'bittersweet-kalia-vibte';
+    return 'kalia-vibte';
   }
   return baseSlug;
 }
