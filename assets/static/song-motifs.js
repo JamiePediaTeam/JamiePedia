@@ -835,6 +835,56 @@ function buildSongMotifsVolumeControl() {
 }
 
 function songMotifsFindSong() {
+  if (typeof window.getActiveSongPageRow === 'function') {
+    const activeRow = window.getActiveSongPageRow();
+    if (activeRow) {
+      const activePathId = String(getSongRowPathValue(activeRow) || '').trim();
+      if (activePathId) {
+        const activeNormalized = typeof normalizeSongRowPath === 'function'
+          ? normalizeSongRowPath(activePathId)
+          : activePathId;
+        const activePointer = String(activeNormalized || '').split('#')[0].split('/').filter(Boolean).pop() || '';
+
+        const exactMatch = window.SongData.allSongs.find((song) => {
+          const songPath = String((song || {}).path || '').trim();
+          if (!songPath) {
+            return false;
+          }
+
+          const songNormalized = typeof normalizeSongRowPath === 'function'
+            ? normalizeSongRowPath(songPath)
+            : songPath;
+
+          return songNormalized === activeNormalized;
+        });
+
+        const pageMatch = exactMatch || window.SongData.allSongs.find((song) => {
+          const songPath = String((song || {}).path || '').trim();
+          if (!songPath) {
+            return false;
+          }
+
+          const songNormalized = typeof normalizeSongRowPath === 'function'
+            ? normalizeSongRowPath(songPath)
+            : songPath;
+          const songPointer = String(songNormalized || '').split('#')[0].split('/').filter(Boolean).pop() || '';
+          return !!activePointer && activePointer === songPointer;
+        });
+
+        if (pageMatch) {
+          const activeYoutubeId = String(activeRow.embed_link || activeRow.youtube_id || activeRow.youtubeId || '').trim();
+          if (Object.prototype.hasOwnProperty.call(activeRow, 'embed_link') || Object.prototype.hasOwnProperty.call(activeRow, 'youtube_id') || Object.prototype.hasOwnProperty.call(activeRow, 'youtubeId')) {
+            return Object.assign({}, pageMatch, {
+              youtubeId: activeYoutubeId
+            });
+          }
+
+          return pageMatch;
+        }
+      }
+    }
+  }
+
   if (!window.SongData || !window.SongData.allSongs) {
     return null;
   }

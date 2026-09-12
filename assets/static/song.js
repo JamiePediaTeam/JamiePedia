@@ -389,6 +389,25 @@ function getActiveVersionName() {
   return 'original';
 }
 
+function getActiveSongPageRow() {
+  if (versionOrder && versionOrder.length > 0) {
+    const activeVersionName = getActiveVersionName();
+    const config = versionConfig[activeVersionName] || versionConfig.original || null;
+    if (config && config.row) {
+      return config.row;
+    }
+  }
+
+  const rows = getSongRowsForCurrentPage();
+  if (!rows.length) {
+    return null;
+  }
+
+  return rows.find((row) => getSongRowPathValue(row).indexOf('#') === -1) || rows[0] || null;
+}
+
+window.getActiveSongPageRow = getActiveSongPageRow;
+
 function getActiveMainTabName() {
   const activeTab = document.querySelector('.song-tab.active');
   if (!activeTab) {
