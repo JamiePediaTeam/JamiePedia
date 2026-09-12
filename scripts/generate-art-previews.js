@@ -16,8 +16,8 @@ const INPUT_GROUPS = [
   }
 ];
 
-const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
-const TARGET_SIZE = 400;
+const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg']);
+const TARGET_SIZE = 200;
 
 async function listFilesRecursive(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -58,8 +58,22 @@ async function convertSingleImage(inputPath, outputPath) {
     .toFile(outputPath);
 }
 
+async function isOutputUpToDate(inputPath, outputPath) {
+  try {
+    const [inputStats, outputStats] = await Promise.all([
+      fs.stat(inputPath),
+      fs.stat(outputPath)
+    ]);
+
+    return outputStats.mtimeMs >= inputStats.mtimeMs;
+  } catch (_error) {
+    return false;
+  }
+}
+
 async function run() {
   let convertedCount = 0;
+  let skippedCount = 0;
 
   for (const group of INPUT_GROUPS) {
     const sourceFiles = await listFilesRecursive(group.inputDir);
@@ -70,13 +84,17 @@ async function run() {
 
     for (const sourceFile of imageFiles) {
       const outputFile = toPreviewPath(sourceFile, group.inputDir, group.outputDir);
+      if (await isOutputUpToDate(sourceFile, outputFile)) {
+        skippedCount += 1;
+        continue;
+      }
+
       await convertSingleImage(sourceFile, outputFile);
       convertedCount += 1;
-      console.log('converted:', path.relative(ROOT, sourceFile), '->', path.relative(ROOT, outputFile));
     }
   }
 
-  console.log('Done. Generated', convertedCount, 'preview image(s) at 400x400 WebP.');
+  console.log('Done. Generated', convertedCount, 'preview image(s) at 400x400 WebP; skipped', skippedCount, 'up-to-date file(s).');
 }
 
 run().catch((error) => {

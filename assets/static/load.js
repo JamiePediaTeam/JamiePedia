@@ -809,6 +809,85 @@ function toPreviewUrl(originalSrc) {
   }
 }
 
+let progressiveArtUpgradeObserver = null;
+let progressiveArtUpgradeQueue = [];
+let progressiveArtUpgradeActiveCount = 0;
+const PROGRESSIVE_ART_UPGRADE_MAX_CONCURRENT = 2;
+
+function progressiveArtQueueHighQualityUpgrade(image) {
+  if (!image || image.nodeType !== 1 || image.tagName !== 'IMG') {
+    return;
+  }
+
+  if (image.dataset.previewManagedHqQueued === '1' || image.dataset.previewManagedUpgraded === '1') {
+    return;
+  }
+
+  image.dataset.previewManagedHqQueued = '1';
+  progressiveArtUpgradeQueue.push(image);
+  progressiveArtRunHighQualityUpgradeQueue();
+}
+
+function progressiveArtRunHighQualityUpgradeQueue() {
+  while (progressiveArtUpgradeActiveCount < PROGRESSIVE_ART_UPGRADE_MAX_CONCURRENT && progressiveArtUpgradeQueue.length > 0) {
+    const image = progressiveArtUpgradeQueue.shift();
+    if (!image || image.nodeType !== 1 || image.tagName !== 'IMG') {
+      continue;
+    }
+
+    const originalSrc = image.dataset.previewManagedHqSrc || '';
+    const previewSrc = image.dataset.previewManagedPreviewSrc || '';
+    const currentSrc = image.getAttribute('src') || '';
+    if (!originalSrc || !previewSrc || (currentSrc !== previewSrc && currentSrc !== originalSrc)) {
+      image.dataset.previewManagedHqQueued = '';
+      continue;
+    }
+
+    progressiveArtUpgradeActiveCount += 1;
+
+    const highQualityProbe = new Image();
+    try {
+      highQualityProbe.decoding = 'async';
+      if ('fetchPriority' in highQualityProbe) {
+        highQualityProbe.fetchPriority = 'low';
+      }
+    } catch (_error) {
+      // Ignore optional priority hints when unsupported.
+    }
+
+    highQualityProbe.onload = function () {
+      if (image.dataset.previewManagedHqSrc !== originalSrc) {
+        progressiveArtUpgradeActiveCount -= 1;
+        image.dataset.previewManagedHqQueued = '';
+        progressiveArtRunHighQualityUpgradeQueue();
+        return;
+      }
+
+      image.dataset.previewManagedUpgraded = '1';
+      image.src = originalSrc;
+      image.dataset.previewManagedHqQueued = '';
+      progressiveArtUpgradeActiveCount -= 1;
+      progressiveArtRunHighQualityUpgradeQueue();
+    };
+
+    highQualityProbe.onerror = function () {
+      image.dataset.previewManagedHqQueued = '';
+      progressiveArtUpgradeActiveCount -= 1;
+      progressiveArtRunHighQualityUpgradeQueue();
+    };
+
+    highQualityProbe.src = originalSrc;
+  }
+}
+
+function progressiveArtScheduleHighQualityUpgrade(image) {
+  if (!image || image.nodeType !== 1 || image.tagName !== 'IMG') {
+    return;
+  }
+
+  progressiveArtQueueHighQualityUpgrade(image);
+}
+
 function applyProgressiveArtPreviewToImage(image) {
   if (!image || image.nodeType !== 1 || image.tagName !== 'IMG') {
     return;
@@ -823,6 +902,11 @@ function applyProgressiveArtPreviewToImage(image) {
       return;
     }
 
+    if (image.__previewManagedErrorHandler) {
+      image.removeEventListener('error', image.__previewManagedErrorHandler);
+      image.__previewManagedErrorHandler = null;
+    }
+
     image.dataset.previewManagedHqSrc = '';
     image.dataset.previewManagedPreviewSrc = '';
   }
@@ -835,26 +919,40 @@ function applyProgressiveArtPreviewToImage(image) {
 
   image.dataset.previewManagedHqSrc = originalSrc;
   image.dataset.previewManagedPreviewSrc = previewSrc;
+  image.dataset.previewManagedUpgraded = '';
+  image.dataset.previewManagedOriginalTried = '';
 
-  const previewProbe = new Image();
-  previewProbe.onload = function () {
-    if (image.dataset.previewManagedHqSrc !== originalSrc) {
-      return;
+  try {
+    image.decoding = 'async';
+    if (!image.hasAttribute('loading') || image.getAttribute('loading') === 'lazy') {
+      image.loading = 'eager';
     }
+    if ('fetchPriority' in image) {
+      image.fetchPriority = 'high';
+    }
+  } catch (_error) {
+    // Ignore optional image hints in unsupported browsers.
+  }
 
-    image.src = previewSrc;
+  if (image.__previewManagedErrorHandler) {
+    image.removeEventListener('error', image.__previewManagedErrorHandler);
+  }
 
-    const highQualityProbe = new Image();
-    highQualityProbe.onload = function () {
-      if (image.dataset.previewManagedHqSrc !== originalSrc) {
+  image.__previewManagedErrorHandler = function () {
+    if (image.dataset.previewManagedPreviewSrc === previewSrc) {
+      if (image.dataset.previewManagedOriginalTried === '1') {
+        image.removeEventListener('error', image.__previewManagedErrorHandler);
         return;
       }
 
+      image.dataset.previewManagedOriginalTried = '1';
       image.src = originalSrc;
-    };
-    highQualityProbe.src = originalSrc;
+    }
   };
-  previewProbe.src = previewSrc;
+  image.addEventListener('error', image.__previewManagedErrorHandler);
+
+  image.src = previewSrc;
+  progressiveArtScheduleHighQualityUpgrade(image);
 }
 
 function applyProgressiveArtPreviews(rootNode) {
