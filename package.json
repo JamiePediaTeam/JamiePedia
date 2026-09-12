@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "A website dedicated to tracking information on the musician Jamie Paige",
   "scripts": {
+    "prestart": "npm run build:search-index && npm run build:art-previews",
     "start": "node server.js",
     "serve": "node server.js",
     "build:albums-csv": "node scripts/generate-albums-csv.js",
     "build:music-csv": "node scripts/reformat-music-csv.js",
     "build:transcripts": "node scripts/generate-transcript-playback-json.js",
-    "build:art-previews": "node scripts/generate-art-previews.js"
+    "build:art-previews": "node scripts/generate-art-previews.js",
+    "build:search-index": "node scripts/generate-search-content-index.js"
   },
   "keywords": [
     "jamie paige",

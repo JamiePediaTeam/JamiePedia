@@ -5,6 +5,12 @@ let searchImageCsvPromise = null;
 let searchImageByPath = Object.create(null);
 let searchAlbumTitleByPath = Object.create(null);
 let searchSongRowsPromise = null;
+let searchContentIndexPromise = null;
+let searchContentIndex = {
+  songs: Object.create(null),
+  albums: Object.create(null),
+  motifs: Object.create(null)
+};
 
 const searchSongCsvHeaderAliases = {
   page_path: ['page_path', 'path_id', 'path', 'page path', 'path id'],
@@ -260,9 +266,16 @@ function getSearchSongVariantSlugsFromRows(routePath, songRows) {
 
   rows.forEach((row) => {
     const rowPath = getSearchSongRowPathValue(row);
+    const cleanedRowPath = String(rowPath || '').split('?')[0].replace(/\.html$/i, '').trim();
+    const rowFileWithHash = cleanedRowPath.split('/').filter(Boolean).pop() || '';
     const hashIndex = String(rowPath || '').indexOf('#');
     const hashToken = hashIndex === -1 ? '' : String(rowPath.slice(hashIndex + 1) || '').trim();
     const tabName = normalizeSearchSongRowValue(row, 'tab_name');
+
+    if (rowFileWithHash) {
+      slugs.add(rowFileWithHash.toLowerCase());
+      slugs.add(rowFileWithHash.replace(/[^a-z0-9]+/gi, '').toLowerCase());
+    }
 
     if (hashToken) {
       slugs.add(baseSlug + hashToken.replace(/[^a-z0-9]+/gi, '').toLowerCase());
@@ -318,6 +331,44 @@ async function fetchSearchText(path) {
   } catch (_error) {
     return null;
   }
+}
+
+function ensureSearchContentIndexLoaded(basePath) {
+  if (searchContentIndexPromise) {
+    return searchContentIndexPromise;
+  }
+
+  const indexUrl = (basePath || '') + '/public/search/search-content-index.json';
+  searchContentIndexPromise = fetch(indexUrl, { cache: 'no-store' })
+    .then((response) => response.ok ? response.json() : null)
+    .then((payload) => {
+      const songs = payload && payload.songs && typeof payload.songs === 'object'
+        ? payload.songs
+        : Object.create(null);
+      const albums = payload && payload.albums && typeof payload.albums === 'object'
+        ? payload.albums
+        : Object.create(null);
+      const motifs = payload && payload.motifs && typeof payload.motifs === 'object'
+        ? payload.motifs
+        : Object.create(null);
+
+      searchContentIndex = {
+        songs,
+        albums,
+        motifs
+      };
+      return searchContentIndex;
+    })
+    .catch(() => {
+      searchContentIndex = {
+        songs: Object.create(null),
+        albums: Object.create(null),
+        motifs: Object.create(null)
+      };
+      return searchContentIndex;
+    });
+
+  return searchContentIndexPromise;
 }
 
 function splitSearchCsvLine(line) {
@@ -579,18 +630,15 @@ function ensureSearchImageCsvLoaded(basePath) {
   return searchImageCsvPromise;
 }
 
-function getSearchMotifSummaryText(motifKeys, basePath) {
+function getSearchMotifSummaryText(motifKeys) {
   const keys = Array.isArray(motifKeys) ? motifKeys : [motifKeys];
   const normalizedKeys = Array.from(new Set(keys.map((key) => String(key || '').trim()).filter(Boolean)));
-  const candidates = [];
-
-  normalizedKeys.forEach((key) => {
-    candidates.push('/public/motif-summaries/' + key + '.txt');
-    candidates.push('/public/motifs/motif-summaries/' + key + '.txt');
-  });
-
-  return Promise.all(candidates.map((candidate) => fetchSearchText(resolveSearchPath(basePath, candidate))))
-    .then((texts) => texts.filter(Boolean).join(' ').trim());
+  const motifIndex = (searchContentIndex && searchContentIndex.motifs) || Object.create(null);
+  return normalizedKeys
+    .map((key) => String(motifIndex[String(key || '').toLowerCase()] || '').trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
 }
 
 function buildSearchSnippet(text, query) {
@@ -623,35 +671,44 @@ function buildSearchSnippet(text, query) {
   };
 }
 
-async function getSearchSongExternalContent(basePath, routePath, songRows) {
+function getSearchSongExternalContent(routePath, songRows) {
   const slugs = getSearchSongVariantSlugsFromRows(routePath, songRows);
+  const songIndex = (searchContentIndex && searchContentIndex.songs) || Object.create(null);
   const content = {
     summary: '',
     lyrics: '',
     extended: ''
   };
 
-  await Promise.all(slugs.map(async (slug) => {
-    const [summaryText, annotatedText, extendedText, lrcText] = await Promise.all([
-      fetchSearchText(resolveSearchPath(basePath, '/public/songs/summaries/' + slug + '.txt')),
-      fetchSearchText(resolveSearchPath(basePath, '/public/songs/annotations/' + slug + '.txt')),
-      fetchSearchText(resolveSearchPath(basePath, '/public/songs/extended/' + slug + '.txt')),
-      fetchSearchText(resolveSearchPath(basePath, '/public/songs/lyrics/' + slug + '.lrc'))
-    ]);
+  slugs.forEach((slug) => {
+    const key = String(slug || '').trim().toLowerCase();
+    if (!key) {
+      return;
+    }
+
+    const entry = songIndex[key] || null;
+    if (!entry || typeof entry !== 'object') {
+      return;
+    }
+
+    const summaryText = String(entry.summary || '').trim();
+    const annotationsText = String(entry.annotations || '').trim();
+    const lyricsText = String(entry.lyrics || '').trim();
+    const extendedText = String(entry.extended || '').trim();
 
     if (summaryText) {
       content.summary += ' ' + summaryText;
     }
-    if (annotatedText) {
-      content.lyrics += ' ' + annotatedText;
+    if (annotationsText) {
+      content.lyrics += ' ' + annotationsText;
+    }
+    if (lyricsText) {
+      content.lyrics += ' ' + lyricsText;
     }
     if (extendedText) {
       content.extended += ' ' + extendedText;
     }
-    if (lrcText) {
-      content.lyrics += ' ' + parseSearchLrcRawLines(lrcText).join(' ');
-    }
-  }));
+  });
 
   content.summary = content.summary.trim();
   content.lyrics = content.lyrics.trim();
@@ -659,11 +716,24 @@ async function getSearchSongExternalContent(basePath, routePath, songRows) {
   return content;
 }
 
+function getSearchAlbumExternalContent(routePath) {
+  const normalizedRoute = normalizeSearchRoutePath(routePath);
+  const albumSlug = normalizedRoute.split('/').filter(Boolean).pop() || '';
+  const albumIndex = (searchContentIndex && searchContentIndex.albums) || Object.create(null);
+  const entry = albumIndex[String(albumSlug || '').toLowerCase()] || null;
+
+  return {
+    summary: String((entry || {}).summary || '').trim(),
+    lyrics: '',
+    extended: String((entry || {}).extended || '').trim()
+  };
+}
+
 // Fetch and search a single file
-async function searchFile(fileEntry, query) {
+function searchFile(fileEntry, query, searchContext) {
   try {
-    const basePath = window.location.pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
-    await ensureSearchImageCsvLoaded(basePath);
+    const context = searchContext || {};
+    const basePath = context.basePath || (window.location.pathname.includes('/JamiePedia/') ? '/JamiePedia' : '');
     const routePath = normalizeSearchRoutePath(fileEntry.path);
     const pathParts = routePath.split('/').filter(Boolean);
     const isMotifPage = routePath === '/motifs' || pathParts[0] === 'motifs';
@@ -677,7 +747,7 @@ async function searchFile(fileEntry, query) {
       motifIdFromEntry
     ].filter(Boolean)));
 
-    const songRows = await ensureSearchSongRowsLoaded(basePath);
+    const songRows = Array.isArray(context.songRows) ? context.songRows : [];
     const matchingSongRows = isMusicPage ? getSearchSongRowsForRoute(routePath, songRows) : [];
     const isSongPage = isMusicPage && matchingSongRows.length > 0;
     const isAlbumPage = isMusicPage && pathParts.length === 2 && matchingSongRows.length === 0;
@@ -736,10 +806,12 @@ async function searchFile(fileEntry, query) {
     ].filter(Boolean).join(' ')).filter(Boolean).join(' ').trim();
 
     const externalContent = isSongPage
-      ? await getSearchSongExternalContent(basePath, routePath, songRows)
-      : isMotifPage
-        ? { summary: await getSearchMotifSummaryText(motifSummaryKeys, basePath), lyrics: '', extended: '' }
-        : { summary: '', lyrics: '', extended: '' };
+      ? getSearchSongExternalContent(routePath, songRows)
+      : isAlbumPage
+        ? getSearchAlbumExternalContent(routePath)
+        : isMotifPage
+          ? { summary: getSearchMotifSummaryText(motifSummaryKeys), lyrics: '', extended: '' }
+          : { summary: '', lyrics: '', extended: '' };
 
     const motifRelatedText = isMotifPage && typeof window.SongData !== 'undefined' && window.SongData && typeof window.SongData.getSongsWithMotifId === 'function'
       ? motifSummaryKeys
@@ -893,9 +965,27 @@ async function performSearch(query) {
   
   const modal = document.getElementById('searchModal');
   modal.style.display = 'block';
+
+  const basePath = window.location.pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
+  const pathsReadyPromise = typeof window.whenMusicFilePathsReady === 'function'
+    ? window.whenMusicFilePathsReady()
+    : Promise.resolve(window.musicFilePaths || []);
+
+  const [songRows] = await Promise.all([
+    ensureSearchSongRowsLoaded(basePath),
+    ensureSearchImageCsvLoaded(basePath),
+    ensureSearchContentIndexLoaded(basePath),
+    pathsReadyPromise
+  ]);
+
+  const searchContext = {
+    basePath,
+    songRows: Array.isArray(songRows) ? songRows : []
+  };
   
   const results = [];
-  const searchPromises = musicFilePaths.map(fileEntry => searchFile(fileEntry, trimmedQuery));
+  const paths = Array.isArray(window.musicFilePaths) ? window.musicFilePaths : [];
+  const searchPromises = paths.map((fileEntry) => Promise.resolve(searchFile(fileEntry, trimmedQuery, searchContext)));
   const searchResults = await Promise.all(searchPromises);
   
   searchResults.forEach(result => {
