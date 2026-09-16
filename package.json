@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A website dedicated to tracking information on the musician Jamie Paige",
   "scripts": {
-    "prestart": "npm run build:search-index && npm run build:art-previews",
+    "prestart": "npm run build:search-index",
     "start": "node server.js",
     "serve": "node server.js",
     "build:albums-csv": "node scripts/generate-albums-csv.js",
