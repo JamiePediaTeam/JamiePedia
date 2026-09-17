@@ -1,3 +1,6 @@
+if (!window.__jamiePediaMusicFilesBootstrap) {
+window.__jamiePediaMusicFilesBootstrap = true;
+
 // Music file paths for search/nav/random/tracklist behavior.
 // Songs are sourced from Songs CSV, album index pages from Albums CSV,
 // and motif pages from Motifs CSV.
@@ -302,3 +305,5 @@ window.whenMusicFilePathsReady = function () {
       }
     });
 })();
+
+  }

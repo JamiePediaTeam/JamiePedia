@@ -238,7 +238,7 @@ function songLyricsRowToPathIdSlug(row) {
     return '';
   }
 
-  const withoutPrefix = normalized.replace(/^\/music\//i, '');
+  const withoutPrefix = normalized.replace(/^\/music\//i, '').split('#')[0].trim();
   return withoutPrefix || '';
 }
 

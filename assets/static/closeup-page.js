@@ -1,6 +1,7 @@
 (function () {
   const pathname = window.location.pathname || '/';
   const basePath = pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
+  const closeupTextBySlugCache = Object.create(null);
 
   function toRelativePath(path) {
     let normalized = String(path || '/');
@@ -72,6 +73,22 @@
     } catch (_error) {
       return '';
     }
+  }
+
+  async function fetchCloseupTextBySlug(slug) {
+    const normalizedSlug = String(slug || '').trim().toLowerCase();
+    if (!normalizedSlug) {
+      return '';
+    }
+
+    if (Object.prototype.hasOwnProperty.call(closeupTextBySlugCache, normalizedSlug)) {
+      return closeupTextBySlugCache[normalizedSlug];
+    }
+
+    const textPath = withBasePath('/public/close ups/text/' + normalizedSlug + '.txt');
+    const text = await fetchText(textPath);
+    closeupTextBySlugCache[normalizedSlug] = text || '';
+    return closeupTextBySlugCache[normalizedSlug];
   }
 
   function parseMediaToken(value) {
@@ -392,17 +409,35 @@
   }
 
   function convertInlineFormatting(text) {
+    const literalTokens = [];
     let html = escapeHtml(String(text || ''));
+
+    html = html.replace(/\\([\\`*_{}\[\]()#+\-.!>])/g, function (_match, escapedChar) {
+      const token = '@@CLOSEUPLITERAL' + literalTokens.length + '@@';
+      literalTokens.push(escapedChar);
+      return token;
+    });
 
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
-    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function (_match, label, url) {
-      return '<a href="' + url.replace(/"/g, '%22') + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function (_match, label, rawHref) {
+      const resolvedHref = typeof window.resolveTxtInternalHref === 'function'
+        ? window.resolveTxtInternalHref(rawHref)
+        : String(rawHref || '').trim().replace(/"/g, '%22');
+      const isExternal = /^https?:\/\//i.test(String(resolvedHref || ''));
+      const attrs = isExternal
+        ? ' class="txt-external-link" target="_blank" rel="noopener noreferrer"'
+        : '';
+      const glyph = isExternal
+        ? '<span class="txt-external-link-glyph" aria-hidden="true">↗</span>'
+        : '';
+      return '<a href="' + resolvedHref + '"' + attrs + '>' + label + glyph + '</a>';
     });
 
     html = html.replace(/(^|\s)(https?:\/\/[^\s<]+)/g, function (_match, prefix, url) {
-      return prefix + '<a href="' + url.replace(/"/g, '%22') + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
+      const href = url.replace(/"/g, '%22');
+      return prefix + '<a href="' + href + '" class="txt-external-link" target="_blank" rel="noopener noreferrer">' + url + '<span class="txt-external-link-glyph" aria-hidden="true">↗</span></a>';
     });
 
     html = html.replace(/(^|\s)([a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+(?:\/[\w\-./?%&=+#~:]*)?)/gi, function (match, prefix, domain) {
@@ -416,7 +451,11 @@
       }
 
       const href = 'https://' + normalizedDomain;
-      return prefix + '<a href="' + href.replace(/"/g, '%22') + '" target="_blank" rel="noopener noreferrer">' + normalizedDomain + '</a>';
+      return prefix + '<a href="' + href.replace(/"/g, '%22') + '" class="txt-external-link" target="_blank" rel="noopener noreferrer">' + normalizedDomain + '<span class="txt-external-link-glyph" aria-hidden="true">↗</span></a>';
+    });
+
+    html = html.replace(/@@CLOSEUPLITERAL(\d+)@@/g, function (_match, index) {
+      return escapeHtml(literalTokens[Number(index)] || '');
     });
 
     return html;
@@ -602,6 +641,7 @@
         paragraphBuffer.length === 0
         && !/[.!?]$/.test(trimmed)
         && trimmed.length <= 80
+        && !/^\[[^\]]+\]\([^)]+\)$/.test(trimmed)
         && /\([^)]+\)/.test(trimmed)
         && !(trimmed.startsWith('(') && trimmed.endsWith(')'))
       ) {
@@ -744,7 +784,12 @@
   }
 
   function applyInlineStyles() {
+    if (document.getElementById('jamiepedia-closeup-inline-styles')) {
+      return;
+    }
+
     const style = document.createElement('style');
+    style.id = 'jamiepedia-closeup-inline-styles';
     style.textContent = [
       '#closeupContent { max-width: none; margin-left: -13px; margin-top: 20px; margin-bottom: 20px; }',
       '.closeup-article { max-width: none; margin: 0; padding: 6px 8px 8px; }',
@@ -760,7 +805,7 @@
       '.closeup-media { margin: 0.95em 0 1.1em; }',
       '.closeup-bandcamp { width: min(560px, 100%); }',
       '.closeup-media img, .closeup-media video { width: min(680px, 100%); max-width: 100%; border-radius: 0; border: 1px solid var(--theme-color-border_pill); display: block; background: var(--theme-color-background_base); }',
-      '.closeup-video video { width: min(560px, 100%); aspect-ratio: 16 / 9; height: auto; }',
+      '.closeup-video video { width: auto; height: 315px; max-width: 100%; max-height: 315px; }',
       '.closeup-audio audio { width: min(560px, 100%); display: block; }',
       '.closeup-youtube-frame-wrap { width: min(560px, 100%); aspect-ratio: 16 / 9; border-radius: 0; overflow: hidden; border: 1px solid var(--theme-color-border_pill); background: var(--theme-color-background_base); }',
       '.closeup-youtube-frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }',
@@ -782,51 +827,103 @@
 
   function renderNotFound(container, slug) {
     const title = slugToTitle(slug) || 'Close-up';
-    document.title = title + ' Close-up';
     container.innerHTML = '<div class="closeup-header"><h1>' + escapeHtml(title) + ' Close-up</h1><p>No close-up text file was found for this song.</p></div>';
   }
 
-  async function initializeCloseupPage() {
-    const container = document.getElementById('closeupContent');
+  async function renderCloseupIntoContainer(container, slug, options) {
+    const settings = options && typeof options === 'object' ? options : {};
     if (!container) {
-      return;
+      return { found: false, headingText: '' };
     }
 
     applyInlineStyles();
 
-    const slug = getSongSlugFromRoute();
-    if (!slug) {
-      renderNotFound(container, '');
-      return;
+    const normalizedSlug = String(slug || '').trim().toLowerCase();
+    if (!normalizedSlug) {
+      if (settings.showNotFound !== false) {
+        renderNotFound(container, '');
+      } else {
+        container.innerHTML = '';
+      }
+      return { found: false, headingText: '' };
     }
 
-    const manifest = null;
-    const textPath = withBasePath('/public/close ups/text/' + slug + '.txt');
-    const closeupText = await fetchText(textPath);
-
+    const closeupText = await fetchCloseupTextBySlug(normalizedSlug);
     if (!closeupText) {
-      renderNotFound(container, slug);
-      return;
+      if (settings.showNotFound !== false) {
+        renderNotFound(container, normalizedSlug);
+      } else {
+        container.innerHTML = '';
+      }
+      return { found: false, headingText: '' };
     }
 
     const tagged = extractThemeTag(closeupText);
-    applyThemeOverride(tagged.themeId);
+    if (settings.applyTheme !== false) {
+      applyThemeOverride(tagged.themeId);
+    }
 
-    const renderResult = renderCloseupBody(tagged.text, manifest || { assets: { images: [], videos: [], audio: [] } }, slug);
+    if (typeof window.ensureTxtInternalLinkIndexLoaded === 'function') {
+      await window.ensureTxtInternalLinkIndexLoaded().catch(() => null);
+    }
+
+    const renderResult = renderCloseupBody(tagged.text, { assets: { images: [], videos: [], audio: [] } }, normalizedSlug);
     const headingText = String(renderResult.leadingHeadingText || '').trim();
-    document.title = headingText || (slugToTitle(slug) + ' Close-up');
 
-    const pageHref = withBasePath('/music/' + slug);
+    if (settings.setDocumentTitle) {
+      document.title = headingText || (slugToTitle(normalizedSlug) + ' Close-up');
+    }
+
+    const pageHref = String(settings.pageHref || withBasePath('/music/' + normalizedSlug));
+    const includeBackLink = settings.includeBackLink !== false;
+    const includeHeader = settings.includeHeader !== false;
+
     container.innerHTML =
       '<article class="closeup-article">' +
-        (headingText ? '<div class="closeup-header"><h1>' + convertInlineFormatting(headingText) + '</h1></div>' : '') +
+        (includeHeader && headingText ? '<div class="closeup-header"><h1>' + convertInlineFormatting(headingText) + '</h1></div>' : '') +
         '<div class="closeup-content">' + renderResult.html + '</div>' +
-        '<div class="closeup-back-wrap"><a class="closeup-back-link" href="' + pageHref.replace(/"/g, '%22') + '">Back to page</a></div>' +
+        (includeBackLink ? '<div class="closeup-back-wrap"><a class="closeup-back-link" href="' + pageHref.replace(/"/g, '%22') + '">Back to page</a></div>' : '') +
       '</article>';
 
     if (typeof window.normalizeInternalAnchorTargets === 'function') {
       window.normalizeInternalAnchorTargets(container);
     }
+
+    return { found: true, headingText };
+  }
+
+  window.JamiePediaCloseup = window.JamiePediaCloseup || {};
+  window.JamiePediaCloseup.renderIntoContainer = renderCloseupIntoContainer;
+  window.JamiePediaCloseup.hasCloseupForSlug = async function (slug) {
+    const text = await fetchCloseupTextBySlug(slug);
+    return !!String(text || '').trim();
+  };
+
+  async function initializeCloseupPage() {
+    const routeSlug = getSongSlugFromRoute();
+    if (routeSlug) {
+      const targetHref = withBasePath('/music/' + routeSlug) + '#close-up';
+      if (window.location.pathname !== withBasePath('/music/' + routeSlug) || String(window.location.hash || '').toLowerCase() !== '#close-up') {
+        window.location.replace(targetHref);
+        return;
+      }
+    }
+
+    const container = document.getElementById('closeupContent');
+    if (!container) {
+      return;
+    }
+    container.classList.add('closeup-page-host');
+
+    const slug = routeSlug;
+    await renderCloseupIntoContainer(container, slug, {
+      applyTheme: true,
+      setDocumentTitle: true,
+      includeHeader: true,
+      includeBackLink: true,
+      showNotFound: true,
+      pageHref: withBasePath('/music/' + slug)
+    });
   }
 
   if (document.readyState === 'loading') {

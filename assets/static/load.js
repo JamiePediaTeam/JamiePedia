@@ -56,6 +56,21 @@ function withBasePath(path) {
   return basePath + normalized;
 }
 
+function mapCloseupPathToSongSection(pathname) {
+  const normalizedPath = toExtensionlessPath(pathname);
+  const match = normalizedPath.match(/^\/music\/([^/]+)\/close-up$/i);
+  if (!match) {
+    return '';
+  }
+
+  const slug = String(match[1] || '').trim().toLowerCase();
+  if (!slug) {
+    return '';
+  }
+
+  return withBasePath('/music/' + slug) + '#close-up';
+}
+
 function toSiteHref(rawHref) {
   const source = String(rawHref || '').trim();
   if (!source || source.startsWith('#') || /^(mailto:|tel:|javascript:|data:|blob:)/i.test(source)) {
@@ -66,6 +81,11 @@ function toSiteHref(rawHref) {
     const absolute = new URL(source, window.location.href);
     if (absolute.origin !== window.location.origin) {
       return source;
+    }
+
+    const closeupRedirectHref = mapCloseupPathToSongSection(absolute.pathname);
+    if (closeupRedirectHref) {
+      return closeupRedirectHref;
     }
 
     const canonicalPath = withBasePath(toExtensionlessPath(absolute.pathname));
@@ -104,6 +124,232 @@ function canonicalizeCurrentUrl() {
 
 window.toSiteHref = toSiteHref;
 window.normalizeInternalAnchorTargets = normalizeInternalAnchorTargets;
+
+const txtInternalLinkIndex = {
+  loaded: false,
+  loadingPromise: null,
+  songIds: new Set(),
+  albumIds: new Set(),
+  motifPageByMotifId: Object.create(null),
+  motifPageByCategoryId: Object.create(null)
+};
+
+function parseTxtCsvLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values.map((value) => String(value || '').trim());
+}
+
+function parseTxtCsvRows(text) {
+  const lines = String(text || '').split(/\r?\n/).filter((line) => String(line || '').trim());
+  if (!lines.length) {
+    return { headers: [], rows: [] };
+  }
+
+  const headers = parseTxtCsvLine(lines[0]).map((header) => String(header || '').trim().toLowerCase());
+  const rows = lines.slice(1).map((line) => parseTxtCsvLine(line));
+  return { headers, rows };
+}
+
+function findTxtHeaderIndex(headers, aliases) {
+  const normalizedAliases = (Array.isArray(aliases) ? aliases : []).map((alias) => String(alias || '').trim().toLowerCase());
+  for (let index = 0; index < headers.length; index += 1) {
+    if (normalizedAliases.includes(String(headers[index] || '').trim().toLowerCase())) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function normalizeTxtLinkToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '')
+    .replace(/\/index\.html$/i, '')
+    .replace(/\.html$/i, '');
+}
+
+function isTxtTruthyFlag(value) {
+  const normalized = String(value || '').trim().toUpperCase();
+  return normalized === 'TRUE' || normalized === 'YES' || normalized === '1';
+}
+
+async function ensureTxtInternalLinkIndexLoaded() {
+  if (txtInternalLinkIndex.loaded) {
+    return txtInternalLinkIndex;
+  }
+
+  if (txtInternalLinkIndex.loadingPromise) {
+    return txtInternalLinkIndex.loadingPromise;
+  }
+
+  txtInternalLinkIndex.loadingPromise = Promise.all([
+    fetch(withBasePath('/public/csv/JamiePedia Data - Songs.csv'), { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
+    fetch(withBasePath('/public/csv/JamiePedia Data - Albums.csv'), { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
+    fetch(withBasePath('/public/csv/JamiePedia Data - Motifs.csv'), { cache: 'no-store' }).then((response) => response.ok ? response.text() : '')
+  ]).then((texts) => {
+    const songs = parseTxtCsvRows(texts[0] || '');
+    const albums = parseTxtCsvRows(texts[1] || '');
+    const motifs = parseTxtCsvRows(texts[2] || '');
+
+    const pathIndex = findTxtHeaderIndex(songs.headers, ['path id', 'path_id', 'page_path', 'path']);
+    songs.rows.forEach((values) => {
+      if (pathIndex === -1) {
+        return;
+      }
+      const token = normalizeTxtLinkToken(values[pathIndex] || '');
+      if (token) {
+        txtInternalLinkIndex.songIds.add(token);
+      }
+    });
+
+    const albumIdIndex = findTxtHeaderIndex(albums.headers, ['album_id', 'album id', 'path id', 'path_id', 'path']);
+    albums.rows.forEach((values) => {
+      if (albumIdIndex === -1) {
+        return;
+      }
+      const token = normalizeTxtLinkToken(values[albumIdIndex] || '');
+      if (token) {
+        txtInternalLinkIndex.albumIds.add(token);
+      }
+    });
+
+    const motifIdIndex = findTxtHeaderIndex(motifs.headers, ['motif id', 'motif_id']);
+    const categoryIdIndex = findTxtHeaderIndex(motifs.headers, ['category id', 'category_id']);
+    const hasPageIndex = findTxtHeaderIndex(motifs.headers, ['has page', 'has_page']);
+    motifs.rows.forEach((values) => {
+      const hasPage = hasPageIndex === -1 ? true : isTxtTruthyFlag(values[hasPageIndex] || '');
+      if (!hasPage) {
+        return;
+      }
+
+      const motifId = normalizeTxtLinkToken(values[motifIdIndex] || '');
+      const categoryId = normalizeTxtLinkToken(values[categoryIdIndex] || '');
+      const pageSlug = categoryId === 'kalia-vibte'
+        ? 'kalia-vibte'
+        : (categoryId || motifId);
+
+      if (!pageSlug) {
+        return;
+      }
+
+      if (motifId && !txtInternalLinkIndex.motifPageByMotifId[motifId]) {
+        txtInternalLinkIndex.motifPageByMotifId[motifId] = pageSlug;
+      }
+
+      if (categoryId && !txtInternalLinkIndex.motifPageByCategoryId[categoryId]) {
+        txtInternalLinkIndex.motifPageByCategoryId[categoryId] = pageSlug;
+      }
+    });
+
+    txtInternalLinkIndex.loaded = true;
+    return txtInternalLinkIndex;
+  }).catch(() => {
+    txtInternalLinkIndex.loaded = true;
+    return txtInternalLinkIndex;
+  });
+
+  return txtInternalLinkIndex.loadingPromise;
+}
+
+function resolveTxtInternalHref(rawHref) {
+  const source = String(rawHref || '').trim();
+  if (!source) {
+    return '#';
+  }
+
+  if (/^(javascript:|data:|blob:)/i.test(source)) {
+    return '#';
+  }
+
+  if (/^(https?:|mailto:|tel:|#|\/|\.\/|\.\.\/)/i.test(source)) {
+    const normalized = source.replace(/"/g, '%22');
+    return typeof toSiteHref === 'function' ? toSiteHref(normalized) : normalized;
+  }
+
+  const typedMatch = source.match(/^(album|path|song|motif|category)\s*:\s*(.+)$/i);
+  const explicitType = typedMatch ? String(typedMatch[1] || '').toLowerCase() : '';
+  const tokenSource = typedMatch ? typedMatch[2] : source;
+  const token = normalizeTxtLinkToken(tokenSource);
+  if (!token) {
+    return '#';
+  }
+
+  if (token.startsWith('music/') || token.startsWith('motifs/')) {
+    const mappedCloseupHref = token.startsWith('music/') ? mapCloseupPathToSongSection('/' + token) : '';
+    if (mappedCloseupHref) {
+      return mappedCloseupHref.replace(/"/g, '%22');
+    }
+
+    return withBasePath('/' + token).replace(/"/g, '%22');
+  }
+
+  if (token.includes('/')) {
+    const mappedCloseupHref = mapCloseupPathToSongSection('/' + token);
+    if (mappedCloseupHref) {
+      return mappedCloseupHref.replace(/"/g, '%22');
+    }
+
+    return withBasePath('/' + token).replace(/"/g, '%22');
+  }
+
+  if (explicitType === 'motif') {
+    const motifPage = txtInternalLinkIndex.motifPageByMotifId[token] || token;
+    return withBasePath('/motifs/' + motifPage).replace(/"/g, '%22');
+  }
+
+  if (explicitType === 'category') {
+    const categoryPage = txtInternalLinkIndex.motifPageByCategoryId[token] || token;
+    return withBasePath('/motifs/' + categoryPage).replace(/"/g, '%22');
+  }
+
+  if (explicitType === 'album' || explicitType === 'path' || explicitType === 'song') {
+    return withBasePath('/music/' + token).replace(/"/g, '%22');
+  }
+
+  const motifPage = txtInternalLinkIndex.motifPageByCategoryId[token] || txtInternalLinkIndex.motifPageByMotifId[token] || '';
+  if (motifPage) {
+    return withBasePath('/motifs/' + motifPage).replace(/"/g, '%22');
+  }
+
+  if (txtInternalLinkIndex.songIds.has(token) || txtInternalLinkIndex.albumIds.has(token)) {
+    return withBasePath('/music/' + token).replace(/"/g, '%22');
+  }
+
+  return withBasePath('/music/' + token).replace(/"/g, '%22');
+}
+
+window.ensureTxtInternalLinkIndexLoaded = ensureTxtInternalLinkIndexLoaded;
+window.resolveTxtInternalHref = resolveTxtInternalHref;
+ensureTxtInternalLinkIndexLoaded().catch(function () {});
 
 function splitThemeCsvLine(line) {
   const values = [];
@@ -574,7 +820,7 @@ loadThemeFromCsv();
 
 // Load social icons script
 const socialIconsScript = document.createElement('script');
-socialIconsScript.src = basePath + '/assets/static/social-icons.js';
+socialIconsScript.src = basePath + '/assets/static/social-icons.js?v=20260917a';
 document.head.appendChild(socialIconsScript);
 
 // Navigate to a song with proper base path
@@ -591,6 +837,9 @@ function getCurrentSongNavKey() {
   const currentPointer = currentPath.split('/').filter(Boolean).pop() || '';
   const normalizedSongPath = currentPointer ? ('/music/' + currentPointer) : currentPath;
   const hashToken = normalizeSongSidebarHashToken(window.location.hash);
+  if (hashToken === 'close-up' || hashToken === 'closeup') {
+    return normalizedSongPath;
+  }
   return hashToken ? (normalizedSongPath + '#' + hashToken) : normalizedSongPath;
 }
 
@@ -687,11 +936,19 @@ function getNavListForPath(currentPath) {
 }
 
 function initializeDataNavButtons() {
-  const navOrder = window.navOrder;
-  if (!navOrder) return;
-
   const songNavList = getNavListForSongPage();
   const isSongPage = Array.isArray(songNavList) && songNavList.length > 0;
+  const navOrder = window.navOrder;
+  if (!navOrder && !isSongPage) {
+    if (!window.__pendingDataNavButtonsRetry) {
+      window.__pendingDataNavButtonsRetry = true;
+      window.setTimeout(function () {
+        window.__pendingDataNavButtonsRetry = false;
+        initializeDataNavButtons();
+      }, 120);
+    }
+    return;
+  }
 
   let activeList = null;
   let currentIndex = -1;
@@ -700,9 +957,39 @@ function initializeDataNavButtons() {
     const currentSongKey = getCurrentSongNavKey();
     activeList = songNavList;
     currentIndex = activeList.findIndex((item) => item === currentSongKey);
+
+    if (currentIndex === -1) {
+      const currentPath = normalizePathForNav(window.location.pathname);
+      const currentPathId = currentPath.split('/').filter(Boolean).pop() || '';
+      currentIndex = activeList.findIndex((item) => {
+        const normalized = normalizeSongSidebarPathKey(item);
+        if (!normalized) {
+          return false;
+        }
+
+        const basePath = normalized.split('#')[0];
+        if (basePath === currentPath) {
+          return true;
+        }
+
+        const rowPathId = basePath.split('/').filter(Boolean).pop() || '';
+        return !!rowPathId && rowPathId === currentPathId;
+      });
+    }
   }
 
   if (currentIndex === -1) {
+    if (!navOrder) {
+      if (!window.__pendingDataNavButtonsRetry) {
+        window.__pendingDataNavButtonsRetry = true;
+        window.setTimeout(function () {
+          window.__pendingDataNavButtonsRetry = false;
+          initializeDataNavButtons();
+        }, 120);
+      }
+      return;
+    }
+
     const currentPath = normalizePathForNav(window.location.pathname);
     activeList = getNavListForPath(currentPath);
     if (!activeList) return;
@@ -713,8 +1000,8 @@ function initializeDataNavButtons() {
   const prevPath = currentIndex > 0 ? activeList[currentIndex - 1] : null;
   const nextPath = currentIndex < activeList.length - 1 ? activeList[currentIndex + 1] : null;
   const activeIsSongList = isSongPage && activeList === songNavList;
-  const isSong = activeIsSongList || activeList === navOrder.songs;
-  const isAlbum = activeList === navOrder.albums;
+  const isSong = activeIsSongList || (navOrder && activeList === navOrder.songs);
+  const isAlbum = Boolean(navOrder && activeList === navOrder.albums);
 
   let containers = Array.from(document.querySelectorAll('.song-nav-buttons, .album-nav-buttons'));
 
@@ -1007,9 +1294,9 @@ function installProgressiveArtObserver() {
 
 installProgressiveArtObserver();
 
-const coverArtistCsvPath = basePath + '/public/csv/JamiePedia Data - Cover Artists.csv';
-let coverArtistsByFilename = {};
-let coverArtistsLoadPromise = null;
+const loadCoverArtistCsvPath = basePath + '/public/csv/JamiePedia Data - Cover Artists.csv';
+let loadCoverArtistsByFilename = {};
+let loadCoverArtistsLoadPromise = null;
 
 function splitCoverArtistCsvLine(line) {
   const values = [];
@@ -1075,22 +1362,22 @@ function parseCoverArtistCsv(text) {
 }
 
 function ensureCoverArtistsLoaded() {
-  if (coverArtistsLoadPromise) {
-    return coverArtistsLoadPromise;
+  if (loadCoverArtistsLoadPromise) {
+    return loadCoverArtistsLoadPromise;
   }
 
-  coverArtistsLoadPromise = fetch(coverArtistCsvPath, { cache: 'no-store' })
+  loadCoverArtistsLoadPromise = fetch(loadCoverArtistCsvPath, { cache: 'no-store' })
     .then((response) => response.ok ? response.text() : '')
     .then((text) => {
-      coverArtistsByFilename = parseCoverArtistCsv(text);
-      return coverArtistsByFilename;
+      loadCoverArtistsByFilename = parseCoverArtistCsv(text);
+      return loadCoverArtistsByFilename;
     })
     .catch(() => {
-      coverArtistsByFilename = {};
-      return coverArtistsByFilename;
+      loadCoverArtistsByFilename = {};
+      return loadCoverArtistsByFilename;
     });
 
-  return coverArtistsLoadPromise;
+  return loadCoverArtistsLoadPromise;
 }
 
 function getCoverArtist(filename) {
@@ -1099,7 +1386,7 @@ function getCoverArtist(filename) {
     return null;
   }
 
-  return coverArtistsByFilename[key] || null;
+  return loadCoverArtistsByFilename[key] || null;
 }
 
 window.getCoverArtist = getCoverArtist;
@@ -2075,8 +2362,6 @@ function getSongSidebarRowForCurrentPage() {
     if (hashMatch) {
       return hashMatch;
     }
-
-    return null;
   }
 
   return rows.find((row) => {
@@ -2156,7 +2441,7 @@ function getAutomaticSongCloseupHref(row) {
     return '';
   }
 
-  return '/music/' + slug + '/close-up';
+  return '/music/' + slug + '#close-up';
 }
 
 function createSongSidebarLinks(labelsValue, linksValue) {
@@ -2444,6 +2729,10 @@ function initializeSongSidebarData() {
 
   const sidebarScope = getActiveSongSidebarScope();
   songSidebarFieldOrder.forEach((field) => {
+    if (field && field.key === 'close_up') {
+      return;
+    }
+
     const block = getOrCreateSongSidebarBlock(sidebarScope, field);
 
     if (block) {
@@ -2583,6 +2872,53 @@ function pathToPageName(filePath) {
   return slugToDisplayName(filename);
 }
 
+var TRACKLIST_COLLAPSE_STORAGE_KEY = 'jamiepedia.tracklistSidebarCollapsed';
+
+function isTracklistSidebarCollapsed() {
+  try {
+    return window.localStorage && window.localStorage.getItem(TRACKLIST_COLLAPSE_STORAGE_KEY) === '1';
+  } catch (_error) {
+    return false;
+  }
+}
+
+function setTracklistSidebarCollapsed(collapsed) {
+  try {
+    if (window.localStorage) {
+      window.localStorage.setItem(TRACKLIST_COLLAPSE_STORAGE_KEY, collapsed ? '1' : '0');
+    }
+  } catch (_error) {
+    // Ignore storage errors so UI still works in restrictive browser modes.
+  }
+}
+
+function applyTracklistSidebarCollapseState(sidebarEl, collapsed) {
+  if (!sidebarEl) {
+    return;
+  }
+
+  sidebarEl.classList.toggle('is-collapsed', Boolean(collapsed));
+
+  var trigger = sidebarEl.querySelector('.tracklist-collapse-trigger');
+  if (trigger) {
+    trigger.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    trigger.setAttribute('aria-label', collapsed ? 'Expand tracklist' : 'Collapse tracklist');
+  }
+
+  var listWrap = sidebarEl.querySelector('.tracklist-list-wrap');
+  if (listWrap) {
+    if (!collapsed) {
+      var listEl = listWrap.querySelector('.tracklist-list');
+      var measuredHeight = listEl ? listEl.scrollHeight : 0;
+      if (measuredHeight > 0) {
+        listWrap.style.setProperty('--tracklist-content-height', measuredHeight + 'px');
+      } else {
+        listWrap.style.removeProperty('--tracklist-content-height');
+      }
+    }
+  }
+}
+
 function buildTracklistSidebarEl(headerText, headerHref, entries, currentPath, useOrderedList) {
   var el = document.createElement('div');
   el.className = 'sidebar2 tracklist-sidebar';
@@ -2601,6 +2937,27 @@ function buildTracklistSidebarEl(headerText, headerHref, entries, currentPath, u
   });
 
   headerDiv.appendChild(titleLink);
+
+  var collapseTrigger = document.createElement('button');
+  collapseTrigger.type = 'button';
+  collapseTrigger.className = 'tracklist-collapse-trigger';
+  collapseTrigger.setAttribute('aria-label', 'Collapse tracklist');
+  collapseTrigger.setAttribute('aria-expanded', 'true');
+
+  var collapseChevron = document.createElement('span');
+  collapseChevron.className = 'tracklist-collapse-chevron';
+  collapseChevron.setAttribute('aria-hidden', 'true');
+  collapseTrigger.appendChild(collapseChevron);
+
+  collapseTrigger.addEventListener('click', function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    var nextCollapsed = !el.classList.contains('is-collapsed');
+    applyTracklistSidebarCollapseState(el, nextCollapsed);
+    setTracklistSidebarCollapsed(nextCollapsed);
+  });
+
+  headerDiv.appendChild(collapseTrigger);
 
   var listEl = document.createElement(useOrderedList ? 'ol' : 'ul');
   listEl.className = 'tracklist-list';
@@ -2631,8 +2988,12 @@ function buildTracklistSidebarEl(headerText, headerHref, entries, currentPath, u
     listEl.appendChild(li);
   });
 
+  var listWrap = document.createElement('div');
+  listWrap.className = 'tracklist-list-wrap';
+  listWrap.appendChild(listEl);
+
   el.appendChild(headerDiv);
-  el.appendChild(listEl);
+  el.appendChild(listWrap);
   return el;
 }
 
@@ -2754,6 +3115,9 @@ function initializeTracklistSidebar() {
       );
       stickyWrapper.appendChild(sidebar2El);
 
+      // Apply persisted expanded/collapsed state after insertion so height measurement is accurate.
+      applyTracklistSidebarCollapseState(sidebar2El, isTracklistSidebarCollapsed());
+
       if (typeof addSocialMediaIcons === 'function') {
         addSocialMediaIcons();
       }
@@ -2769,9 +3133,17 @@ function albumSummaryEscapeHtml(value) {
 }
 
 function albumSummarySanitizeUrl(url) {
+  if (typeof window.resolveTxtInternalHref === 'function') {
+    return window.resolveTxtInternalHref(url);
+  }
+
   const candidate = String(url || '').trim();
-  if (!candidate) return '#';
-  if (/^(https?:|mailto:|\/|#|\.\/|\.\.\/)/i.test(candidate)) return candidate.replace(/"/g, '%22');
+  if (!candidate) {
+    return '#';
+  }
+  if (/^(https?:|mailto:|\/|#|\.\/|\.\.\/)/i.test(candidate)) {
+    return candidate.replace(/"/g, '%22');
+  }
   return '#';
 }
 

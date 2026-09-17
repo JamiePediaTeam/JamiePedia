@@ -19,6 +19,14 @@ function addSocialMediaIcons() {
 
   document.querySelectorAll('a').forEach(link => {
     const href = link.getAttribute('href') || '';
+
+    if (link.classList.contains('txt-external-link')) {
+      const existingIcon = link.querySelector('.social-icon');
+      if (existingIcon) {
+        existingIcon.remove();
+      }
+      return;
+    }
     
     // Check if link already has an icon
     if (link.querySelector('.social-icon')) {

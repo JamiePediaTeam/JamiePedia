@@ -252,6 +252,67 @@ function motifEscapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+function motifSummarySanitizeHref(rawHref) {
+  if (typeof window.resolveTxtInternalHref === 'function') {
+    return window.resolveTxtInternalHref(rawHref);
+  }
+
+  const source = String(rawHref || '').trim();
+  if (!source) {
+    return '#';
+  }
+
+  if (/^(https?:|mailto:|tel:|#|\/|\.\/|\.\.\/)/i.test(source)) {
+    return source.replace(/"/g, '%22');
+  }
+
+  return '#';
+}
+
+function isExternalMotifSummaryHref(href) {
+  return /^https?:\/\//i.test(String(href || '').trim());
+}
+
+function renderMotifSummaryInline(text) {
+  const codeTokens = [];
+  const literalTokens = [];
+  let html = motifEscapeHtml(String(text || ''));
+
+  html = html.replace(/\\([\\`*_{}\[\]()#+\-.!>])/g, (_match, escapedChar) => {
+    const token = '@@MOTIFLITERAL' + literalTokens.length + '@@';
+    literalTokens.push(escapedChar);
+    return token;
+  });
+
+  html = html.replace(/`([^`]+)`/g, (_, codeText) => {
+    const token = '@@MOTIFCODE' + codeTokens.length + '@@';
+    codeTokens.push('<code>' + codeText + '</code>');
+    return token;
+  });
+
+  html = html
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>');
+
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => {
+    const resolvedHref = motifSummarySanitizeHref(href);
+    const isExternal = isExternalMotifSummaryHref(resolvedHref);
+    const attrs = isExternal
+      ? ' class="txt-external-link" target="_blank" rel="noopener noreferrer"'
+      : '';
+    const glyph = isExternal
+      ? '<span class="txt-external-link-glyph" aria-hidden="true">↗</span>'
+      : '';
+    return '<a href="' + resolvedHref + '"' + attrs + '>' + label + glyph + '</a>';
+  });
+
+  html = html.replace(/@@MOTIFLITERAL(\d+)@@/g, (_match, index) => motifEscapeHtml(literalTokens[Number(index)] || ''));
+  html = html.replace(/@@MOTIFCODE(\d+)@@/g, (_match, index) => codeTokens[Number(index)] || '');
+  return html;
+}
+
 function formatMotifSongTitleHtml(value) {
   const parts = String(value || '')
     .split(/\s*\|\s*/)
@@ -298,8 +359,8 @@ function renderMotifSummaryParagraphs(text) {
 
   return blocks
     .map((block) => {
-      const escapedLines = block.split(/\n/).map((line) => motifEscapeHtml(line.trim()));
-      return '<p>' + tabPrefix + escapedLines.join('<br>' + tabPrefix) + '</p>';
+      const renderedLines = block.split(/\n/).map((line) => renderMotifSummaryInline(line.trim()));
+      return '<p>' + tabPrefix + renderedLines.join('<br>' + tabPrefix) + '</p>';
     })
     .join('');
 }
@@ -346,6 +407,10 @@ async function renderMotifSummary(motifId) {
   if (!summaryText) {
     summaryNode.innerHTML = makeMotifEmptyBoxHtml('summary');
     return;
+  }
+
+  if (typeof window.ensureTxtInternalLinkIndexLoaded === 'function') {
+    await window.ensureTxtInternalLinkIndexLoaded().catch(() => null);
   }
 
   const html = renderMotifSummaryParagraphs(summaryText);
@@ -2643,9 +2708,38 @@ const PlayerStore = {
   volumeInput: null
 };
 
+const JAMIEPEDIA_VOLUME_STORAGE_KEY = 'jamiepedia.playerVolume';
+
+function readPersistedPlayerVolume() {
+  try {
+    const stored = window.localStorage ? window.localStorage.getItem(JAMIEPEDIA_VOLUME_STORAGE_KEY) : null;
+    const parsed = Number(stored);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, Math.min(100, parsed));
+    }
+  } catch (_error) {
+    // Ignore storage access errors (private mode, blocked storage, etc.).
+  }
+
+  return 100;
+}
+
+function persistPlayerVolume(value) {
+  try {
+    if (window.localStorage) {
+      window.localStorage.setItem(JAMIEPEDIA_VOLUME_STORAGE_KEY, String(value));
+    }
+  } catch (_error) {
+    // Ignore storage access errors.
+  }
+}
+
+PlayerStore.volume = readPersistedPlayerVolume();
+
 function setMotifPageVolume(value) {
   const nextVolume = Math.max(0, Math.min(100, Number(value) || 0));
   PlayerStore.volume = nextVolume;
+  persistPlayerVolume(nextVolume);
 
   if (PlayerStore.volumeInput) {
     PlayerStore.volumeInput.value = String(nextVolume);

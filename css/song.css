@@ -131,6 +131,26 @@ html {
   display: block;
 }
 
+.song-closeup-content {
+  width: 100%;
+  margin-top: 0;
+}
+
+.song-closeup-content.active {
+  display: block;
+}
+
+.song-container.song-closeup-mode {
+  display: block;
+  gap: 0;
+  padding: 0;
+}
+
+.song-container.song-closeup-mode .song-closeup-content.closeup-inline-host {
+  max-width: none;
+  margin: 0;
+}
+
 .song-content h1.song-markdown-h1,
 .lyrics-content h1.song-markdown-h1 {
   margin: 0 0 14px 0;
@@ -1007,4 +1027,90 @@ html {
   border: 3px solid var(--theme-color-link_default);
   border-bottom: 0px solid var(--theme-color-transparent_value);
   font-weight: bold;
+}
+
+.version-dropdown {
+  position: relative;
+  display: inline-block;
+  height: 100%;
+  z-index: 80;
+}
+
+.version-dropdown-trigger {
+  font-family: "Nunito", sans-serif;
+  padding: 2px 10px;
+  min-width: 122px;
+  height: 100%;
+  cursor: pointer;
+  font-size: 1em;
+  color: var(--theme-color-brand_frame);
+  background-color: var(--theme-color-background_base);
+  font-weight: 500;
+  border: 3px solid var(--theme-color-brand_frame);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
+  border-radius: 4px 4px 0px 0px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.version-dropdown:hover .version-dropdown-trigger,
+.version-dropdown.open .version-dropdown-trigger {
+  color: var(--theme-color-link_default);
+  border-color: var(--theme-color-link_default);
+}
+
+.version-dropdown-label {
+  line-height: 1.2;
+}
+
+.version-dropdown-chevron {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid currentColor;
+  transition: transform 140ms ease;
+  transform-origin: 50% 35%;
+}
+
+.version-dropdown.open .version-dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+.version-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  min-width: max(100%, 150px);
+  border: 2px solid var(--theme-color-brand_frame);
+  border-radius: 6px;
+  background: var(--theme-color-background_base);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+  z-index: 120;
+  overflow: hidden;
+}
+
+.version-dropdown-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--theme-color-brand_frame);
+  font-family: "Nunito", sans-serif;
+  font-size: 0.9em;
+  font-weight: 500;
+  text-align: left;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.version-dropdown-item:hover {
+  background: var(--theme-color-surface_highlight);
+  color: var(--theme-color-text_base_black);
+}
+
+.version-dropdown-item.active {
+  font-weight: 700;
+  color: var(--theme-color-link_default);
 }

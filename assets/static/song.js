@@ -5,6 +5,11 @@ let versionConfig = {};
 let versionOrder = [];
 
 let songSidebarRowsPromise = null;
+let songHasCloseup = false;
+let songCloseupAvailabilityByVersion = {};
+const songCloseupAvailabilityBySlug = Object.create(null);
+let songCloseupSourceSlugByVersion = {};
+const CLOSEUP_TAB_NAME = 'closeup';
 
 function splitSongDataValues(value) {
   return String(value || '')
@@ -49,6 +54,8 @@ function normalizeCurrentSongPathForRows() {
 function getSongRowPathValue(row) {
   return String((row || {}).page_path || (row || {}).path_id || (row || {}).path || '').trim();
 }
+
+window.getSongRowPathValue = getSongRowPathValue;
 
 function getSongPathPointer(value) {
   const normalized = normalizeSongRowPath(value);
@@ -238,10 +245,10 @@ function buildSongMainColShell(songRows) {
   mainCol.innerHTML = [
     '<div class="song-tabs-container">',
     '  <div class="song-tabs">',
-    '    <button class="song-tab active" onclick="switchTab(\'summary\')">Summary</button>',
-    '    <button class="song-tab" onclick="switchTab(\'lyrics\')">Lyrics</button>',
-    '    <button class="song-tab" onclick="switchTab(\'motifs\')">Connections</button>',
-    '    <button class="song-tab" onclick="switchTab(\'extended\')">Extended Info</button>',
+    '    <button class="song-tab active" onclick="switchTab(\'summary\')" data-song-tab="summary">Summary</button>',
+    '    <button class="song-tab" onclick="switchTab(\'lyrics\')" data-song-tab="lyrics">Lyrics</button>',
+    '    <button class="song-tab" onclick="switchTab(\'motifs\')" data-song-tab="motifs">Connections</button>',
+    '    <button class="song-tab" onclick="switchTab(\'extended\')" data-song-tab="extended">Extended Info</button>',
     '    <div class="tabs-spacer"></div>',
     '  </div>',
     '</div>',
@@ -253,8 +260,491 @@ function buildSongMainColShell(songRows) {
   ].join('\n');
 }
 
+function ensureSongCloseupHostContainers() {
+  const versionScopes = versionOrder && versionOrder.length > 0
+    ? versionOrder.map((name) => getVersionScope(name)).filter(Boolean)
+    : [getVersionScope('original')].filter(Boolean);
+
+  versionScopes.forEach((scope, index) => {
+    if (!scope) {
+      return;
+    }
+
+    const versionName = versionOrder && versionOrder.length > 0 ? versionOrder[index] : 'original';
+    const suffix = !versionName || versionName === 'original' ? '' : ('-' + versionName);
+    if (scope.querySelector('[id="content-closeup' + suffix + '"]')) {
+      return;
+    }
+
+    const closeupContent = document.createElement('div');
+    closeupContent.id = 'content-closeup' + suffix;
+    closeupContent.className = 'song-content song-closeup-content';
+    closeupContent.style.display = 'none';
+    scope.appendChild(closeupContent);
+  });
+}
+
+function getCloseupHostForVersion(versionName) {
+  const suffix = !versionName || versionName === 'original' ? '' : ('-' + versionName);
+  return document.getElementById('content-closeup' + suffix);
+}
+
+function setSongCloseupModeEnabled(enabled) {
+  const activeVersionName = getActiveVersionName();
+  const activeScope = getVersionScope(activeVersionName);
+  if (!activeScope) {
+    return;
+  }
+
+  document.querySelectorAll('.song-container').forEach((scope) => {
+    scope.classList.remove('song-closeup-mode');
+    const parentBodybar = scope.closest('.bodybar');
+    if (parentBodybar) {
+      parentBodybar.classList.remove('song-closeup-body-active');
+    }
+  });
+
+  const leftView = activeScope.querySelector('.song-leftview');
+  const rightView = activeScope.querySelector('.song-rightview');
+  const regularContents = Array.from(activeScope.querySelectorAll('.song-content')).filter((node) => !node.classList.contains('song-closeup-content'));
+  const closeupHost = getCloseupHostForVersion(activeVersionName);
+
+  if (enabled) {
+    activeScope.classList.add('song-closeup-mode');
+    const bodybar = activeScope.closest('.bodybar');
+    if (bodybar) {
+      bodybar.classList.add('song-closeup-body-active');
+    }
+
+    if (leftView) {
+      leftView.style.display = 'none';
+    }
+    if (rightView) {
+      rightView.style.display = 'none';
+    }
+
+    regularContents.forEach((node) => {
+      node.classList.remove('active');
+    });
+
+    if (closeupHost) {
+      closeupHost.style.display = 'block';
+      closeupHost.classList.add('active');
+    }
+    return;
+  }
+
+  if (leftView) {
+    leftView.style.display = '';
+  }
+  if (rightView) {
+    rightView.style.display = '';
+  }
+
+  if (closeupHost) {
+    closeupHost.classList.remove('active');
+    closeupHost.style.display = 'none';
+  }
+}
+
+async function detectSongCloseupAvailability() {
+  const rows = getSongRowsForCurrentPage();
+  const mainRow = rows.find((row) => getSongRowPathValue(row).indexOf('#') === -1) || rows[0] || null;
+  const slug = mainRow
+    ? getSongPathPointer(getSongRowPathValue(mainRow))
+    : getCurrentSongSlug();
+
+  if (!slug) {
+    songHasCloseup = false;
+    return false;
+  }
+
+  if (window.JamiePediaCloseup && typeof window.JamiePediaCloseup.hasCloseupForSlug === 'function') {
+    songHasCloseup = await window.JamiePediaCloseup.hasCloseupForSlug(slug);
+    return songHasCloseup;
+  }
+
+  const path = buildPublicTextPath('close ups/text', slug, 'txt').replace('/songs/', '/');
+  const responseText = await fetchTextFile(path);
+  songHasCloseup = !!responseText;
+  return songHasCloseup;
+}
+
+function getSongSlugForVersion(versionName) {
+  if (versionOrder && versionOrder.length > 0) {
+    const config = versionConfig[versionName] || null;
+    const rowPath = getSongRowPathValue((config || {}).row || null);
+    const normalized = normalizeSongRowPath(rowPath);
+    if (normalized) {
+      const slug = normalized.replace(/^\/music\//i, '').split('#')[0].trim();
+      if (slug) {
+        return slug;
+      }
+    }
+  }
+
+  return getCurrentSongSlug();
+}
+
+function getVersionCloseupAvailability(versionName) {
+  const key = String(versionName || 'original').trim() || 'original';
+  return !!songCloseupAvailabilityByVersion[key];
+}
+
+async function hasCloseupForSlug(slug) {
+  const normalizedSlug = String(slug || '').trim().toLowerCase();
+  if (!normalizedSlug) {
+    return false;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(songCloseupAvailabilityBySlug, normalizedSlug)) {
+    return !!songCloseupAvailabilityBySlug[normalizedSlug];
+  }
+
+  let available = false;
+  if (window.JamiePediaCloseup && typeof window.JamiePediaCloseup.hasCloseupForSlug === 'function') {
+    available = await window.JamiePediaCloseup.hasCloseupForSlug(normalizedSlug);
+  } else {
+    const path = buildPublicTextPath('close ups/text', normalizedSlug, 'txt').replace('/songs/', '/');
+    const responseText = await fetchTextFile(path);
+    available = !!responseText;
+  }
+
+  songCloseupAvailabilityBySlug[normalizedSlug] = !!available;
+  return !!available;
+}
+
+function normalizeCloseupSlugToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\.txt$/i, '')
+    .replace(/[#/]+/g, '-')
+    .replace(/[_\s]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function isCloseupEnabledFlag(value) {
+  const token = String(value || '').trim().toLowerCase();
+  return token === 'true' || token === 'yes' || token === '1';
+}
+
+function isCloseupDisabledFlag(value) {
+  const token = String(value || '').trim().toLowerCase();
+  return token === 'false' || token === 'no' || token === '0' || token === 'none' || token === 'n/a' || token === 'na';
+}
+
+function getVersionRowCloseupRawValue(row) {
+  if (!row || typeof row !== 'object') {
+    return '';
+  }
+
+  return String(
+    row.close_up
+    || row['close up']
+    || row['Close Up']
+    || row.closeup
+    || row['closeup']
+    || ''
+  ).trim();
+}
+
+function getSongIdSlugFromRow(row) {
+  if (!row || typeof row !== 'object') {
+    return '';
+  }
+
+  const rawSongId = String(row.song_id || row['song id'] || row['Song ID'] || '').trim();
+  if (!rawSongId) {
+    return '';
+  }
+
+  return normalizeCloseupSlugToken(rawSongId);
+}
+
+function getCloseupSlugCandidatesForVersion(versionName) {
+  const config = versionConfig[versionName] || versionConfig.original || null;
+  const row = config && config.row ? config.row : null;
+  const pagePath = normalizeSongRowPath(getSongRowPathValue(row));
+  const baseSlug = normalizeCloseupSlugToken(pagePath.replace(/^\/music\//i, '').split('#')[0]);
+  const hashToken = normalizeVersionHashToken((pagePath.split('#')[1] || '').trim());
+  const closeupField = getVersionRowCloseupRawValue(row);
+  const songIdSlug = getSongIdSlugFromRow(row);
+
+  const candidates = [];
+  const addCandidate = (value) => {
+    const token = normalizeCloseupSlugToken(value);
+    if (!token || candidates.includes(token)) {
+      return;
+    }
+    candidates.push(token);
+  };
+
+  if (versionName === 'original') {
+    addCandidate(baseSlug || getCurrentSongSlug());
+    return candidates;
+  }
+
+  // Alternate versions should only expose Close-Up when they define a dedicated
+  // source, or explicitly opt in to using the base song close-up.
+  if (isCloseupDisabledFlag(closeupField)) {
+    return [];
+  }
+
+  if (closeupField) {
+    if (isCloseupEnabledFlag(closeupField)) {
+      addCandidate(baseSlug || getCurrentSongSlug());
+    } else {
+      addCandidate(closeupField);
+    }
+  }
+
+  if (baseSlug && hashToken) {
+    addCandidate(baseSlug + '-' + hashToken);
+  }
+  addCandidate(songIdSlug);
+  return candidates;
+}
+
+async function resolveCloseupSlugForVersion(versionName) {
+  const candidates = getCloseupSlugCandidatesForVersion(versionName);
+  for (const candidate of candidates) {
+    const exists = await hasCloseupForSlug(candidate);
+    if (exists) {
+      return candidate;
+    }
+  }
+
+  return '';
+}
+
+async function detectSongCloseupAvailabilityByVersion() {
+  const nextAvailability = {};
+  const nextSources = {};
+  const names = (versionOrder && versionOrder.length > 0) ? versionOrder : ['original'];
+
+  for (const versionName of names) {
+    const closeupSlug = await resolveCloseupSlugForVersion(versionName);
+    nextSources[versionName] = closeupSlug;
+    nextAvailability[versionName] = !!closeupSlug;
+  }
+
+  songCloseupAvailabilityByVersion = nextAvailability;
+  songCloseupSourceSlugByVersion = nextSources;
+  songHasCloseup = Object.values(nextAvailability).some(Boolean);
+  return songHasCloseup;
+}
+
+async function renderCloseupForSongVersion(versionName) {
+  const host = getCloseupHostForVersion(versionName);
+  if (!host) {
+    return false;
+  }
+
+  const slug = String(songCloseupSourceSlugByVersion[versionName] || '').trim();
+
+  if (!slug || !window.JamiePediaCloseup || typeof window.JamiePediaCloseup.renderIntoContainer !== 'function') {
+    host.innerHTML = makeEmptyBoxHtml('close-up');
+    return false;
+  }
+
+  const renderResult = await window.JamiePediaCloseup.renderIntoContainer(host, slug, {
+    applyTheme: false,
+    setDocumentTitle: false,
+    includeHeader: true,
+    includeBackLink: false,
+    showNotFound: false
+  });
+
+  if (!renderResult || !renderResult.found) {
+    host.innerHTML = makeEmptyBoxHtml('close-up');
+    return false;
+  }
+
+  host.classList.add('closeup-inline-host');
+  return true;
+}
+
+function ensureCloseupTabButton(versionName) {
+  const activeVersionName = String(versionName || getActiveVersionName() || 'original').trim() || 'original';
+  const shouldShow = getVersionCloseupAvailability(activeVersionName);
+  const tabsContainers = Array.from(document.querySelectorAll('.song-tabs'));
+  tabsContainers.forEach((tabsContainer) => {
+    const existing = tabsContainer.querySelector('.song-tab[data-song-tab="closeup"]');
+    if (shouldShow) {
+      if (existing) {
+        return;
+      }
+
+      const closeupTab = document.createElement('button');
+      closeupTab.className = 'song-tab';
+      closeupTab.type = 'button';
+      closeupTab.setAttribute('data-song-tab', 'closeup');
+      closeupTab.setAttribute('onclick', "switchTab('closeup')");
+      closeupTab.textContent = 'Close-Up';
+
+      const spacer = tabsContainer.querySelector('.tabs-spacer');
+      if (spacer) {
+        tabsContainer.insertBefore(closeupTab, spacer);
+      } else {
+        tabsContainer.appendChild(closeupTab);
+      }
+      return;
+    }
+
+    if (existing) {
+      existing.remove();
+    }
+  });
+
+  const activeTab = getActiveMainTabName();
+  if (!shouldShow && activeTab === CLOSEUP_TAB_NAME) {
+    switchTab('motifs');
+  }
+
+  // Keep content tabs grouped on the left of the spacer after runtime changes.
+  reorderSongTabs();
+}
+
+const VERSION_SELECTOR_ALT_DROPDOWN_THRESHOLD = 2;
+
+function closeAllVersionDropdownMenus() {
+  document.querySelectorAll('.version-dropdown').forEach((dropdown) => {
+    dropdown.classList.remove('open');
+    const trigger = dropdown.querySelector('.version-dropdown-trigger');
+    const menu = dropdown.querySelector('.version-dropdown-menu');
+    if (menu) {
+      menu.hidden = true;
+    }
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+function updateVersionDropdownActiveState(versionName) {
+  document.querySelectorAll('.version-dropdown').forEach((dropdown) => {
+    const triggerLabel = dropdown.querySelector('.version-dropdown-label');
+    const items = Array.from(dropdown.querySelectorAll('.version-dropdown-item'));
+    let activeLabel = '';
+
+    items.forEach((item) => {
+      const itemVersionName = String(item.getAttribute('data-version-name') || '').trim();
+      const isActive = itemVersionName === versionName;
+      item.classList.toggle('active', isActive);
+      item.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      if (isActive) {
+        activeLabel = String(item.textContent || '').trim();
+      }
+    });
+
+    if (triggerLabel && activeLabel) {
+      triggerLabel.textContent = activeLabel;
+    }
+  });
+}
+
+function installVersionDropdownGlobalHandlers() {
+  if (window.__songVersionDropdownGlobalHandlersInstalled) {
+    return;
+  }
+
+  window.__songVersionDropdownGlobalHandlersInstalled = true;
+
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target && target.closest && target.closest('.version-dropdown')) {
+      return;
+    }
+    closeAllVersionDropdownMenus();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeAllVersionDropdownMenus();
+    }
+  });
+}
+
+function createVersionDropdown(versionRows) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'version-dropdown';
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'version-dropdown-trigger';
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+
+  const label = document.createElement('span');
+  label.className = 'version-dropdown-label';
+  label.textContent = String((versionRows[0] || {}).tab_name || '').trim() || 'Original';
+
+  const chevron = document.createElement('span');
+  chevron.className = 'version-dropdown-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+
+  trigger.appendChild(label);
+  trigger.appendChild(chevron);
+
+  const menu = document.createElement('div');
+  menu.className = 'version-dropdown-menu';
+  menu.setAttribute('role', 'listbox');
+  menu.hidden = true;
+
+  versionRows.forEach((row, index) => {
+    const versionName = versionOrder[index];
+    if (!versionName) {
+      return;
+    }
+
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'version-dropdown-item' + (index === 0 ? ' active' : '');
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+    item.setAttribute('data-version-name', versionName);
+    item.textContent = String((row || {}).tab_name || '').trim() || versionName;
+    item.addEventListener('click', () => {
+      switchVersion(versionName);
+      closeAllVersionDropdownMenus();
+    });
+
+    menu.appendChild(item);
+  });
+
+  trigger.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const isOpen = wrapper.classList.contains('open');
+    closeAllVersionDropdownMenus();
+    if (!isOpen) {
+      wrapper.classList.add('open');
+      menu.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      return;
+    }
+
+    wrapper.classList.remove('open');
+    menu.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+  });
+
+  wrapper.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+
+  wrapper.appendChild(trigger);
+  wrapper.appendChild(menu);
+  return wrapper;
+}
+
 function renderVersionTabsFromRows(songRows) {
   const versionRows = getVersionRows(songRows);
+  const altCount = Math.max(0, versionRows.length - 1);
+  const shouldUseDropdown = altCount > VERSION_SELECTOR_ALT_DROPDOWN_THRESHOLD;
   const tabsContainers = Array.from(document.querySelectorAll('.song-tabs'));
   if (!tabsContainers.length) {
     return;
@@ -262,6 +752,7 @@ function renderVersionTabsFromRows(songRows) {
 
   tabsContainers.forEach((tabsContainer) => {
     Array.from(tabsContainer.querySelectorAll('.version-tab')).forEach((button) => button.remove());
+    Array.from(tabsContainer.querySelectorAll('.version-dropdown')).forEach((dropdown) => dropdown.remove());
 
     if (versionRows.length <= 1) {
       return;
@@ -269,6 +760,17 @@ function renderVersionTabsFromRows(songRows) {
 
     const spacer = tabsContainer.querySelector('.tabs-spacer');
     const insertBeforeNode = spacer ? spacer.nextSibling : null;
+
+    if (shouldUseDropdown) {
+      const dropdown = createVersionDropdown(versionRows);
+      if (insertBeforeNode) {
+        tabsContainer.insertBefore(dropdown, insertBeforeNode);
+      } else {
+        tabsContainer.appendChild(dropdown);
+      }
+      installVersionDropdownGlobalHandlers();
+      return;
+    }
 
     versionRows.forEach((row, index) => {
       const versionName = versionOrder[index];
@@ -363,6 +865,16 @@ function getHashTokenForVersion(versionName) {
   return candidate || normalizeVersionHashToken(versionName);
 }
 
+function isCloseupSectionHash(value) {
+  const normalized = String(value || '')
+    .trim()
+    .replace(/^#/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+
+  return normalized === 'closeup';
+}
+
 function syncVersionHash(versionName) {
   if (!window.history || typeof window.history.replaceState !== 'function') {
     return;
@@ -412,6 +924,11 @@ function getActiveMainTabName() {
   const activeTab = document.querySelector('.song-tab.active');
   if (!activeTab) {
     return 'motifs';
+  }
+
+  const tabKey = String(activeTab.getAttribute('data-song-tab') || '').trim().toLowerCase();
+  if (tabKey === CLOSEUP_TAB_NAME) {
+    return CLOSEUP_TAB_NAME;
   }
 
   const onClick = String(activeTab.getAttribute('onclick') || '');
@@ -716,6 +1233,8 @@ function switchVersion(versionName, options) {
   document.querySelectorAll('.version-tab').forEach(el => {
     el.classList.remove('active');
   });
+  updateVersionDropdownActiveState(versionName);
+  closeAllVersionDropdownMenus();
   
   // Check if this version exists in config
   if (!versionConfig[versionName]) {
@@ -750,6 +1269,14 @@ function switchVersion(versionName, options) {
   if (targetButton) {
     targetButton.classList.add('active');
   }
+  updateVersionDropdownActiveState(versionName);
+
+  ensureCloseupTabButton(versionName);
+
+  if (getVersionCloseupAvailability(versionName)) {
+    ensureSongCloseupHostContainers();
+    renderCloseupForSongVersion(versionName);
+  }
 
   if (!settings.skipHashUpdate) {
     syncVersionHash(versionName);
@@ -762,8 +1289,22 @@ function switchVersion(versionName, options) {
   refreshSongRowDependentUi();
 }
 
+window.switchVersion = switchVersion;
+
 
 function switchTab(tabName) {
+  const normalizedTabName = String(tabName || '').trim().toLowerCase();
+  const isCloseupTab = normalizedTabName === CLOSEUP_TAB_NAME;
+  const activeVersionName = getActiveVersionName();
+
+  if (isCloseupTab && !getVersionCloseupAvailability(activeVersionName)) {
+    if (isCloseupSectionHash(window.location.hash)) {
+      syncVersionHash(activeVersionName);
+    }
+    switchTab('motifs');
+    return;
+  }
+
   // Hide all content in all versions
   document.querySelectorAll('.song-content').forEach(el => {
     el.classList.remove('active');
@@ -802,7 +1343,7 @@ function switchTab(tabName) {
   }
   
   const contentElement = document.getElementById(contentId);
-  if (contentElement) {
+  if (contentElement && !isCloseupTab) {
     contentElement.classList.add('active');
   }
 
@@ -813,10 +1354,23 @@ function switchTab(tabName) {
   if (tabButton) {
     tabButton.classList.add('active');
   }
-  
+
   // Show/hide lyrics subtabs based on selected tab
   const lyricsSubtabsContainer = document.getElementById(lyricsSubtabsContainerId);
   const songLength = activeVersion ? activeVersion.querySelector('.song-length') : null;
+
+  setSongCloseupModeEnabled(isCloseupTab);
+
+  if (isCloseupTab) {
+    renderCloseupForSongVersion(activeVersionName);
+    if (lyricsSubtabsContainer) {
+      lyricsSubtabsContainer.classList.remove('active');
+    }
+    if (songLength) {
+      songLength.classList.remove('hide-border');
+    }
+    return;
+  }
   
   if (lyricsSubtabsContainer) {
     if (tabName === 'lyrics') {
@@ -832,6 +1386,8 @@ function switchTab(tabName) {
     window.renderSongMotifsSection();
   }
 }
+
+window.switchTab = switchTab;
 
 function reorderSongTabs() {
   document.querySelectorAll('.song-tabs').forEach((tabsContainer) => {
@@ -855,7 +1411,8 @@ function reorderSongTabs() {
     });
 
     const spacer = tabsContainer.querySelector('.tabs-spacer');
-    const orderedTabs = [byName.motifs, byName.summary, byName.lyrics, byName.extended].filter(Boolean);
+    const closeupTab = tabs.find((button) => String(button.getAttribute('data-song-tab') || '').trim().toLowerCase() === CLOSEUP_TAB_NAME);
+    const orderedTabs = [byName.motifs, byName.summary, byName.lyrics, byName.extended, closeupTab].filter(Boolean);
 
     orderedTabs.forEach((button) => {
       tabsContainer.appendChild(button);
@@ -867,6 +1424,10 @@ function reorderSongTabs() {
 
     Array.from(tabsContainer.querySelectorAll('.version-tab')).forEach((button) => {
       tabsContainer.appendChild(button);
+    });
+
+    Array.from(tabsContainer.querySelectorAll('.version-dropdown')).forEach((dropdown) => {
+      tabsContainer.appendChild(dropdown);
     });
   });
 }
@@ -933,6 +1494,8 @@ function switchLyricsTab(lyricsType) {
   }
 }
 
+window.switchLyricsTab = switchLyricsTab;
+
 function removeRawLyricsUi() {
   document.querySelectorAll('.lyrics-subtabs-container').forEach((container) => {
     const rawButtons = Array.from(container.querySelectorAll('.lyrics-subtab')).filter((button) => {
@@ -965,14 +1528,43 @@ function removeRawLyricsUi() {
 // Initialize lyrics subtabs visibility on page load
 function loadScriptOnce(src) {
   return new Promise((resolve) => {
-    const existing = document.querySelector('script[src="' + src + '"]');
+    const targetSrc = String(src || '').trim();
+    if (!targetSrc) {
+      resolve();
+      return;
+    }
+
+    let absoluteTargetSrc = '';
+    try {
+      absoluteTargetSrc = new URL(targetSrc, window.location.href).href;
+    } catch (_error) {
+      absoluteTargetSrc = targetSrc;
+    }
+
+    const existing = Array.from(document.querySelectorAll('script[src]')).find((scriptTag) => {
+      const candidateSrc = String(scriptTag.getAttribute('src') || '').trim();
+      if (!candidateSrc) {
+        return false;
+      }
+
+      if (candidateSrc === targetSrc) {
+        return true;
+      }
+
+      try {
+        return new URL(candidateSrc, window.location.href).href === absoluteTargetSrc;
+      } catch (_error) {
+        return scriptTag.src === absoluteTargetSrc;
+      }
+    });
+
     if (existing) {
       resolve();
       return;
     }
 
     const script = document.createElement('script');
-    script.src = src;
+    script.src = targetSrc;
     script.onload = () => resolve();
     script.onerror = () => resolve();
     document.head.appendChild(script);
@@ -1015,6 +1607,21 @@ function buildVariantSongSlug(baseSlug, variantSuffix) {
     return normalizedBase;
   }
 
+  const altMatch = normalizedSuffix.match(/^alt(\d+)$/);
+  const versionIndex = altMatch ? Number(altMatch[1]) : -1;
+  if (versionIndex >= 0 && Array.isArray(versionOrder) && versionOrder[versionIndex]) {
+    const versionName = versionOrder[versionIndex];
+    const config = versionConfig[versionName] || {};
+    const rowPath = getSongRowPathValue(config.row || null);
+    const normalized = normalizeSongRowPath(rowPath);
+    if (normalized) {
+      const pathIdSlug = normalized.replace(/^\/music\//i, '').split('#')[0].trim();
+      if (pathIdSlug) {
+        return pathIdSlug;
+      }
+    }
+  }
+
   return normalizedBase + normalizedSuffix;
 }
 
@@ -1030,7 +1637,7 @@ function buildLyricsSlugForVariant(baseSlug, variantSuffix) {
     const rowPath = getSongRowPathValue(config.row || null);
     const normalized = normalizeSongRowPath(rowPath);
     if (normalized) {
-      const pathIdSlug = normalized.replace(/^\/music\//i, '');
+      const pathIdSlug = normalized.replace(/^\/music\//i, '').split('#')[0].trim();
       if (pathIdSlug) {
         return pathIdSlug;
       }
@@ -1083,6 +1690,10 @@ function escapeHtml(value) {
 }
 
 function sanitizeMarkdownUrl(url) {
+  if (typeof window.resolveTxtInternalHref === 'function') {
+    return window.resolveTxtInternalHref(url);
+  }
+
   const candidate = String(url || '').trim();
   if (!candidate) {
     return '#';
@@ -1095,19 +1706,25 @@ function sanitizeMarkdownUrl(url) {
   return '#';
 }
 
+function isExternalMarkdownHref(href) {
+  return /^https?:\/\//i.test(String(href || '').trim());
+}
+
 function renderMarkdownInline(text) {
   const codeTokens = [];
+  const literalTokens = [];
   let html = escapeHtml(text);
+
+  html = html.replace(/\\([\\`*_{}\[\]()#+\-.!>])/g, (_, escapedChar) => {
+    const token = '@@LITERALTOKEN' + literalTokens.length + '@@';
+    literalTokens.push(escapedChar);
+    return token;
+  });
 
   html = html.replace(/`([^`]+)`/g, (_, codeText) => {
     const token = '@@CODETOKEN' + codeTokens.length + '@@';
     codeTokens.push('<code>' + codeText + '</code>');
     return token;
-  });
-
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
-    const href = sanitizeMarkdownUrl(url);
-    return '<a href="' + href + '">' + label + '</a>';
   });
 
   html = html
@@ -1116,6 +1733,19 @@ function renderMarkdownInline(text) {
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/_([^_]+)_/g, '<em>$1</em>');
 
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+    const href = sanitizeMarkdownUrl(url);
+    const isExternal = isExternalMarkdownHref(href);
+    const attrs = isExternal
+      ? ' class="txt-external-link" target="_blank" rel="noopener noreferrer"'
+      : '';
+    const glyph = isExternal
+      ? '<span class="txt-external-link-glyph" aria-hidden="true">↗</span>'
+      : '';
+    return '<a href="' + href + '"' + attrs + '>' + label + glyph + '</a>';
+  });
+
+  html = html.replace(/@@LITERALTOKEN(\d+)@@/g, (_, index) => escapeHtml(literalTokens[Number(index)] || ''));
   html = html.replace(/@@CODETOKEN(\d+)@@/g, (_, index) => codeTokens[Number(index)] || '');
   return html;
 }
@@ -1501,6 +2131,10 @@ function loadSongTextContent() {
     return Promise.resolve();
   }
 
+  const linkIndexTask = typeof window.ensureTxtInternalLinkIndexLoaded === 'function'
+    ? window.ensureTxtInternalLinkIndexLoaded().catch(() => null)
+    : Promise.resolve();
+
   const textCache = new Map();
   const fetchScopedText = (folder, slug, extension) => {
     const key = folder + '|' + slug + '|' + extension;
@@ -1511,31 +2145,35 @@ function loadSongTextContent() {
     return textCache.get(key);
   };
 
-  const summaryTasks = Array.from(document.querySelectorAll('[id^="content-summary"]')).map((container) => {
-    const variantSuffix = getContainerVariantSuffix(container.id, 'content-summary');
-    const scopedSlug = buildVariantSongSlug(baseSlug, variantSuffix);
-    return fetchScopedText('summaries', scopedSlug, 'txt').then((summaryText) => {
-      if (!summaryText) {
-        container.innerHTML = makeEmptyBoxHtml('summary');
-        return;
-      }
+  const summaryTasks = linkIndexTask.then(() => {
+    return Array.from(document.querySelectorAll('[id^="content-summary"]')).map((container) => {
+      const variantSuffix = getContainerVariantSuffix(container.id, 'content-summary');
+      const scopedSlug = buildVariantSongSlug(baseSlug, variantSuffix);
+      return fetchScopedText('summaries', scopedSlug, 'txt').then((summaryText) => {
+        if (!summaryText) {
+          container.innerHTML = makeEmptyBoxHtml('summary');
+          return;
+        }
 
-      const html = renderSummaryParagraphs(summaryText);
-      container.innerHTML = html || makeEmptyBoxHtml('summary');
+        const html = renderSummaryParagraphs(summaryText);
+        container.innerHTML = html || makeEmptyBoxHtml('summary');
+      });
     });
   });
 
-  const extendedTasks = Array.from(document.querySelectorAll('[id^="content-extended"]')).map((container) => {
-    const variantSuffix = getContainerVariantSuffix(container.id, 'content-extended');
-    const scopedSlug = buildVariantSongSlug(baseSlug, variantSuffix);
-    return fetchScopedText('extended', scopedSlug, 'txt').then((extendedText) => {
-      if (!extendedText) {
-        container.innerHTML = makeEmptyBoxHtml('extended info');
-        return;
-      }
+  const extendedTasks = linkIndexTask.then(() => {
+    return Array.from(document.querySelectorAll('[id^="content-extended"]')).map((container) => {
+      const variantSuffix = getContainerVariantSuffix(container.id, 'content-extended');
+      const scopedSlug = buildVariantSongSlug(baseSlug, variantSuffix);
+      return fetchScopedText('extended', scopedSlug, 'txt').then((extendedText) => {
+        if (!extendedText) {
+          container.innerHTML = makeEmptyBoxHtml('extended info');
+          return;
+        }
 
-      const html = renderTextParagraphs(extendedText);
-      container.innerHTML = html || makeEmptyBoxHtml('extended info');
+        const html = renderTextParagraphs(extendedText);
+        container.innerHTML = html || makeEmptyBoxHtml('extended info');
+      });
     });
   });
 
@@ -1565,18 +2203,28 @@ function loadSongTextContent() {
     });
   });
 
-  return Promise.all(summaryTasks.concat(extendedTasks, annotatedTasks)).then(() => {
+  return Promise.all([
+    summaryTasks.then((tasks) => Promise.all(tasks)),
+    extendedTasks.then((tasks) => Promise.all(tasks)),
+    Promise.all(annotatedTasks)
+  ]).then(() => {
     initializeReferences();
   });
 }
 
 function initializeSongConnectionsFeature() {
+  if (window.__songConnectionsInitPromise) {
+    return window.__songConnectionsInitPromise;
+  }
+
   const prefix = '../../';
 
-  loadScriptOnce('https://www.youtube.com/iframe_api')
+  window.__songConnectionsInitPromise = loadScriptOnce('https://www.youtube.com/iframe_api')
     .then(() => loadScriptOnce(prefix + 'assets/static/csv-data.js'))
     .then(() => loadScriptOnce(prefix + 'assets/static/song-lyrics.js'))
-    .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js'));
+    .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js?v=20260917a'));
+
+  return window.__songConnectionsInitPromise;
 }
 
 function initializeCoverArtistCredits() {
@@ -1705,11 +2353,16 @@ function getCoverArtist(filename) {
 window.getCoverArtist = getCoverArtist;
 
 function initializeSongPage() {
-  Promise.all([ensureCoverArtistsLoaded(), ensureSongSidebarRowsLoaded()]).finally(() => {
+  Promise.all([ensureCoverArtistsLoaded(), ensureSongSidebarRowsLoaded(), loadScriptOnce('../../assets/static/closeup-page.js?v=20260917c')]).finally(async () => {
     const songRows = getSongRowsForCurrentPage();
     buildSongMainColShell(songRows);
     loadVersionConfig(songRows);
     removeRawLyricsUi();
+
+    await detectSongCloseupAvailabilityByVersion();
+    ensureCloseupTabButton('original');
+    ensureSongCloseupHostContainers();
+
     renderVersionTabsFromRows(songRows);
     reorderSongTabs();
     renderSongPagePresentation();
@@ -1747,17 +2400,27 @@ function initializeSongPage() {
     }
 
     initializeCoverArtistCredits();
-    loadSongTextContent();
-    initializeSongConnectionsFeature();
+    const textLoadTask = loadSongTextContent();
+    const connectionsLoadTask = initializeSongConnectionsFeature();
+    await Promise.all([textLoadTask, connectionsLoadTask]);
 
-    if (versionOrder && versionOrder.length > 0) {
-      window.addEventListener('hashchange', () => {
+    if (isCloseupSectionHash(window.location.hash)) {
+      switchTab(CLOSEUP_TAB_NAME);
+    }
+
+    window.addEventListener('hashchange', () => {
+      if (isCloseupSectionHash(window.location.hash)) {
+        switchTab(CLOSEUP_TAB_NAME);
+        return;
+      }
+
+      if (versionOrder && versionOrder.length > 0) {
         const versionName = getCurrentHashVersionName() || 'original';
         if (versionConfig[versionName]) {
           switchVersion(versionName, { skipHashUpdate: true });
         }
-      });
-    }
+      }
+    });
   });
 }
 

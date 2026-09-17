@@ -405,6 +405,25 @@ function isKnownCloseupRouteRequest(requestPath) {
   return getKnownCloseupRoutes().has(normalized);
 }
 
+function getSongSectionHrefFromCloseupRoute(requestPath) {
+  const normalized = normalizeCloseupRoutePath(requestPath);
+  if (!normalized) {
+    return '';
+  }
+
+  const match = normalized.match(/^\/music\/([^/]+)\/close-up$/i);
+  if (!match) {
+    return '';
+  }
+
+  const slug = String(match[1] || '').trim().toLowerCase();
+  if (!slug) {
+    return '';
+  }
+
+  return '/music/' + slug + '#close-up';
+}
+
 function detectContentType(filePath) {
   if (filePath.endsWith('.css')) return 'text/css';
   if (filePath.endsWith('.js')) return 'application/javascript';
@@ -580,17 +599,16 @@ const server = http.createServer((req, res) => {
       }
 
       if (!rawRouteRequested && isKnownCloseupRouteRequest(requestPath)) {
-        fs.readFile(CLOSEUP_SHELL_PATH, (shellErr, shellContent) => {
-          if (shellErr) {
-            console.error(`Error reading ${CLOSEUP_SHELL_PATH}:`, shellErr.message);
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('500 - Close-up shell missing', 'utf-8');
-            return;
-          }
+        const redirectHref = getSongSectionHrefFromCloseupRoute(requestPath);
+        if (redirectHref) {
+          res.writeHead(302, { Location: redirectHref });
+          res.end();
+          return;
+        }
 
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end(shellContent, 'utf-8');
-        });
+        // Safety fallback if route parsing fails unexpectedly.
+        res.writeHead(302, { Location: '/music' });
+        res.end();
         return;
       }
 

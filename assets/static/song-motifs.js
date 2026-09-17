@@ -240,6 +240,32 @@ function songMotifsResolveSongSlugs() {
   return candidates;
 }
 
+const JAMIEPEDIA_VOLUME_STORAGE_KEY = 'jamiepedia.playerVolume';
+
+function readPersistedPlayerVolume() {
+  try {
+    const stored = window.localStorage ? window.localStorage.getItem(JAMIEPEDIA_VOLUME_STORAGE_KEY) : null;
+    const parsed = Number(stored);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, Math.min(100, parsed));
+    }
+  } catch (_error) {
+    // Ignore storage access errors (private mode, blocked storage, etc.).
+  }
+
+  return 100;
+}
+
+function persistPlayerVolume(value) {
+  try {
+    if (window.localStorage) {
+      window.localStorage.setItem(JAMIEPEDIA_VOLUME_STORAGE_KEY, String(value));
+    }
+  } catch (_error) {
+    // Ignore storage access errors.
+  }
+}
+
 function getSongMotifsState() {
   if (!window.__songMotifsState) {
     window.__songMotifsState = {
@@ -254,7 +280,7 @@ function getSongMotifsState() {
       mainTrack: null,
       playButton: null,
       declaredDuration: 0,
-      volume: 100,
+      volume: readPersistedPlayerVolume(),
       volumeInput: null,
       karaokeEntries: [],
       lyricalRefs: [],
@@ -659,6 +685,7 @@ function setSongMotifsVolume(value) {
   const state = getSongMotifsState();
   const nextVolume = Math.max(0, Math.min(100, Number(value) || 0));
   state.volume = nextVolume;
+  persistPlayerVolume(nextVolume);
 
   if (state.volumeInput) {
     state.volumeInput.value = String(nextVolume);
