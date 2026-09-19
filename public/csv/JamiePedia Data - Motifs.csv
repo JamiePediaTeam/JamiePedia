@@ -18,10 +18,17 @@ On Fire,,on-fire,,FALSE,Motif,TRUE,,FFFFFF
 Jijo,,jijo,,FALSE,Motif,TRUE,,FFFFFF
 Decree,,decree,,FALSE,Motif,TRUE,,FFFFFF
 When Spring Comes,,when-spring-comes,../public/images/cover-art/wscrr.png,FALSE,Motif,TRUE,,FFFFFF
-Jerma Woo,,jerma-woo,../public/images/motif-art/jerma.png,FALSE,Sample,TRUE,,FFFFFF
+jermawoo,,jerma-woo,../public/images/motif-art/jerma.png,FALSE,Sample,TRUE,,FFFFFF
 Say it Ain't So,,say-it-aint-so,../public/images/motif-art/weezer.png,FALSE,Lyrical,FALSE,https://en.wikipedia.org/wiki/Weezer_(Blue_Album),00ACE6
-Anew Again,anew-again,anew-again,../public/images/cover-art/aa.png,FALSE,Lyrical,FALSE,,9EC7CD
+Anew Again,anew-again,anew-again,../public/images/cover-art/aa.png,FALSE,Lyrical,TRUE,,9EC7CD
 Fantasize,,fantasize,,FALSE,Motif,TRUE,,FA4333
 Honor Majesty,,honor-majesty,,FALSE,Motif,TRUE,,E31C2C
-"My Darlling, My Companion",,my-darling-my-companion,,FALSE,Motif,FALSE,,FFFFFF
+"My Darling, My Companion",,my-darling-my-companion,,FALSE,Motif,FALSE,,FFFFFF
 Destiny,destiny,destiny,../public/images/cover-art/destiny.jpg,TRUE,Motif,TRUE,,EB9139
+AURogerBeep,,aurogerbeep,,FALSE,Sample,TRUE,,FFFFFF
+Never Meant to Know,,never-meant-to-know,,FALSE,Lyrical,FALSE,https://www.youtube.com/watch?v=IawfoCuBV3c,FFFFFF
+Beck and Call,,beck-and-call,,FALSE,Lyrical,TRUE,,FFFFFF
+All I Want To Do,,want-to-do,,FALSE,Lyrical,TRUE,,FFFFFF
+All the Little Nothings,,little-nothings,,FALSE,Lyrical,TRUE,,FFFFFF
+Rainy Day,,rainy-day,,FALSE,Lyrical,TRUE,,778899
+Keep a Bullet,,keep-a-bullet,,FALSE,Lyrical,TRUE,,71dab1

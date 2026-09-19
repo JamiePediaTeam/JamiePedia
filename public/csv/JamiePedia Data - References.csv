@@ -1,11 +1,11 @@
 Song ID,Motif ID,Start Time,End Time,Definition,Type,Lyrics
-AGGRANDICIZE,constant-companions,3:24,3:28,FALSE,rhythmic,
+AGGRANDICIZE,constant-companions,3:25,3:28,FALSE,rhythmic,
 BIRDBRAIN,constant-companions,1:29,1:37,FALSE,rhythmic,
 BREEZE_BLOWS,constant-companions,1:37,1:43,FALSE,rhythmic,
 BREEZE_BLOWS,constant-companions,1:43,1:48,FALSE,rhythmic,
 CADMIUM_COLORS,kalia-vibte,1:39,1:44.7,FALSE,rhythmic,
 CADMIUM_COLORS,paisley-pudge-a,2:14,2:21,FALSE,rhythmic,
-CADMIUM_COLORS,constant-companions,2:23,2:28.5,FALSE,rhythmic,
+CADMIUM_COLORS,constant-companions,2:23.5,2:28.5,FALSE,rhythmic,
 CADMIUM_COLORS,paisley-pudge-a,3:55,3:57.5,FALSE,rhythmic,
 CADMIUM_COLORS,kalia-vibte,4:20,4:25.9,FALSE,rhythmic,
 CADMIUM_COLORS,autumn-every-day,4:24,4:26.8,FALSE,rhythmic,
@@ -95,12 +95,12 @@ DANCE_DELIGHTFUL,constant-companions,2:44,2:50,FALSE,rhythmic,
 DANCE_DELIGHTFUL,gummyworm-a,3:33,3:38,FALSE,rhythmic,
 DANCE_DELIGHTFUL,let-the-bass-go,0:24.5,0:24.5,FALSE,sample,
 DESTINY,destiny,3:30,3:45,FALSE,lyrical,Maybe you could stay here just a little longer And make the time pass slower Maybe you could make this last forever And you could be my lover
-DYAD,constant-companions,0:56,1:01.5,TRUE,rhythmic,
-DYAD,constant-companions,1:42,1:47,FALSE,rhythmic,
-DYAD,constant-companions,2:33,2:37,FALSE,rhythmic,
-DYAD,constant-companions,2:37,2:39.8,FALSE,rhythmic,
-DYAD,constant-companions,1:01.5,1:03,FALSE,rhythmic,
+DYAD,constant-companions,0:56.7,1:03,TRUE,rhythmic,
 DYAD,constant-companions,1:06.7,1:11,FALSE,rhythmic,
+DYAD,constant-companions,1:42,1:47,FALSE,rhythmic,
+DYAD,constant-companions,2:32.8,2:39.8,FALSE,rhythmic,
+DYAD,constant-companions,2:42.3,2:49.8,FALSE,rhythmic,
+,,,,,,
 GUMMYWORM,gummyworm-b,0:20,0:31,TRUE,rhythmic,
 GUMMYWORM,gummyworm-b,0:33,0:43,FALSE,rhythmic,
 GUMMYWORM,gummyworm-a,2:02,2:14,TRUE,rhythmic,
@@ -110,21 +110,21 @@ GUMMYWORM,gummyworm-a,3:51,4:03,FALSE,rhythmic,
 GUMMYWORM,gummyworm-b,4:05,4:15,FALSE,rhythmic,
 GUMMYWORM,gummyworm-b,4:17.1,4:29.10,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,0:28,0:30.8,FALSE,rhythmic,
-I_WISH_THAT_I_COULD_FALL,constant-companions,0:38,0:41,FALSE,rhythmic,
+I_WISH_THAT_I_COULD_FALL,constant-companions,0:38.2,0:41,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,0:41,0:45.3,FALSE,rhythmic,
-I_WISH_THAT_I_COULD_FALL,kalia-vibte,1:28,1:35,FALSE,rhythmic,
+I_WISH_THAT_I_COULD_FALL,kalia-vibte,1:28.6,1:35,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,1:52,1:55.4,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,2:16,2:19.4,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,2:23,2:29,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,where-hearts-thaw,2:30,2:58,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,where-hearts-thaw,3:12,3:37,FALSE,rhythmic,
-I_WISH_THAT_I_COULD_FALL,kalia-vibte,3:28,3:36,FALSE,rhythmic,
+I_WISH_THAT_I_COULD_FALL,kalia-vibte,3:28.3,3:36,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,3:28,3:31.4,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,3:35,3:38.5,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,patterns-of-clouds,3:39,3:50,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,erri-nollau,3:39,3:47,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,where-hearts-thaw,3:53,4:21,FALSE,rhythmic,
-I_WISH_THAT_I_COULD_FALL,constant-companions,0:17.3,0:21,FALSE,rhythmic,
+I_WISH_THAT_I_COULD_FALL,constant-companions,0:17.6,0:21,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,0:45.3,0:51,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,erri-nollau,1:25.3,1:35.6,FALSE,rhythmic,
 I_WISH_THAT_I_COULD_FALL,where-hearts-thaw,1:25.3,2:24,FALSE,rhythmic,
@@ -158,24 +158,24 @@ MY_DARLING_MY_COMPANION,destiny,4:10,4:24,FALSE,lyrical,Maybe you could stay her
 NOT_QUITE_THERE,gummyworm-a,1:33,1:43,FALSE,rhythmic,
 NOT_QUITE_THERE,gummyworm-b,2:03,2:06.5,FALSE,rhythmic,
 NOT_QUITE_THERE,GUMMYWORM,2:04,2:06.5,FALSE,lyrical,"(Oh gummyworm, gotta make it hurt)"
-NOT_QUITE_THERE,kalia-vibte,2:11,2:16,FALSE,rhythmic,
+NOT_QUITE_THERE,kalia-vibte,2:12,2:16,FALSE,rhythmic,
 NOT_QUITE_THERE,gummyworm-a,3:15,3:26,FALSE,rhythmic,
 NOT_QUITE_THERE,gummyworm-a,3:26,3:42,FALSE,rhythmic,
-NOT_QUITE_THERE,constant-companions,4:16,4:23,FALSE,rhythmic,
+NOT_QUITE_THERE,constant-companions,4:17,4:24,FALSE,rhythmic,
 OBJECT_OF_AFFECTION,pp-alliteration,0:50,0:52,FALSE,lyrical,"Perfect little packages,"
 OBJECT_OF_AFFECTION,jya,1:02,1:02,FALSE,sample,
 OBJECT_OF_AFFECTION,HOLD_ME_TIGHTLY,1:09,1:11,FALSE,lyrical,hold me tight
-OBJECT_OF_AFFECTION,constant-companions,1:32,1:41,FALSE,rhythmic,
+OBJECT_OF_AFFECTION,constant-companions,1:33.3,1:41.6,FALSE,rhythmic,
 OBJECT_OF_AFFECTION,BALLROOM,1:48,1:50,FALSE,lyrical,(Welcome to the fiction)
 OBJECT_OF_AFFECTION,pp-alliteration,2:19,2:21,FALSE,lyrical,"Perfect little packages,"
 OBJECT_OF_AFFECTION,jya,2:31,2:31,FALSE,sample,
 OBJECT_OF_AFFECTION,jerma-woo,2:36,2:36,FALSE,sample,
 OBJECT_OF_AFFECTION,HOLD_ME_TIGHTLY,2:38,2:40,FALSE,lyrical,hold me tight
 OBJECT_OF_AFFECTION,honor-majesty,2:52,2:57,FALSE,rhythmic,
-OBJECT_OF_AFFECTION,HONOR_MAJESTY,2:56,3:01,FALSE,lyrical,"(I swear on my life, I'll make it worth the while)(Never anything less than free!)"
+OBJECT_OF_AFFECTION,HONOR_MAJESTY,2:56,3:00.7,FALSE,lyrical,"I swear on my life, I'll make it worth the while | Never anything less than free!"
 OBJECT_OF_AFFECTION,honor-majesty,3:00,3:06,FALSE,rhythmic,
 OBJECT_OF_AFFECTION,say-it-aint-so,3:01,3:05,FALSE,lyrical,
-OBJECT_OF_AFFECTION,constant-companions,3:10,3:24,FALSE,rhythmic,
+OBJECT_OF_AFFECTION,constant-companions,3:11,3:24,FALSE,rhythmic,
 OBJECT_OF_AFFECTION,anew-again,3:20,3:23,FALSE,lyrical,born anew
 OBJECT_OF_AFFECTION,pp-alliteration,3:23,3:25,FALSE,lyrical,Perfect little packages
 OBJECT_OF_AFFECTION,BALLROOM,3:31,3:31,FALSE,lyrical,fiction
@@ -252,3 +252,40 @@ WHERE_HEARTS_THAW,kalia-vibte,1:42,1:54.1,FALSE,rhythmic,
 WHERE_HEARTS_THAW,where-hearts-thaw,0:04.8,1:29.1,FALSE,rhythmic,
 WHERE_HEARTS_THAW,kalia-vibte,1:12.1,1:24.2,FALSE,rhythmic,
 WHERE_HEARTS_THAW,kalia-vibte,1:28.3,1:40.1,FALSE,rhythmic,
+,,,,,,
+DYAD,constant-companions,0:56.7,1:03,TRUE,lyrical,"Baby, do you know what you wanna hear? | 'Cause you can say the word, make it all so clear | Or you can sit around, watch it disappear"
+DYAD,constant-companions,1:06.7,1:11,FALSE,lyrical,"But you don't even know what you wanna say | It only takes an instant to slip away | But if you grab a hold, make a grand escape"
+DYAD,constant-companions,1:42,1:47,FALSE,lyrical,"Baby, do you know what you wanna hear? | 'Cause you can say the word, make it all so clear "
+DYAD,constant-companions,2:32.8,2:39.8,FALSE,lyrical,"Baby, do you know what you wanna hear? | 'Cause you can say the word, make it all so clear | Or you can sit around, watch it disappear"
+DYAD,constant-companions,2:42.3,2:49.8,FALSE,lyrical,"But you don't even know what you wanna say | You'll wait until your life starts to slip away | But if you grab a hold, let the message play"
+DYAD,A_REPETITION,0:30.4,0:31.2,FALSE,lyrical,a repetition
+DYAD,never-meant-to-know,3:23.4,3:27,FALSE,lyrical,break and fall away | To order from the disarray
+DYAD,GRAND_RESTORE,3:36.5,3:37.2,FALSE,lyrical,grand restore
+I_WISH_THAT_I_COULD_FALL,HOLD_ME_TIGHTLY,2:17.9,2:19,FALSE,lyrical,hold me tight
+I_WISH_THAT_I_COULD_FALL,beck-and-call,0:03,0:05,TRUE,lyrical,at your beck and call
+I_WISH_THAT_I_COULD_FALL,want-to-do,0:41.8,0:45,TRUE,lyrical,All I wanna do is to do you right
+I_WISH_THAT_I_COULD_FALL,want-to-do,1:55.4,1:58.8,FALSE,lyrical,All I wanna do is to do you right
+I_WISH_THAT_I_COULD_FALL,want-to-do,2:19.55,2:22,FALSE,lyrical,All I wanna do is to do you right
+I_WISH_THAT_I_COULD_FALL,want-to-do,3:34.9,3:38.4,FALSE,lyrical,All I wanna do is to do you right
+CADMIUM_COLORS,little-nothings,0:32,0:34,FALSE,lyrical,All the little nothings
+CADMIUM_COLORS,constant-companions,2:23.5,2:28.5,FALSE,lyrical,"Baby, do you know what it's like to die | To see the sparkle fade from inside your eye"
+CADMIUM_COLORS,constant-companions,3:57.5,4:03.7,FALSE,lyrical,"Baby, do you know what you wanna hear | 'Cause you can say the word, make it oh so clear"
+CADMIUM_COLORS,rainy-day,4:16.3,4:25.4,FALSE,lyrical,I kept a bullet in the chamber for a rainy day | But what's the point in planning for it anyway | I've got too many colors for a shade of grey
+CLOUDDROP,rainy-day,5:30.5,5:41,FALSE,lyrical,You've got far too many colors for some hopeless shade of grey | Where the clouds that blot the sun out never seem to overstay
+MANIFESTO,rainy-day,2:24.5,2:32.5,FALSE,lyrical,But what's the point in planning anyways? | A thousand colors in a shade of grey | Manifesto for a rainy day
+CADMIUM_COLORS,AUTUMN_EVERY_DAY,4:27,4:29.7,FALSE,lyrical,autumn every <single> day
+BREEZE_BLOWS,NOT_QUITE_THERE,0:42,0:44,FALSE,lyrical,not quite there
+AGGRANDICIZE,DESTINY,2:15.6,2:16,FALSE,lyrical,destiny
+AGGRANDICIZE,destiny,2:14.9,2:16.8,FALSE,rhythmic,
+AGGRANDICIZE,paisley-pudge-b,3:38,3:42,FALSE,rhythmic,
+LIAISON,keep-a-bullet,2:22,2:24.8,FALSE,lyrical,I keep a bullet with your name inside my zone
+OBJECT_OF_AFFECTION,constant-companions,1:33.3,1:41.6,FALSE,lyrical,They don't even know what they wanna hear | They only know the torch and the warmth of fear
+OBJECT_OF_AFFECTION,constant-companions,3:11,3:13.7,FALSE,lyrical,They don't even know
+MACHINE_LOVE,beck-and-call,1:12,1:12.9,FALSE,lyrical,at your beck and call
+MACHINE_LOVE,eared-robot,1:05.9,1:10,FALSE,lyrical,恋をして ふられ また 捨てられて
+MACHINE_LOVE,eared-robot,2:17,2:21.5,FALSE,lyrical,泣きたくなっても それでも かき集め
+MACHINE_LOVE,eared-robot,2:43.3,2:44.8,FALSE,lyrical,恋をして
+MACHINE_LOVE,eared-robot,3:18.9,3:20,FALSE,lyrical,恋をして
+MACHINE_LOVE,eared-robot,3:21.7,3:23.7,FALSE,lyrical,恋をして
+MACHINE_LOVE,eared-robot,3:24.3,3:29,FALSE,lyrical,その過去を 捨てて ここまでおいで
+BIRDBRAIN,WHEN_SPRING_COMES,2:24.7,2:34.9,FALSE,lyrical,Is it all for a show? | In the golden hour you seem to know no fear | Is it really true?
