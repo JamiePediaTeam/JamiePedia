@@ -25,11 +25,10 @@ function timeToSeconds(value) {
 }
 
 function formatTime(seconds) {
-  const totalMs = Math.max(0, Number(seconds) || 0) * 1000;
-  const mins = Math.floor(totalMs / 60000);
-  const secs = Math.floor((totalMs % 60000) / 1000);
-  const hundredths = Math.floor((totalMs % 1000) / 10);
-  return mins + ':' + String(secs).padStart(2, '0') + '.' + String(hundredths).padStart(2, '0');
+  const safe = Math.max(0, Math.floor(Number(seconds) || 0));
+  const mins = Math.floor(safe / 60);
+  const secs = safe % 60;
+  return mins + ':' + String(secs).padStart(2, '0');
 }
 
 function motifTranscriptUnique(values) {
@@ -2868,7 +2867,7 @@ function buildTimelineRow(song, motif, index, refs, options = {}) {
   trackArea.appendChild(labels);
 
   const currentLabel = document.createElement('span');
-  currentLabel.textContent = '0:00.00';
+  currentLabel.textContent = '0:00';
   labels.appendChild(currentLabel);
 
   const durationLabel = document.createElement('span');
