@@ -31,6 +31,14 @@ function formatTime(seconds) {
   return mins + ':' + String(secs).padStart(2, '0');
 }
 
+function formatPlaybackTime(seconds) {
+  const totalMs = Math.max(0, Number(seconds) || 0) * 1000;
+  const mins = Math.floor(totalMs / 60000);
+  const secs = Math.floor((totalMs % 60000) / 1000);
+  const hundredths = Math.floor((totalMs % 1000) / 10);
+  return mins + ':' + String(secs).padStart(2, '0') + '.' + String(hundredths).padStart(2, '0');
+}
+
 function motifTranscriptUnique(values) {
   const seen = new Set();
   const list = [];
@@ -2813,11 +2821,11 @@ function updateProgress(row) {
   const percent = (current / duration) * 100;
 
   row.progress.style.width = percent + '%';
-  row.currentLabel.textContent = formatTime(current);
+  row.currentLabel.textContent = formatPlaybackTime(current);
 
   const hasMeasuredRuntime = Number.isFinite(liveDuration) && liveDuration > 0
     && (!Number.isInteger(liveDuration) || currentRaw > 0 || playerState === 1);
-  row.durationLabel.textContent = hasMeasuredRuntime ? formatTime(row.duration) : '';
+  row.durationLabel.textContent = hasMeasuredRuntime ? formatPlaybackTime(row.duration) : '';
 }
 
 function seekToPercent(row, percent) {
@@ -2867,7 +2875,7 @@ function buildTimelineRow(song, motif, index, refs, options = {}) {
   trackArea.appendChild(labels);
 
   const currentLabel = document.createElement('span');
-  currentLabel.textContent = '0:00';
+  currentLabel.textContent = '0:00.00';
   labels.appendChild(currentLabel);
 
   const durationLabel = document.createElement('span');
@@ -2992,15 +3000,39 @@ function renderSegments(rowState) {
 
 function startTimer(rowState) {
   if (rowState.timer) {
-    clearInterval(rowState.timer);
+    if (typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(rowState.timer);
+    } else {
+      clearInterval(rowState.timer);
+    }
+    rowState.timer = null;
   }
 
-  rowState.timer = setInterval(() => updateProgress(rowState), 120);
+  const tick = () => {
+    if (!rowState.player || typeof rowState.player.getPlayerState !== 'function') {
+      rowState.timer = null;
+      return;
+    }
+
+    if (rowState.player.getPlayerState() !== 1) {
+      rowState.timer = null;
+      return;
+    }
+
+    updateProgress(rowState);
+    rowState.timer = requestAnimationFrame(tick);
+  };
+
+  rowState.timer = requestAnimationFrame(tick);
 }
 
 function stopTimer(rowState) {
   if (rowState.timer) {
-    clearInterval(rowState.timer);
+    if (typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(rowState.timer);
+    } else {
+      clearInterval(rowState.timer);
+    }
     rowState.timer = null;
   }
 }
@@ -3042,7 +3074,7 @@ function createYouTubePlayers() {
             rowState.duration = fallback;
           }
 
-          rowState.durationLabel.textContent = hasMeasuredRuntime && rowState.duration > 0 ? formatTime(rowState.duration) : '';
+          rowState.durationLabel.textContent = hasMeasuredRuntime && rowState.duration > 0 ? formatPlaybackTime(rowState.duration) : '';
           renderSegments(rowState);
         },
         onStateChange: (event) => {
