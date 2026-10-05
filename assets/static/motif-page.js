@@ -25,10 +25,11 @@ function timeToSeconds(value) {
 }
 
 function formatTime(seconds) {
-  const safe = Math.max(0, Math.floor(Number(seconds) || 0));
-  const mins = Math.floor(safe / 60);
-  const secs = safe % 60;
-  return mins + ':' + String(secs).padStart(2, '0');
+  const totalMs = Math.max(0, Number(seconds) || 0) * 1000;
+  const mins = Math.floor(totalMs / 60000);
+  const secs = Math.floor((totalMs % 60000) / 1000);
+  const hundredths = Math.floor((totalMs % 1000) / 10);
+  return mins + ':' + String(secs).padStart(2, '0') + '.' + String(hundredths).padStart(2, '0');
 }
 
 function motifTranscriptUnique(values) {
@@ -2797,12 +2798,27 @@ function updateProgress(row) {
     return;
   }
 
+  const liveDuration = Number(row.player.getDuration()) || 0;
+  const currentRaw = row.player.getCurrentTime() || 0;
+  const playerState = typeof row.player.getPlayerState === 'function' ? row.player.getPlayerState() : -1;
+
+  if (Number.isFinite(liveDuration) && liveDuration > 0) {
+    const hasPreciseMeasuredDuration = !Number.isInteger(liveDuration) || currentRaw > 0 || playerState === 1;
+    if (hasPreciseMeasuredDuration) {
+      row.duration = liveDuration;
+    }
+  }
+
   const duration = row.duration > 0 ? row.duration : 1;
-  const current = Math.min(duration, Math.max(0, row.player.getCurrentTime() || 0));
+  const current = Math.min(duration, Math.max(0, currentRaw));
   const percent = (current / duration) * 100;
 
   row.progress.style.width = percent + '%';
   row.currentLabel.textContent = formatTime(current);
+
+  const hasMeasuredRuntime = Number.isFinite(liveDuration) && liveDuration > 0
+    && (!Number.isInteger(liveDuration) || currentRaw > 0 || playerState === 1);
+  row.durationLabel.textContent = hasMeasuredRuntime ? formatTime(row.duration) : '';
 }
 
 function seekToPercent(row, percent) {
@@ -2852,11 +2868,11 @@ function buildTimelineRow(song, motif, index, refs, options = {}) {
   trackArea.appendChild(labels);
 
   const currentLabel = document.createElement('span');
-  currentLabel.textContent = '0:00';
+  currentLabel.textContent = '0:00.00';
   labels.appendChild(currentLabel);
 
   const durationLabel = document.createElement('span');
-  durationLabel.textContent = '0:00';
+  durationLabel.textContent = '';
   labels.appendChild(durationLabel);
 
   const mainTrack = document.createElement('div');
@@ -2900,7 +2916,7 @@ function buildTimelineRow(song, motif, index, refs, options = {}) {
     showVariationBadges: !!options.showVariationBadges
   };
 
-  rowState.durationLabel.textContent = formatTime(rowState.duration);
+  rowState.durationLabel.textContent = '';
   renderSegments(rowState);
 
   playButton.addEventListener('click', () => {
@@ -3012,10 +3028,22 @@ function createYouTubePlayers() {
           if (typeof event.target.setVolume === 'function') {
             event.target.setVolume(PlayerStore.volume);
           }
-          const ytDuration = Number(event.target.getDuration()) || 0;
+
+          const player = event.target;
+          const ytDuration = Number(player.getDuration()) || 0;
           const fallback = rowState.refs.reduce((max, ref) => Math.max(max, ref.endTime), 0);
-          rowState.duration = Math.max(ytDuration, fallback);
-          rowState.durationLabel.textContent = formatTime(rowState.duration);
+          const playerState = typeof player.getPlayerState === 'function' ? player.getPlayerState() : -1;
+          const currentTime = Number(player.getCurrentTime()) || 0;
+          const hasMeasuredRuntime = Number.isFinite(ytDuration) && ytDuration > 0
+            && (!Number.isInteger(ytDuration) || currentTime > 0 || playerState === 1);
+
+          if (Number.isFinite(ytDuration) && ytDuration > 0) {
+            rowState.duration = ytDuration;
+          } else if (fallback > 0) {
+            rowState.duration = fallback;
+          }
+
+          rowState.durationLabel.textContent = hasMeasuredRuntime && rowState.duration > 0 ? formatTime(rowState.duration) : '';
           renderSegments(rowState);
         },
         onStateChange: (event) => {

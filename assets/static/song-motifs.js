@@ -72,7 +72,7 @@ function songMotifsReadDeclaredDuration() {
   };
 
   const findTimeInText = (text) => {
-    const match = String(text || '').match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
+    const match = String(text || '').match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?)/);
     return match ? songMotifTimeToSeconds(match[1]) : 0;
   };
 
@@ -281,6 +281,8 @@ function getSongMotifsState() {
       mainTrack: null,
       playButton: null,
       declaredDuration: 0,
+      karaokeDuration: 0,
+      youtubeDuration: 0,
       volume: readPersistedPlayerVolume(),
       volumeInput: null,
       karaokeEntries: [],
@@ -650,10 +652,70 @@ function songMotifsUpdateKaraoke(currentTime) {
   }, 500);
 }
 
+function songMotifsHasMeasuredPlaybackDuration() {
+  const state = getSongMotifsState();
+  const measured = Number(state.youtubeDuration) || 0;
+  if (!Number.isFinite(measured) || measured <= 0) {
+    return false;
+  }
+
+  if (!Number.isInteger(measured)) {
+    return true;
+  }
+
+  const player = state.player;
+  const currentTime = player && typeof player.getCurrentTime === 'function' ? Number(player.getCurrentTime()) || 0 : 0;
+  const playerState = player && typeof player.getPlayerState === 'function' ? player.getPlayerState() : -1;
+  return currentTime > 0 || playerState === 1;
+}
+
+function songMotifsResolvePlaybackDuration() {
+  const state = getSongMotifsState();
+
+  if (state.player && typeof state.player.getDuration === 'function') {
+    const liveDuration = Number(state.player.getDuration()) || 0;
+    if (Number.isFinite(liveDuration) && liveDuration > 0) {
+      const hasPreciseStoredDuration = Number.isFinite(Number(state.youtubeDuration))
+        && Number(state.youtubeDuration) > 0
+        && !Number.isInteger(Number(state.youtubeDuration));
+
+      if (hasPreciseStoredDuration) {
+        state.duration = Number(state.youtubeDuration);
+        return Number(state.youtubeDuration);
+      }
+
+      state.youtubeDuration = liveDuration;
+      return liveDuration;
+    }
+  }
+
+  if (Number.isFinite(Number(state.youtubeDuration)) && Number(state.youtubeDuration) > 0) {
+    return Number(state.youtubeDuration);
+  }
+
+  if (Number.isFinite(Number(state.karaokeDuration)) && Number(state.karaokeDuration) > 0) {
+    return Number(state.karaokeDuration);
+  }
+
+  if (Number.isFinite(Number(state.declaredDuration)) && Number(state.declaredDuration) > 0) {
+    return Number(state.declaredDuration);
+  }
+
+  if (Number.isFinite(Number(state.duration)) && Number(state.duration) > 0) {
+    return Number(state.duration);
+  }
+
+  return 0;
+}
+
 function songMotifsApplyKaraokeEntries(entries) {
   const state = getSongMotifsState();
   if (!Array.isArray(entries)) {
     state.karaokeEntries = [];
+    state.karaokeDuration = 0;
+    if (!Number.isFinite(Number(state.youtubeDuration)) || Number(state.youtubeDuration) <= 0) {
+      state.duration = songMotifsResolvePlaybackDuration();
+    }
     songMotifsUpdateKaraoke(0);
     return;
   }
@@ -673,12 +735,24 @@ function songMotifsApplyKaraokeEntries(entries) {
     };
   });
 
+  state.karaokeDuration = state.karaokeEntries.length > 0
+    ? Math.max(...state.karaokeEntries.map((entry) => Number(entry.time) || 0))
+    : 0;
+
   if (state.karaokeLayerHost) {
     state.karaokeLayerHost.innerHTML = '';
   }
   state.karaokeActiveLayer = null;
 
   state.karaokeCurrentIndex = -2;
+  if (!Number.isFinite(Number(state.youtubeDuration)) || Number(state.youtubeDuration) <= 0) {
+    state.duration = songMotifsResolvePlaybackDuration();
+    if (state.durationLabel && songMotifsHasMeasuredPlaybackDuration()) {
+      state.durationLabel.textContent = songMotifFormatTime(state.duration);
+    } else if (state.durationLabel) {
+      state.durationLabel.textContent = '';
+    }
+  }
   songMotifsUpdateKaraoke(0);
 }
 
@@ -1169,8 +1243,44 @@ function songMotifsUpdateProgress() {
     return;
   }
 
+  const liveDuration = Number(state.player.getDuration()) || 0;
+  const currentRaw = state.player.getCurrentTime() || 0;
+  const playerState = typeof state.player.getPlayerState === 'function' ? state.player.getPlayerState() : -1;
+  const hasMeasuredRuntime = Number.isFinite(liveDuration) && liveDuration > 0
+    && (!Number.isInteger(liveDuration) || currentRaw > 0 || playerState === 1)
+    && songMotifsHasMeasuredPlaybackDuration();
+
+  if (Number.isFinite(liveDuration) && liveDuration > 0) {
+    const hasPreciseStoredDuration = Number.isFinite(Number(state.youtubeDuration))
+      && Number(state.youtubeDuration) > 0
+      && !Number.isInteger(Number(state.youtubeDuration));
+
+    if (hasPreciseStoredDuration) {
+      state.youtubeDuration = Number(state.youtubeDuration);
+      state.duration = state.youtubeDuration;
+    } else if (Math.abs((state.duration || 0) - liveDuration) > 0.05 || state.duration <= 0) {
+      state.youtubeDuration = liveDuration;
+      state.duration = liveDuration;
+    }
+  }
+
+  if (state.durationLabel) {
+    if (hasMeasuredRuntime && songMotifsHasMeasuredPlaybackDuration()) {
+      state.durationLabel.textContent = songMotifFormatTime(state.duration);
+    } else {
+      state.durationLabel.textContent = '';
+    }
+  }
+
   const duration = state.duration > 0 ? state.duration : 1;
-  const current = Math.min(duration, Math.max(0, state.player.getCurrentTime() || 0));
+  const current = Math.min(duration, Math.max(0, currentRaw));
+
+  if (currentRaw <= 0 && playerState !== 1) {
+    state.currentLabel.textContent = '';
+    state.progressNode.style.width = '0%';
+    return;
+  }
+
   state.progressNode.style.width = ((current / duration) * 100) + '%';
   state.currentLabel.textContent = songMotifFormatTime(current);
   songMotifsUpdateLegend(current);
@@ -1275,17 +1385,21 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
     videoWrap.innerHTML = '<div class="song-motif-empty">Playback is unavailable for this song.</div>';
   }
 
+  const controls = document.createElement('div');
+  controls.className = 'song-motif-controls';
+  shell.appendChild(controls);
+
+  const karaokeWrap = document.createElement('section');
+  karaokeWrap.className = 'song-karaoke-wrap';
+  karaokeWrap.style.display = 'none';
+  shell.appendChild(karaokeWrap);
+
   if (hasVideo) {
     const volumeWrap = buildSongMotifsVolumeControl();
     shell.appendChild(volumeWrap);
   } else {
     state.volumeInput = null;
   }
-
-  const karaokeWrap = document.createElement('section');
-  karaokeWrap.className = 'song-karaoke-wrap';
-  karaokeWrap.style.display = 'none';
-  shell.appendChild(karaokeWrap);
 
   const karaokeViewport = document.createElement('div');
   karaokeViewport.className = 'song-karaoke-viewport';
@@ -1294,10 +1408,6 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   const karaokeLayerHost = document.createElement('div');
   karaokeLayerHost.className = 'song-karaoke-layer-host';
   karaokeViewport.appendChild(karaokeLayerHost);
-
-  const controls = document.createElement('div');
-  controls.className = 'song-motif-controls';
-  shell.appendChild(controls);
 
   const songColor = String(song && song.color ? song.color : '').trim() || '#ef8a85';
 
@@ -1313,7 +1423,7 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   labels.appendChild(currentLabel);
 
   const durationLabel = document.createElement('span');
-  durationLabel.textContent = songMotifFormatTime(state.duration);
+  durationLabel.textContent = '';
   labels.appendChild(durationLabel);
 
   const mainTrack = document.createElement('div');
@@ -1503,6 +1613,41 @@ function songMotifsAttachPlayer(song, youtubeId) {
     return;
   }
 
+  const syncPlayerDuration = (player) => {
+    if (!player || typeof player.getDuration !== 'function') {
+      return;
+    }
+
+    const liveDuration = Number(player.getDuration()) || 0;
+    if (!Number.isFinite(liveDuration) || liveDuration <= 0) {
+      return;
+    }
+
+    const currentTime = typeof player.getCurrentTime === 'function' ? Number(player.getCurrentTime()) || 0 : 0;
+    const playerState = typeof player.getPlayerState === 'function' ? player.getPlayerState() : -1;
+    const hasMeasuredRuntime = Number.isFinite(liveDuration) && liveDuration > 0
+      && (!Number.isInteger(liveDuration) || currentTime > 0 || playerState === 1);
+    const hasPreciseStoredDuration = Number.isFinite(Number(state.youtubeDuration))
+      && Number(state.youtubeDuration) > 0
+      && !Number.isInteger(Number(state.youtubeDuration));
+
+    if (hasPreciseStoredDuration) {
+      state.youtubeDuration = Number(state.youtubeDuration);
+      state.duration = state.youtubeDuration;
+    } else {
+      state.youtubeDuration = liveDuration;
+      if (state.duration <= 0 || Math.abs(state.duration - liveDuration) > 0.05) {
+        state.duration = liveDuration;
+      }
+    }
+
+    if (state.durationLabel && hasMeasuredRuntime && songMotifsHasMeasuredPlaybackDuration()) {
+      state.durationLabel.textContent = songMotifFormatTime(state.duration);
+    } else if (state.durationLabel) {
+      state.durationLabel.textContent = '';
+    }
+  };
+
   state.player = new YT.Player('songMotifPlayerHost', {
     height: '220',
     width: '100%',
@@ -1531,18 +1676,12 @@ function songMotifsAttachPlayer(song, youtubeId) {
           event.target.setVolume(state.volume);
         }
 
-        const ytDuration = Number(event.target.getDuration()) || 0;
-        if (state.declaredDuration > 0) {
-          state.duration = state.declaredDuration;
-        } else {
-          state.duration = Math.max(state.duration, ytDuration);
-        }
-        state.durationLabel.textContent = songMotifFormatTime(state.duration);
+        syncPlayerDuration(event.target);
 
-        // Propagate the YouTube-derived duration to the page's song-length
-        // paragraph so it doesn't need to be manually entered in the HTML.
-        if (ytDuration > 0 && typeof window.updateSongLengthFromYoutube === 'function') {
-          window.updateSongLengthFromYoutube(state.duration);
+        // Keep the page summary rounded to the nearest whole second, but always
+        // use the live fractional player duration for the progress bar.
+        if (state.youtubeDuration > 0 && typeof window.updateSongLengthFromYoutube === 'function') {
+          window.updateSongLengthFromYoutube(state.youtubeDuration);
         }
 
         const rows = document.querySelectorAll('.song-motif-track');
@@ -1559,6 +1698,8 @@ function songMotifsAttachPlayer(song, youtubeId) {
         });
       },
       onStateChange: (event) => {
+        syncPlayerDuration(event.target);
+
         const playing = event.data === 1;
         state.playButton.textContent = playing ? '||' : '▶';
 

@@ -733,10 +733,22 @@ html {
 .song-motif-time-labels {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   color: var(--theme-color-text_primary);
   font-size: 0.72em;
   letter-spacing: 0.02em;
   margin-bottom: 4px;
+  min-height: 1.2em;
+}
+
+.song-motif-time-labels > span {
+  display: inline-block;
+  min-width: 5.2ch;
+  white-space: nowrap;
+}
+
+.song-motif-time-labels > span:last-child {
+  text-align: right;
 }
 
 .song-motif-main-track {
