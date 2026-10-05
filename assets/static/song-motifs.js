@@ -19,10 +19,11 @@ function songMotifTimeToSeconds(value) {
 }
 
 function songMotifFormatTime(seconds) {
-  const safe = Math.max(0, Math.floor(Number(seconds) || 0));
-  const mins = Math.floor(safe / 60);
-  const secs = safe % 60;
-  return mins + ':' + String(secs).padStart(2, '0');
+  const totalMs = Math.max(0, Number(seconds) || 0) * 1000;
+  const mins = Math.floor(totalMs / 60000);
+  const secs = Math.floor((totalMs % 60000) / 1000);
+  const hundredths = Math.floor((totalMs % 1000) / 10);
+  return mins + ':' + String(secs).padStart(2, '0') + '.' + String(hundredths).padStart(2, '0');
 }
 
 function songMotifsNormalizeYouTubeId(value) {
@@ -1005,7 +1006,11 @@ function songMotifsDisposeRuntimeState() {
   const state = getSongMotifsState();
 
   if (state.timer) {
-    clearInterval(state.timer);
+    if (typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(state.timer);
+    } else {
+      clearInterval(state.timer);
+    }
     state.timer = null;
   }
 
@@ -1172,6 +1177,36 @@ function songMotifsUpdateProgress() {
   songMotifsUpdateKaraoke(current);
 }
 
+function songMotifsStartProgressTicker() {
+  const state = getSongMotifsState();
+
+  if (state.timer) {
+    if (typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(state.timer);
+    } else {
+      clearInterval(state.timer);
+    }
+    state.timer = null;
+  }
+
+  const tick = () => {
+    if (!state.player || typeof state.player.getPlayerState !== 'function') {
+      state.timer = null;
+      return;
+    }
+
+    if (state.player.getPlayerState() !== 1) {
+      state.timer = null;
+      return;
+    }
+
+    songMotifsUpdateProgress();
+    state.timer = requestAnimationFrame(tick);
+  };
+
+  state.timer = requestAnimationFrame(tick);
+}
+
 function songMotifsSeekTo(seconds) {
   const state = getSongMotifsState();
   if (!state.player || typeof state.player.seekTo !== 'function') {
@@ -1274,7 +1309,7 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   timelineWrap.appendChild(labels);
 
   const currentLabel = document.createElement('span');
-  currentLabel.textContent = '0:00';
+  currentLabel.textContent = '0:00.00';
   labels.appendChild(currentLabel);
 
   const durationLabel = document.createElement('span');
@@ -1528,13 +1563,14 @@ function songMotifsAttachPlayer(song, youtubeId) {
         state.playButton.textContent = playing ? '||' : '▶';
 
         if (playing) {
-          if (state.timer) {
-            clearInterval(state.timer);
-          }
-          state.timer = setInterval(songMotifsUpdateProgress, 120);
+          songMotifsStartProgressTicker();
         } else {
           if (state.timer) {
-            clearInterval(state.timer);
+            if (typeof cancelAnimationFrame === 'function') {
+              cancelAnimationFrame(state.timer);
+            } else {
+              clearInterval(state.timer);
+            }
             state.timer = null;
           }
           songMotifsUpdateProgress();
