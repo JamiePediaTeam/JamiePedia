@@ -1,4 +1,21 @@
 /* if you're looking at this you probably have some idea what you're seeing and im going to tell you right now: i dont wanna talk about it */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+  animation-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0s;
+  }
+}
+
 html {
   font-size: 0.9em;
   line-height: 22px;
