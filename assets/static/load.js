@@ -2744,7 +2744,9 @@ function buildAlbumPageFromRow(row) {
   const themeId = String((row || {}).theme || '').trim();
 
   if (themeId) {
-    if (typeof window.applyThemeById === 'function') {
+    if (typeof window.requestThemeById === 'function') {
+      window.requestThemeById(themeId);
+    } else if (typeof window.applyThemeById === 'function') {
       window.applyThemeById(themeId);
     } else {
       document.documentElement.setAttribute('data-theme-id', themeId);
