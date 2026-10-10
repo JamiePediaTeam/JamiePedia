@@ -7,14 +7,12 @@ const themeGatePath = String(window.location.pathname || '');
 const themeGateRoute = basePath && themeGatePath.startsWith(basePath)
   ? themeGatePath.slice(basePath.length) || '/'
   : themeGatePath;
-const pageCarryStorageKey = 'jamiepedia:page-carry:v1';
 const themeGateNeedsExplicitReady = /^\/music\/[^/]+(?:\/close-up)?$/i.test(themeGateRoute)
   || /^\/artists\/[^/]+$/i.test(themeGateRoute)
   || /^\/motifs\/[^/]+$/i.test(themeGateRoute);
 let themeGateThemeLoaded = false;
 let themeGatePageReady = !themeGateNeedsExplicitReady;
 let themeGateReleased = false;
-let pageCarryOverlayElement = null;
 
 if (!document.getElementById('themeGateStyle')) {
   const themeGateStyle = document.createElement('style');
@@ -25,146 +23,14 @@ if (!document.getElementById('themeGateStyle')) {
 
 themeGateRoot.setAttribute('data-theme-pending', 'true');
 
-function readPageCarryPayload() {
-  try {
-    const raw = window.sessionStorage.getItem(pageCarryStorageKey);
-    if (!raw) {
-      return null;
-    }
-
-    const payload = JSON.parse(raw);
-    return payload && typeof payload === 'object' ? payload : null;
-  } catch (_error) {
-    return null;
-  }
-}
-
-function clearPageCarryPayload() {
-  try {
-    window.sessionStorage.removeItem(pageCarryStorageKey);
-  } catch (_error) {
-    // Ignore storage failures.
-  }
-}
-
-function ensurePageCarryStyle() {
-  if (document.getElementById('pageCarryOverlayStyle')) {
-    return;
-  }
-
-  const style = document.createElement('style');
-  style.id = 'pageCarryOverlayStyle';
-  style.textContent = [
-    '#pageCarryOverlay{position:fixed;inset:0;z-index:2147483000;overflow:hidden;pointer-events:none;background:var(--theme-page-background,#f7f4ef);}',
-    '#pageCarryOverlayFrame{position:absolute;inset:0;border:none;width:100%;height:100%;display:block;background:transparent;}'
-  ].join('');
-  document.head.appendChild(style);
-}
-
-function dismissPageCarryOverlay() {
-  if (!pageCarryOverlayElement) {
-    return;
-  }
-
-  const overlayToRemove = pageCarryOverlayElement;
-  pageCarryOverlayElement = null;
-  if (overlayToRemove && overlayToRemove.parentNode) {
-    overlayToRemove.parentNode.removeChild(overlayToRemove);
-  }
-}
-
-function buildPageCarrySrcdoc(pageHtml, scrollY) {
-  const html = String(pageHtml || '');
-  const y = Math.max(0, Number(scrollY || 0));
-  const injectedStyle = '<style>html,body{margin:0 !important;overflow:hidden !important;}body{transform:translateY(-' + y + 'px) !important;transform-origin:top left;}</style>';
-
-  if (!html) {
-    return '';
-  }
-
-  if (/<head\b[^>]*>/i.test(html)) {
-    return html.replace(/<head\b[^>]*>/i, function (match) {
-      return match + injectedStyle;
-    });
-  }
-
-  return '<!doctype html><html><head>' + injectedStyle + '</head><body>' + html + '</body></html>';
-}
-
-function mountPageCarryOverlayIfAvailable() {
-  const payload = readPageCarryPayload();
-  clearPageCarryPayload();
-
-  if (!payload) {
-    return;
-  }
-
-  const now = Date.now();
-  const createdAt = Number(payload.createdAt || 0);
-  if (!createdAt || now - createdAt > 15000) {
-    return;
-  }
-
-  const expectedPath = String(payload.targetPath || '').trim();
-  const fromPath = String(payload.fromPath || '').trim();
-  const currentPath = toSiteHref(window.location.pathname + window.location.search + window.location.hash);
-  if (expectedPath && expectedPath !== currentPath) {
-    return;
-  }
-
-  if (!expectedPath && fromPath) {
-    let referrerPath = '';
-    try {
-      if (document.referrer) {
-        const referrerUrl = new URL(document.referrer);
-        if (referrerUrl.origin === window.location.origin) {
-          referrerPath = toSiteHref(referrerUrl.pathname + referrerUrl.search + referrerUrl.hash);
-        }
-      }
-    } catch (_error) {
-      referrerPath = '';
-    }
-
-    if (!referrerPath || referrerPath !== fromPath) {
-      return;
-    }
-  }
-
-  const pageHtml = String(payload.pageHtml || '');
-  if (!pageHtml) {
-    return;
-  }
-
-  ensurePageCarryStyle();
-
-  const overlay = document.createElement('div');
-  overlay.id = 'pageCarryOverlay';
-
-  const frame = document.createElement('iframe');
-  frame.id = 'pageCarryOverlayFrame';
-  frame.setAttribute('aria-hidden', 'true');
-  frame.setAttribute('tabindex', '-1');
-  frame.setAttribute('sandbox', '');
-  frame.srcdoc = buildPageCarrySrcdoc(pageHtml, payload.scrollY || 0);
-
-  overlay.appendChild(frame);
-  themeGateRoot.appendChild(overlay);
-  pageCarryOverlayElement = overlay;
-}
-
 function maybeRevealThemeGate() {
   if (themeGateReleased || !themeGateThemeLoaded || !themeGatePageReady) {
     return;
   }
 
   themeGateReleased = true;
-  const reveal = function () {
-    themeGateRoot.removeAttribute('data-theme-pending');
-    themeGateRoot.setAttribute('data-theme-ready', 'true');
-    dismissPageCarryOverlay();
-  };
-
-  reveal();
+  themeGateRoot.removeAttribute('data-theme-pending');
+  themeGateRoot.setAttribute('data-theme-ready', 'true');
 }
 
 window.releaseThemeGate = function () {
@@ -270,107 +136,6 @@ function toSiteHref(rawHref) {
     return source;
   }
 }
-
-function isNavigableInternalAnchor(anchor) {
-  if (!anchor || anchor.tagName !== 'A') {
-    return false;
-  }
-
-  const hrefAttr = String(anchor.getAttribute('href') || '').trim();
-  if (!hrefAttr || hrefAttr.startsWith('#') || /^(mailto:|tel:|javascript:|data:|blob:)/i.test(hrefAttr)) {
-    return false;
-  }
-
-  const target = String(anchor.getAttribute('target') || '').trim().toLowerCase();
-  if (target && target !== '_self') {
-    return false;
-  }
-
-  if (anchor.hasAttribute('download')) {
-    return false;
-  }
-
-  let absolute;
-  try {
-    absolute = new URL(anchor.href, window.location.href);
-  } catch (_error) {
-    return false;
-  }
-
-  if (absolute.origin !== window.location.origin) {
-    return false;
-  }
-
-  const currentPath = window.location.pathname + window.location.search + window.location.hash;
-  const nextPath = absolute.pathname + absolute.search + absolute.hash;
-  if (nextPath === currentPath) {
-    return false;
-  }
-
-  return true;
-}
-
-function cacheCurrentPageForNextNavigation(targetPath) {
-  const docRoot = document.documentElement;
-  if (!docRoot) {
-    return;
-  }
-
-  const pageHtml = String(docRoot.outerHTML || '');
-  if (!pageHtml || pageHtml.length > 2400000) {
-    clearPageCarryPayload();
-    return;
-  }
-
-  try {
-    const fromPath = toSiteHref(window.location.pathname + window.location.search + window.location.hash);
-    window.sessionStorage.setItem(pageCarryStorageKey, JSON.stringify({
-      createdAt: Date.now(),
-      targetPath,
-      fromPath,
-      scrollY: window.scrollY || 0,
-      pageHtml
-    }));
-  } catch (_error) {
-    clearPageCarryPayload();
-  }
-}
-
-document.addEventListener('click', function (event) {
-  if (!event || event.defaultPrevented || event.button !== 0) {
-    return;
-  }
-
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-    return;
-  }
-
-  const anchor = event.target && typeof event.target.closest === 'function'
-    ? event.target.closest('a[href]')
-    : null;
-
-  if (!isNavigableInternalAnchor(anchor)) {
-    return;
-  }
-
-  const targetPath = toSiteHref(anchor.getAttribute('href') || anchor.href || '');
-  if (!targetPath) {
-    return;
-  }
-
-  cacheCurrentPageForNextNavigation(targetPath);
-}, true);
-
-window.addEventListener('beforeunload', function () {
-  const existing = readPageCarryPayload();
-  if (existing && String(existing.targetPath || '').trim()) {
-    return;
-  }
-
-  cacheCurrentPageForNextNavigation('');
-});
-
-mountPageCarryOverlayIfAvailable();
 
 function normalizeInternalAnchorTargets(root) {
   const scope = root && root.querySelectorAll ? root : document;
