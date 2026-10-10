@@ -419,6 +419,54 @@
           return normalized;
         }
 
+        function normalizeArtistRoutePath(rawPath) {
+          var source = String(rawPath || '').trim();
+          if (!source) {
+            return '';
+          }
+
+          var hashless = source.split('#')[0].split('?')[0].trim();
+          if (!hashless) {
+            return '';
+          }
+
+          var withPrefix = hashless.indexOf('/artists/') === 0
+            ? hashless
+            : '/artists/' + hashless.replace(/^\/+/, '');
+
+          var normalized = withPrefix.replace(/\.html$/i, '').replace(/\/index$/i, '');
+          if (normalized.length > 1) {
+            normalized = normalized.replace(/\/+$/, '');
+          }
+
+          if (!/^\/artists\/[^/]+$/.test(normalized) || normalized === '/artists') {
+            return '';
+          }
+
+          return normalized;
+        }
+
+        function normalizeArtistPageSlug(value) {
+          return String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        }
+
+        function splitArtistPageId(value) {
+          var raw = String(value || '').trim();
+          if (!raw) {
+            return { pageId: '', hashToken: '' };
+          }
+
+          var splitIndex = raw.indexOf('#');
+          return {
+            pageId: splitIndex === -1 ? raw : raw.slice(0, splitIndex),
+            hashToken: splitIndex === -1 ? '' : raw.slice(splitIndex + 1).trim()
+          };
+        }
+
         function getSourcePath(pathname) {
           return String(pathname || '').replace(/\/raw\/?$/i, '');
         }
@@ -660,6 +708,50 @@
           return knownRoutes;
         }
 
+        async function getKnownArtistRoutes(siteBase) {
+          var text = await fetchText(withSiteBase('/public/csv/JamiePedia Data - Artists.csv', siteBase));
+          if (!text) {
+            return new Set();
+          }
+
+          var parsed = parseCsvRows(text);
+          var headers = parsed.headers;
+          var rows = parsed.rows;
+          var knownRoutes = new Set();
+          var artistIdIndex = headers.indexOf('artist id');
+          var hasPageIndex = headers.indexOf('has page?') !== -1 ? headers.indexOf('has page?') : headers.indexOf('has page');
+
+          if (artistIdIndex === -1) {
+            return knownRoutes;
+          }
+
+          rows.forEach(function (values) {
+            var artistIds = String(values[artistIdIndex] || '').split(/\s*\|\s*/);
+            var firstArtistId = String(artistIds[0] || '').trim();
+            var hasPage = String(values[hasPageIndex] || '').trim().toUpperCase();
+            if (!(hasPage === 'TRUE' || hasPage === 'YES' || hasPage === '1' || hasPage === '')) {
+              return;
+            }
+
+            var pageId = splitArtistPageId(firstArtistId).pageId || firstArtistId;
+            var slug = normalizeArtistPageSlug(pageId);
+            var legacySlug = normalizeArtistPageSlug(firstArtistId);
+            var normalized = normalizeArtistRoutePath('/artists/' + slug);
+            if (normalized) {
+              knownRoutes.add(normalized);
+            }
+
+            if (legacySlug && legacySlug !== slug) {
+              var legacyNormalized = normalizeArtistRoutePath('/artists/' + legacySlug);
+              if (legacyNormalized) {
+                knownRoutes.add(legacyNormalized);
+              }
+            }
+          });
+
+          return knownRoutes;
+        }
+
         async function bootstrapGithubPagesRoute() {
           var revealTimer = null;
 
@@ -741,6 +833,22 @@
             var motifRoutes = await getKnownMotifRoutes(siteBase);
             if (motifRoutes.has(normalized)) {
               if (await tryRenderShell('/motifs/motif-shell.html', siteBase)) {
+                return;
+              }
+            }
+
+            if (await tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase)) {
+              return;
+            }
+
+            revealNotFoundBody();
+            return;
+          }
+
+          if (normalized.indexOf('/artists/') === 0) {
+            var artistRoutes = await getKnownArtistRoutes(siteBase);
+            if (artistRoutes.has(normalized)) {
+              if (await tryRenderShell('/artists/artist-shell.html', siteBase)) {
                 return;
               }
             }

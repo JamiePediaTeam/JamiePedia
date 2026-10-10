@@ -384,7 +384,7 @@ html {
 
 .motif-transcript-player-message {
   margin: 6px 0 0;
-  color: var(--theme-color-text_motif_help);
+  color: var(--theme-color-text_info);
   font-size: 0.78em;
   display: none;
 }

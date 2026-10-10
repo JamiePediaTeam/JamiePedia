@@ -1176,7 +1176,9 @@ function applySongDocumentState(row, themeIdOverride) {
     return;
   }
 
-  if (typeof window.applyThemeById === 'function') {
+  if (typeof window.requestThemeById === 'function') {
+    window.requestThemeById(themeId);
+  } else if (typeof window.applyThemeById === 'function') {
     window.applyThemeById(themeId);
   } else {
     document.documentElement.setAttribute('data-theme-id', themeId);
@@ -1251,7 +1253,10 @@ function switchVersion(versionName, options) {
 
     // Switch to the version-specific theme so all theme tokens update together.
     const versionThemeId = String(config.theme || '').trim();
-    if (typeof window.applyThemeById === 'function') {
+    if (typeof window.requestThemeById === 'function') {
+      const fallbackThemeId = String(document.documentElement.getAttribute('data-theme-id') || 'default').trim() || 'default';
+      window.requestThemeById(versionThemeId || fallbackThemeId);
+    } else if (typeof window.applyThemeById === 'function') {
       const fallbackThemeId = String(document.documentElement.getAttribute('data-theme-id') || 'default').trim() || 'default';
       window.applyThemeById(versionThemeId || fallbackThemeId);
     } else if (versionThemeId) {
@@ -1970,6 +1975,32 @@ function songLyricsFallbackParseOffsetSeconds(text) {
   return 0;
 }
 
+function songLyricsFallbackParseLyricLineAndSingerTags(value) {
+  const source = String(value || '').trim();
+  if (!source) {
+    return { text: '', singerTag: '', singerTags: [] };
+  }
+
+  let text = source;
+  const singerTags = [];
+
+  while (true) {
+    const match = text.match(/\s*\{([^{}]+)\}\s*$/);
+    if (!match) {
+      break;
+    }
+
+    singerTags.unshift(String(match[1] || '').trim().toLowerCase());
+    text = text.slice(0, match.index).trimEnd();
+  }
+
+  return {
+    text: text.trim(),
+    singerTag: singerTags[0] || '',
+    singerTags
+  };
+}
+
 function songLyricsFallbackParseRawLines(text) {
   const lines = String(text || '').split(/\r?\n/);
   const timedEntries = [];
@@ -1988,7 +2019,8 @@ function songLyricsFallbackParseRawLines(text) {
       return;
     }
 
-    const lyric = line.replace(/\[[^\]]+\]/g, '').trim();
+    const lyricParts = songLyricsFallbackParseLyricLineAndSingerTags(line.replace(/\[[^\]]+\]/g, ''));
+    const lyric = lyricParts.text;
 
     timestamps.forEach((stamp) => {
       timedEntries.push({
@@ -2421,6 +2453,10 @@ function initializeSongPage() {
         }
       }
     });
+
+    if (typeof window.releaseThemeGate === 'function') {
+      window.releaseThemeGate();
+    }
   });
 }
 

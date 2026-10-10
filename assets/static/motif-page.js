@@ -3312,6 +3312,9 @@ function renderMotifPage() {
     emptyState.className = 'motif-empty';
     emptyState.textContent = 'No songs for the ' + motif.name + ' motif.';
     songList.appendChild(emptyState);
+    if (typeof window.releaseThemeGate === 'function') {
+      window.releaseThemeGate();
+    }
     return;
   }
 
@@ -3377,6 +3380,10 @@ function renderMotifPage() {
     createYouTubePlayers();
   } else {
     ensureMotifYouTubeApiLoaded();
+  }
+
+  if (typeof window.releaseThemeGate === 'function') {
+    window.releaseThemeGate();
   }
 }
 

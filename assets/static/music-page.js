@@ -137,6 +137,36 @@
     return splitPipeValues(value).join(' ') || String(value || '').trim();
   }
 
+  function splitDisplayTitleLines(value) {
+    const piped = splitPipeValues(value);
+    if (piped.length) {
+      return piped;
+    }
+
+    const plain = String(value || '').trim();
+    return plain ? [plain] : [];
+  }
+
+  function setMultilineTitle(node, value) {
+    if (!node) {
+      return;
+    }
+
+    const lines = splitDisplayTitleLines(value);
+    node.textContent = '';
+
+    if (!lines.length) {
+      return;
+    }
+
+    lines.forEach((line, index) => {
+      if (index > 0) {
+        node.appendChild(document.createElement('br'));
+      }
+      node.appendChild(document.createTextNode(line));
+    });
+  }
+
   function hasSecretSection(sectionValue) {
     return sectionMapKey(sectionValue).includes('bonus');
   }
@@ -289,7 +319,7 @@
 
     const title = document.createElement('span');
     title.className = 'album-title';
-    title.textContent = tile.title || 'Untitled';
+    setMultilineTitle(title, tile.title || 'Untitled');
 
     link.appendChild(image);
     link.appendChild(title);

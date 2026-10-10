@@ -505,14 +505,28 @@
     function tryApply() {
       attempts += 1;
 
-      if (typeof window.applyThemeById === 'function') {
+      if (typeof window.requestThemeById === 'function') {
+        const didApply = window.requestThemeById(normalizedThemeId);
+        if (didApply) {
+          if (typeof window.releaseThemeGate === 'function') {
+            window.releaseThemeGate();
+          }
+          return;
+        }
+      } else if (typeof window.applyThemeById === 'function') {
         const didApply = window.applyThemeById(normalizedThemeId);
         if (didApply) {
+          if (typeof window.releaseThemeGate === 'function') {
+            window.releaseThemeGate();
+          }
           return;
         }
       }
 
       if (attempts >= maxAttempts) {
+        if (typeof window.releaseThemeGate === 'function') {
+          window.releaseThemeGate();
+        }
         return;
       }
 

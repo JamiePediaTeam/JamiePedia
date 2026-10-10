@@ -2,6 +2,15 @@
 function addSocialMediaIcons() {
   const siteBase = window.location.pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
   const resolveLocalIconUrl = (path) => siteBase + '/' + String(path || '').replace(/^\/+/, '');
+  const iconScopeSelector = [
+    '.sidebar1 a',
+    '.sidebar2 a',
+    '.song-info-sidebar a',
+    '.album-info-sidebar a',
+    '.artist-info-sidebar a',
+    '#linkbox a',
+    '#linkbox * a'
+  ].join(', ');
 
   const iconMap = {
     youtube: { url: 'https://youtube.com/favicon.ico', label: 'YouTube' },
@@ -19,6 +28,15 @@ function addSocialMediaIcons() {
 
   document.querySelectorAll('a').forEach(link => {
     const href = link.getAttribute('href') || '';
+    const inIconScope = link.matches(iconScopeSelector);
+
+    if (!inIconScope) {
+      const scopedExistingIcon = link.querySelector('.social-icon');
+      if (scopedExistingIcon) {
+        scopedExistingIcon.remove();
+      }
+      return;
+    }
 
     if (link.classList.contains('txt-external-link')) {
       const existingIcon = link.querySelector('.social-icon');

@@ -70,6 +70,32 @@ function songLyricsParseOffsetSeconds(text) {
   return 0;
 }
 
+function songLyricsParseLyricLineAndSingerTags(value) {
+  const source = String(value || '').trim();
+  if (!source) {
+    return { text: '', singerTag: '', singerTags: [] };
+  }
+
+  let text = source;
+  const singerTags = [];
+
+  while (true) {
+    const match = text.match(/\s*\{([^{}]+)\}\s*$/);
+    if (!match) {
+      break;
+    }
+
+    singerTags.unshift(String(match[1] || '').trim().toLowerCase());
+    text = text.slice(0, match.index).trimEnd();
+  }
+
+  return {
+    text: text.trim(),
+    singerTag: singerTags[0] || '',
+    singerTags
+  };
+}
+
 function songLyricsParseLrc(text) {
   const lines = String(text || '').split(/\r?\n/);
   const timedEntries = [];
@@ -88,12 +114,17 @@ function songLyricsParseLrc(text) {
       return;
     }
 
-    const lyric = line.replace(/\[[^\]]+\]/g, '').trim();
+    const lyricParts = songLyricsParseLyricLineAndSingerTags(line.replace(/\[[^\]]+\]/g, ''));
+    const lyric = lyricParts.text;
+    const singerTag = lyricParts.singerTag;
+    const singerTags = lyricParts.singerTags;
 
     timestamps.forEach((stamp) => {
       timedEntries.push({
         time: songLyricsParseTimestamp(stamp) + offsetSeconds,
-        text: lyric
+        text: lyric,
+        singerTag,
+        singerTags
       });
     });
   });
@@ -103,7 +134,7 @@ function songLyricsParseLrc(text) {
   timedEntries
     .sort((a, b) => a.time - b.time)
     .forEach((entry) => {
-      const key = entry.time.toFixed(3) + '|' + entry.text;
+      const key = entry.time.toFixed(3) + '|' + entry.text + '|' + String(entry.singerTags && entry.singerTags.length ? entry.singerTags.join(',') : entry.singerTag || '');
       if (seen.has(key)) {
         return;
       }

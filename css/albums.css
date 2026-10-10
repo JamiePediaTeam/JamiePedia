@@ -23,6 +23,8 @@ html {
   margin-right: auto;
   position: relative;
   padding-left: 4px;
+  padding-right: 4px;
+  box-sizing: border-box;
 }
 
 .song-tabs {
@@ -63,6 +65,34 @@ html {
 
 .tabs-spacer {
   flex-grow: 1;
+}
+
+.version-tab {
+  font-family: "Nunito", sans-serif;
+  padding: 2px 16px;
+  height: 100%;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1em;
+  color: var(--theme-color-brand_frame);
+  background-color: var(--theme-color-background_base);
+  font-weight: 500;
+  border: 3px solid var(--theme-color-brand_frame);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
+  border-radius: 4px 4px 0px 0px;
+}
+
+.version-tab:hover {
+  color: var(--theme-color-accent_hover);
+}
+
+.version-tab.active {
+  padding: 4px 16px;
+  color: var(--theme-color-link_default);
+  border: 3px solid var(--theme-color-link_default);
+  border-bottom: 0px solid var(--theme-color-transparent_value);
+  font-weight: bold;
 }
 
 .album-body-panel {

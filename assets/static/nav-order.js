@@ -1,5 +1,5 @@
 // Centralized navigation order for prev/next buttons.
-// Songs, albums, and motifs are all derived from music-files.js ordering.
+// Songs, albums, motifs, and artists are all derived from music-files.js ordering.
 
 (function () {
   function getAllMusicFiles() {
@@ -25,10 +25,16 @@
       .map((item) => item.path)
       .filter((path) => /^\/motifs\/.+\.html$/i.test(path));
 
+    const artists = allMusicFiles
+      .filter((item) => item && item.album === 'Artists' && typeof item.path === 'string')
+      .map((item) => item.path)
+      .filter((path) => /^\/artists\/.+$/i.test(path));
+
     window.navOrder = {
       songs,
       albums,
-      motifs
+      motifs,
+      artists
     };
   }
 

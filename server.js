@@ -6,10 +6,12 @@ const PORT = 3000;
 const SONGS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Songs.csv');
 const ALBUMS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Albums.csv');
 const MOTIFS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Motifs.csv');
+const ARTISTS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Artists.csv');
 const CLOSEUPS_TEXT_DIR = path.join(__dirname, 'public', 'close ups', 'text');
 const SONG_SHELL_PATH = path.join(__dirname, 'music/song-shell.html');
 const ALBUM_SHELL_PATH = path.join(__dirname, 'music/album-shell.html');
 const MOTIF_SHELL_PATH = path.join(__dirname, 'motifs/motif-shell.html');
+const ARTIST_SHELL_PATH = path.join(__dirname, 'artists/artist-shell.html');
 const CLOSEUP_SHELL_PATH = path.join(__dirname, 'music/closeup-shell.html');
 
 function splitCsvLine(line) {
@@ -150,6 +152,55 @@ function normalizeMotifRoutePath(rawPath) {
   }
 
   return normalized;
+}
+
+function normalizeArtistRoutePath(rawPath) {
+  const source = String(rawPath || '').trim();
+  if (!source) {
+    return '';
+  }
+
+  const hashless = source.split('#')[0].split('?')[0].trim();
+  if (!hashless) {
+    return '';
+  }
+
+  const withArtistPrefix = hashless.startsWith('/artists/')
+    ? hashless
+    : '/artists/' + hashless.replace(/^\/+/, '');
+
+  let normalized = withArtistPrefix.replace(/\.html$/i, '');
+  normalized = normalized.replace(/\/index$/i, '');
+  if (normalized.length > 1) {
+    normalized = normalized.replace(/\/+$/, '');
+  }
+
+  if (!/^\/artists\/[^/]+$/.test(normalized) || normalized === '/artists') {
+    return '';
+  }
+
+  return normalized;
+}
+
+function normalizeArtistPageSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function splitArtistPageId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return { pageId: '', hashToken: '' };
+  }
+
+  const splitIndex = raw.indexOf('#');
+  return {
+    pageId: (splitIndex === -1 ? raw : raw.slice(0, splitIndex)).trim(),
+    hashToken: splitIndex === -1 ? '' : raw.slice(splitIndex + 1).trim()
+  };
 }
 
 function loadKnownRoutesFromCsv(csvPath, candidateHeaders, normalizer) {
@@ -300,6 +351,58 @@ function loadKnownMotifRoutesFromCsv() {
   return knownRoutes;
 }
 
+function loadKnownArtistRoutesFromCsv() {
+  const knownRoutes = new Set();
+
+  try {
+    const text = fs.readFileSync(ARTISTS_CSV_PATH, 'utf-8');
+    const lines = String(text || '')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length < 2) {
+      return knownRoutes;
+    }
+
+    const headers = splitCsvLine(lines[0]).map((value) => value.toLowerCase());
+    const artistIdIndex = headers.indexOf('artist id');
+    const hasPageIndex = headers.indexOf('has page?') !== -1 ? headers.indexOf('has page?') : headers.indexOf('has page');
+    if (artistIdIndex === -1) {
+      return knownRoutes;
+    }
+
+    for (let index = 1; index < lines.length; index += 1) {
+      const values = splitCsvLine(lines[index]);
+      const hasPage = String(values[hasPageIndex] || '').trim().toUpperCase();
+      if (!(hasPage === 'TRUE' || hasPage === 'YES' || hasPage === '1' || hasPage === '')) {
+        continue;
+      }
+
+      const firstArtistId = String(values[artistIdIndex] || '').split(/\s*\|\s*/)[0].trim();
+      const pageId = splitArtistPageId(firstArtistId).pageId || firstArtistId;
+      const baseSlug = normalizeArtistPageSlug(pageId);
+      const legacySlug = normalizeArtistPageSlug(firstArtistId);
+
+      const normalized = normalizeArtistRoutePath('/artists/' + baseSlug);
+      if (normalized) {
+        knownRoutes.add(normalized);
+      }
+
+      if (legacySlug && legacySlug !== baseSlug) {
+        const legacyNormalized = normalizeArtistRoutePath('/artists/' + legacySlug);
+        if (legacyNormalized) {
+          knownRoutes.add(legacyNormalized);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Unable to load artist routes from CSV:', error.message);
+  }
+
+  return knownRoutes;
+}
+
 function getKnownSongRoutes() {
   return loadKnownSongRoutesFromCsv();
 }
@@ -310,6 +413,10 @@ function getKnownAlbumRoutes() {
 
 function getKnownMotifRoutes() {
   return loadKnownMotifRoutesFromCsv();
+}
+
+function getKnownArtistRoutes() {
+  return loadKnownArtistRoutesFromCsv();
 }
 
 function loadKnownCloseupRoutesFromTextFiles() {
@@ -394,6 +501,15 @@ function isKnownMotifRouteRequest(requestPath) {
   }
 
   return getKnownMotifRoutes().has(normalized);
+}
+
+function isKnownArtistRouteRequest(requestPath) {
+  const normalized = normalizeArtistRoutePath(requestPath);
+  if (!normalized) {
+    return false;
+  }
+
+  return getKnownArtistRoutes().has(normalized);
 }
 
 function isKnownCloseupRouteRequest(requestPath) {
@@ -589,6 +705,21 @@ const server = http.createServer((req, res) => {
             console.error(`Error reading ${MOTIF_SHELL_PATH}:`, shellErr.message);
             res.writeHead(500, { 'Content-Type': 'text/plain' });
             res.end('500 - Motif shell missing', 'utf-8');
+            return;
+          }
+
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(shellContent, 'utf-8');
+        });
+        return;
+      }
+
+      if (!rawRouteRequested && isKnownArtistRouteRequest(requestPath)) {
+        fs.readFile(ARTIST_SHELL_PATH, (shellErr, shellContent) => {
+          if (shellErr) {
+            console.error(`Error reading ${ARTIST_SHELL_PATH}:`, shellErr.message);
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('500 - Artist shell missing', 'utf-8');
             return;
           }
 

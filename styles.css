@@ -264,9 +264,13 @@ h1 {
 
 .tracklist-list {
   margin: 0;
-  padding-left: 18px;
-  list-style-position: outside;
   line-height: 26px;
+}
+
+ol.tracklist-list {
+  list-style: none;
+  padding-left: 0;
+  counter-reset: tracklist-index;
 }
 
 .tracklist-list-wrap {
@@ -325,6 +329,24 @@ h1 {
 .tracklist-item {
   margin: 0;
   padding: 0;
+}
+
+ol.tracklist-list .tracklist-item {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 0.35em;
+  align-items: start;
+  counter-increment: tracklist-index;
+}
+
+ol.tracklist-list .tracklist-item::before {
+  content: counter(tracklist-index) ".";
+  font-variant-numeric: tabular-nums;
+  color: var(--theme-page-text);
+}
+
+ol.tracklist-list .tracklist-item > a {
+  min-width: 0;
 }
 
 .tracklist-item a {

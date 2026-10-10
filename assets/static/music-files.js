@@ -3,13 +3,14 @@ window.__jamiePediaMusicFilesBootstrap = true;
 
 // Music file paths for search/nav/random/tracklist behavior.
 // Songs are sourced from Songs CSV, album index pages from Albums CSV,
-// and motif pages from Motifs CSV.
+// motif pages from Motifs CSV, and artist pages from Artists CSV.
 
 const musicFilePaths = [];
 window.musicFilePaths = musicFilePaths;
 
 const staticMiscEntries = [
-  { album: 'Motifs', path: '/motifs' }
+  { album: 'Motifs', path: '/motifs', title: 'Motifs' },
+  { album: 'Artists', path: '/artists', title: 'Artists' }
 ];
 
 function getBasePath() {
@@ -255,12 +256,106 @@ function parseMotifEntriesFromCsv(text) {
   return entries;
 }
 
-function setMusicFilePaths(motifEntries, songEntries, albumEntries) {
+function normalizeArtistSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function splitArtistPageId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return { pageId: '', hashToken: '' };
+  }
+
+  const splitIndex = raw.indexOf('#');
+  return {
+    pageId: splitIndex === -1 ? raw : raw.slice(0, splitIndex),
+    hashToken: splitIndex === -1 ? '' : raw.slice(splitIndex + 1)
+  };
+}
+
+function normalizeArtistHashToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^#/, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function buildArtistInternalPath(value) {
+  const parts = splitArtistPageId(value);
+  const slug = normalizeArtistSlug(parts.pageId);
+  const hashToken = normalizeArtistHashToken(parts.hashToken);
+  if (!slug) {
+    return '';
+  }
+
+  return hashToken ? ('/artists/' + slug + '#' + hashToken) : ('/artists/' + slug);
+}
+
+function parseArtistEntriesFromCsv(text) {
+  const lines = String(text || '').split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
+    return [];
+  }
+
+  const headers = splitCsvLine(lines[0]).map((header) => header.toLowerCase());
+  const artistIdIndex = headers.indexOf('artist id');
+  const artistNameIndex = headers.indexOf('artist name');
+  const artistTypeIndex = headers.indexOf('artist type');
+  const artistLinksIndex = headers.indexOf('artist links');
+  const hasPageIndex = headers.indexOf('has page?') !== -1 ? headers.indexOf('has page?') : headers.indexOf('has page');
+
+  if (artistIdIndex === -1 || artistNameIndex === -1) {
+    return [];
+  }
+
+  const entries = [];
+  const seenPaths = new Set();
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitCsvLine(lines[index]);
+    const firstArtistId = splitPipeValues(values[artistIdIndex] || '')[0] || '';
+    const firstArtistName = splitPipeValues(values[artistNameIndex] || '')[0] || firstArtistId;
+    const internalPath = buildArtistInternalPath(firstArtistId);
+    if (!internalPath) {
+      continue;
+    }
+
+    const hasPage = String(values[hasPageIndex] || '').trim().toUpperCase();
+    const links = splitPipeValues(values[artistLinksIndex] || '');
+    const externalHref = String(links[0] || '').trim();
+    const path = (hasPage === 'FALSE' || hasPage === 'NO' || hasPage === '0') && externalHref
+      ? externalHref
+      : internalPath;
+    if (seenPaths.has(path)) {
+      continue;
+    }
+
+    seenPaths.add(path);
+    entries.push({
+      album: 'Artists',
+      title: firstArtistName,
+      subtitle: String(values[artistTypeIndex] || '').trim(),
+      path
+    });
+  }
+
+  return entries;
+}
+
+function setMusicFilePaths(motifEntries, artistEntries, songEntries, albumEntries) {
   musicFilePaths.length = 0;
   const safeAlbumEntries = Array.isArray(albumEntries) ? albumEntries : [];
+  const safeArtistEntries = Array.isArray(artistEntries) ? artistEntries : [];
 
   staticMiscEntries.forEach((entry) => musicFilePaths.push(entry));
   motifEntries.forEach((entry) => musicFilePaths.push(entry));
+  safeArtistEntries.forEach((entry) => musicFilePaths.push(entry));
   safeAlbumEntries.forEach((entry) => musicFilePaths.push(entry));
   songEntries.forEach((entry) => musicFilePaths.push(entry));
 
@@ -282,22 +377,25 @@ window.whenMusicFilePathsReady = function () {
   const songCsvUrl = basePath + '/public/csv/JamiePedia Data - Songs.csv';
   const albumCsvUrl = basePath + '/public/csv/JamiePedia Data - Albums.csv';
   const motifCsvUrl = basePath + '/public/csv/JamiePedia Data - Motifs.csv';
+  const artistCsvUrl = basePath + '/public/csv/JamiePedia Data - Artists.csv';
 
   Promise.all([
     fetch(songCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
     fetch(albumCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
     fetch(motifCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
+    fetch(artistCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
   ])
-    .then(([songCsvText, albumCsvText, motifCsvText]) => {
+    .then(([songCsvText, albumCsvText, motifCsvText, artistCsvText]) => {
       const albumCsv = parseAlbumEntriesFromCsv(albumCsvText);
       const albumEntries = albumCsv.entries;
       const albumTitleById = albumCsv.titleById;
       const songEntries = parseSongEntriesFromCsv(songCsvText, albumTitleById);
       const motifEntries = parseMotifEntriesFromCsv(motifCsvText);
-      setMusicFilePaths(motifEntries, songEntries, albumEntries);
+      const artistEntries = parseArtistEntriesFromCsv(artistCsvText);
+      setMusicFilePaths(motifEntries, artistEntries, songEntries, albumEntries);
     })
     .catch(() => {
-      setMusicFilePaths([], [], []);
+      setMusicFilePaths([], [], [], []);
     })
     .finally(() => {
       if (resolveMusicFilePathsReady) {

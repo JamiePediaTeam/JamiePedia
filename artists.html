@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html data-theme-id="default">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artists</title>
+    <meta name="title" content="Artists">
+    <meta name="description" content="Artist and vocalist pages for collaborators across JamiePedia.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jamiepediateam.github.io/JamiePedia/artists.html">
+    <meta property="og:title" content="Artists">
+    <meta property="og:description" content="Artist and vocalist pages for collaborators across JamiePedia.">
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://jamiepediateam.github.io/JamiePedia/artists.html">
+    <meta property="twitter:title" content="Artists">
+    <meta property="twitter:description" content="Artist and vocalist pages for collaborators across JamiePedia.">
+    <meta name="theme-color" content="#F05E55">
+    <link rel="icon" type="image/x-icon" href="public/images/favicon.ico">
+    <link href="styles.css" rel="stylesheet" type="text/css" media="all">
+    <link href="css/music.css" rel="stylesheet" type="text/css" media="all">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
+    <script src="assets/static/load.js?v=20261010c"></script>
+  </head>
+  <body>
+    <a href="./"><div class="head"></div></a>
+    <div class="navi">
+      <span id="navi"></span>
+    </div>
+
+    <table class="table">
+      <tr>
+        <td>
+          <div class="sidebar1">
+            <span id="sidebar"></span>
+          </div>
+        </td>
+        <td>
+          <div class="bodybar">
+            <div id="artistSections"></div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <script>
+      (function () {
+        const orderedTypes = ['Musical Artist', 'Vocalist', 'Visual Artist', 'Misc.'];
+        const headingLabels = {
+          'Musical Artist': 'Musical Artists',
+          'Vocalist': 'Vocalists',
+          'Visual Artist': 'Visual Artists',
+          'Misc.': 'Miscellaneous'
+        };
+
+        function getArtistTileHref(page, hasSiblingVariants) {
+          if (!page) {
+            return '#';
+          }
+
+          const baseRoute = '/artists/' + String(page.slug || '').trim();
+          const canonicalRoute = typeof window.toSiteHref === 'function'
+            ? window.toSiteHref(baseRoute)
+            : baseRoute;
+
+          if (hasSiblingVariants) {
+            return canonicalRoute;
+          }
+
+          return page.routeKey || page.href || canonicalRoute;
+        }
+
+        function createArtistTile(page, hasSiblingVariants) {
+          const alias = (page.aliases || [])[0] || {};
+          const tile = document.createElement('div');
+          tile.className = 'album-tile';
+
+          const link = document.createElement('a');
+          link.href = getArtistTileHref(page, hasSiblingVariants);
+          tile.appendChild(link);
+
+          const image = document.createElement('img');
+          image.className = 'album-cover';
+          image.alt = (page.primaryName || 'Artist') + ' image';
+          if (alias.image) {
+            image.src = alias.image;
+          }
+          link.appendChild(image);
+
+          const title = document.createElement('span');
+          title.className = 'album-title';
+          title.textContent = page.primaryName || 'Untitled';
+          link.appendChild(title);
+
+          return tile;
+        }
+
+        function createSection(titleText, pages, variantCountsBySlug) {
+          const section = document.createElement('section');
+          const heading = document.createElement('h2');
+          heading.className = 'album-section-heading';
+          heading.textContent = titleText;
+          section.appendChild(heading);
+
+          const gallery = document.createElement('div');
+          gallery.className = 'albumgallery';
+          pages.forEach((page) => {
+            const slug = String((page && page.slug) || '').trim().toLowerCase();
+            const hasSiblingVariants = (variantCountsBySlug[slug] || 0) > 1;
+            gallery.appendChild(createArtistTile(page, hasSiblingVariants));
+          });
+          section.appendChild(gallery);
+          return section;
+        }
+
+        function renderArtistSections() {
+          const mount = document.getElementById('artistSections');
+          if (!mount || typeof ensureArtistDirectoryLoaded !== 'function') {
+            return;
+          }
+
+          ensureArtistDirectoryLoaded().then(function (directory) {
+            const allPages = directory && Array.isArray(directory.pages)
+              ? directory.pages.filter(function (page) { return page && page.hasPage !== false; })
+              : [];
+
+            const variantCountsBySlug = allPages.reduce(function (accumulator, page) {
+              const slug = String((page && page.slug) || '').trim().toLowerCase();
+              if (!slug) {
+                return accumulator;
+              }
+              accumulator[slug] = (accumulator[slug] || 0) + 1;
+              return accumulator;
+            }, Object.create(null));
+
+            const seenSlugs = new Set();
+            const pages = allPages.filter(function (page) {
+              const slug = String((page && page.slug) || '').trim().toLowerCase();
+              if (!slug || seenSlugs.has(slug)) {
+                return false;
+              }
+              seenSlugs.add(slug);
+              return true;
+            });
+
+            mount.innerHTML = '';
+            orderedTypes.forEach(function (type) {
+              const matches = pages
+                .filter(function (page) { return page && page.type === type; })
+                .sort(function (a, b) { return String(a.primaryName || '').localeCompare(String(b.primaryName || '')); });
+              if (!matches.length) {
+                return;
+              }
+              mount.appendChild(createSection(headingLabels[type] || (type + 's'), matches, variantCountsBySlug));
+            });
+          });
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', renderArtistSections, { once: true });
+        } else {
+          renderArtistSections();
+        }
+      }());
+    </script>
+  </body>
+</html>

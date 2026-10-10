@@ -2,6 +2,59 @@
 const pathname = window.location.pathname;
 const basePath = pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
 
+const themeGateRoot = document.documentElement;
+const themeGatePath = String(window.location.pathname || '');
+const themeGateRoute = basePath && themeGatePath.startsWith(basePath)
+  ? themeGatePath.slice(basePath.length) || '/'
+  : themeGatePath;
+const themeGateNeedsExplicitReady = /^\/music\/[^/]+(?:\/close-up)?$/i.test(themeGateRoute)
+  || /^\/artists\/[^/]+$/i.test(themeGateRoute)
+  || /^\/motifs\/[^/]+$/i.test(themeGateRoute);
+let themeGateThemeLoaded = false;
+let themeGatePageReady = !themeGateNeedsExplicitReady;
+let themeGateReleased = false;
+
+if (!document.getElementById('themeGateStyle')) {
+  const themeGateStyle = document.createElement('style');
+  themeGateStyle.id = 'themeGateStyle';
+  themeGateStyle.textContent = 'html[data-theme-pending="true"] body{visibility:hidden !important;}';
+  document.head.appendChild(themeGateStyle);
+}
+
+themeGateRoot.setAttribute('data-theme-pending', 'true');
+
+function maybeRevealThemeGate() {
+  if (themeGateReleased || !themeGateThemeLoaded || !themeGatePageReady) {
+    return;
+  }
+
+  themeGateReleased = true;
+  const reveal = function () {
+    themeGateRoot.removeAttribute('data-theme-pending');
+    themeGateRoot.setAttribute('data-theme-ready', 'true');
+  };
+
+  if (typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(reveal);
+    });
+    return;
+  }
+
+  reveal();
+}
+
+window.releaseThemeGate = function () {
+  themeGatePageReady = true;
+  maybeRevealThemeGate();
+};
+
+window.setTimeout(function () {
+  themeGateThemeLoaded = true;
+  themeGatePageReady = true;
+  maybeRevealThemeGate();
+}, 5000);
+
 function stripBasePath(path) {
   let normalized = String(path || '/');
   if (!normalized.startsWith('/')) {
@@ -461,13 +514,17 @@ function ensureThemeCssLoaded() {
   return themeCssLink;
 }
 
+function normalizeThemeIdToken(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 function findThemeRowById(themeId) {
-  const requested = String(themeId || '').trim();
+  const requested = normalizeThemeIdToken(themeId);
   if (!requested || !Array.isArray(loadedThemeRows) || loadedThemeRows.length === 0) {
     return null;
   }
 
-  return loadedThemeRows.find((row) => String(row.theme_id || '').trim() === requested) || null;
+  return loadedThemeRows.find((row) => normalizeThemeIdToken(row.theme_id) === requested) || null;
 }
 
 function applyThemeRow(themeRow) {
@@ -635,9 +692,22 @@ function applyThemeById(themeId) {
 
 window.applyThemeById = applyThemeById;
 
+function requestThemeById(themeId) {
+  const root = document.documentElement;
+  const requestedThemeId = String(themeId || '').trim();
+  if (!requestedThemeId) {
+    return false;
+  }
+
+  root.setAttribute('data-theme-requested-id', requestedThemeId);
+  root.setAttribute('data-theme-id', requestedThemeId);
+  return applyThemeById(requestedThemeId);
+}
+
+window.requestThemeById = requestThemeById;
+
 async function loadThemeFromCsv() {
   const root = document.documentElement;
-  const requestedThemeId = String(root.getAttribute('data-theme-id') || 'default').trim() || 'default';
   const csvCandidates = [
     '/public/csv/JamiePedia Data - Themes.csv',
     '/public/themes/JamiePedia Data - Themes.csv',
@@ -663,11 +733,17 @@ async function loadThemeFromCsv() {
     }
 
     if (!String(csvText || '').trim()) {
+      ensureThemeCssLoaded();
+      themeGateThemeLoaded = true;
+      maybeRevealThemeGate();
       return;
     }
 
     const rows = parseThemeCsv(csvText);
     if (!rows.length) {
+      ensureThemeCssLoaded();
+      themeGateThemeLoaded = true;
+      maybeRevealThemeGate();
       return;
     }
     loadedThemeRows = rows;
@@ -676,13 +752,20 @@ async function loadThemeFromCsv() {
       root.setAttribute('data-theme-source', loadedCsvPath);
     }
 
+    const requestedThemeId = String(
+      root.getAttribute('data-theme-requested-id')
+      || root.getAttribute('data-theme-id')
+      || 'default'
+    ).trim() || 'default';
     applyThemeById(requestedThemeId);
     ensureThemeCssLoaded();
-    root.setAttribute('data-theme-ready', 'true');
+    themeGateThemeLoaded = true;
+    maybeRevealThemeGate();
   } catch (_error) {
     // Keep defaults if theme data cannot be fetched.
     ensureThemeCssLoaded();
-    root.setAttribute('data-theme-ready', 'true');
+    themeGateThemeLoaded = true;
+    maybeRevealThemeGate();
   }
 }
 
@@ -843,6 +926,166 @@ function getCurrentSongNavKey() {
   return hashToken ? (normalizedSongPath + '#' + hashToken) : normalizedSongPath;
 }
 
+function normalizeArtistNavPathKey(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  const splitIndex = raw.indexOf('#');
+  const rawPath = splitIndex === -1 ? raw : raw.slice(0, splitIndex);
+  const rawHash = splitIndex === -1 ? '' : raw.slice(splitIndex + 1);
+  const withArtistPrefix = rawPath.startsWith('/artists/')
+    ? rawPath
+    : ('/artists/' + rawPath.replace(/^\/+/, ''));
+  const normalizedPath = toExtensionlessPath(withArtistPrefix);
+  const hashToken = normalizeArtistPageHashToken(rawHash);
+
+  return hashToken
+    ? (normalizedPath + '#' + hashToken)
+    : normalizedPath;
+}
+
+function getCurrentArtistNavKey() {
+  const currentPath = toExtensionlessPath(window.location.pathname);
+  const currentPointer = currentPath.split('/').filter(Boolean).pop() || '';
+  const normalizedArtistPath = currentPointer ? ('/artists/' + currentPointer) : currentPath;
+  const hashToken = normalizeArtistPageHashToken(window.location.hash);
+  return hashToken ? (normalizedArtistPath + '#' + hashToken) : normalizedArtistPath;
+}
+
+function getSongNavFamilyKey(value) {
+  const normalized = normalizeSongSidebarPathKey(value);
+  return normalized ? normalized.split('#')[0] : '';
+}
+
+function getArtistNavFamilyKey(value) {
+  const normalized = normalizeArtistNavPathKey(value);
+  return normalized ? normalized.split('#')[0] : '';
+}
+
+function getAlbumNavFamilyKey(value) {
+  const normalized = normalizePathForNav(value);
+  if (normalized === '/music/cc' || normalized === '/music/ccde') {
+    return 'cc-family';
+  }
+  return '';
+}
+
+function getAlbumFamilyPreferredPath(familyKey, runItems) {
+  if (familyKey !== 'cc-family') {
+    return '';
+  }
+
+  const normalizedRunItems = (Array.isArray(runItems) ? runItems : [])
+    .map((item) => normalizePathForNav(item))
+    .filter(Boolean);
+
+  return normalizedRunItems.includes('/music/ccde') ? '/music/ccde' : '';
+}
+
+function isSongNavVariantPath(value) {
+  const normalized = normalizeSongSidebarPathKey(value);
+  return Boolean(normalized && normalized.includes('#'));
+}
+
+function isArtistNavVariantPath(value) {
+  const normalized = normalizeArtistNavPathKey(value);
+  return Boolean(normalized && normalized.includes('#'));
+}
+
+function getCanonicalNavPathForRun(list, candidateIndex, familyResolver, preferredPathResolver) {
+  const items = Array.isArray(list) ? list : [];
+  if (!items.length || !Number.isFinite(candidateIndex) || typeof familyResolver !== 'function') {
+    return null;
+  }
+
+  const candidate = items[candidateIndex];
+  if (!candidate) {
+    return null;
+  }
+
+  const candidateFamilyKey = familyResolver(candidate);
+  if (!candidateFamilyKey) {
+    return candidate;
+  }
+
+  let runStartIndex = candidateIndex;
+  while (runStartIndex > 0) {
+    const previous = items[runStartIndex - 1];
+    if (!previous || familyResolver(previous) !== candidateFamilyKey) {
+      break;
+    }
+    runStartIndex -= 1;
+  }
+
+  let runEndIndex = candidateIndex;
+  while (runEndIndex < items.length - 1) {
+    const next = items[runEndIndex + 1];
+    if (!next || familyResolver(next) !== candidateFamilyKey) {
+      break;
+    }
+    runEndIndex += 1;
+  }
+
+  if (typeof preferredPathResolver === 'function') {
+    const preferredPath = normalizePathForNav(preferredPathResolver(candidateFamilyKey, items.slice(runStartIndex, runEndIndex + 1)) || '');
+    if (preferredPath) {
+      const preferredItem = items.find((item, index) => {
+        return index >= runStartIndex
+          && index <= runEndIndex
+          && normalizePathForNav(item) === preferredPath;
+      });
+      if (preferredItem) {
+        return preferredItem;
+      }
+    }
+  }
+
+  return items[runStartIndex] || candidate;
+}
+
+function findAdjacentNavPath(list, startIndex, direction, currentFamilyKey, familyResolver, preferredPathResolver) {
+  const items = Array.isArray(list) ? list : [];
+  if (!items.length || !Number.isFinite(startIndex) || !direction) {
+    return null;
+  }
+
+  let index = startIndex + direction;
+  while (index >= 0 && index < items.length) {
+    const candidate = items[index];
+    if (!candidate) {
+      index += direction;
+      continue;
+    }
+
+    if (typeof familyResolver !== 'function') {
+      return candidate;
+    }
+
+    const candidateFamilyKey = familyResolver(candidate);
+
+    if (!currentFamilyKey) {
+      if (candidateFamilyKey) {
+        return getCanonicalNavPathForRun(items, index, familyResolver, preferredPathResolver) || candidate;
+      }
+      return candidate;
+    }
+
+    if (candidateFamilyKey && candidateFamilyKey !== currentFamilyKey) {
+      return getCanonicalNavPathForRun(items, index, familyResolver, preferredPathResolver) || candidate;
+    }
+
+    if (!candidateFamilyKey) {
+      return candidate;
+    }
+
+    index += direction;
+  }
+
+  return null;
+}
+
 function buildSongNavListFromCsvRows(rows) {
   const list = [];
   const seen = new Set();
@@ -932,6 +1175,10 @@ function getNavListForPath(currentPath) {
     return navOrder.motifs;
   }
 
+  if (Array.isArray(navOrder.artists) && navOrder.artists.some((item) => normalizePathForNav(item) === currentPath)) {
+    return navOrder.artists;
+  }
+
   return null;
 }
 
@@ -993,15 +1240,39 @@ function initializeDataNavButtons() {
     const currentPath = normalizePathForNav(window.location.pathname);
     activeList = getNavListForPath(currentPath);
     if (!activeList) return;
-    currentIndex = activeList.findIndex((item) => normalizePathForNav(item) === currentPath);
+    const activeIsArtistList = Boolean(navOrder && activeList === navOrder.artists);
+    if (activeIsArtistList) {
+      const currentArtistKey = getCurrentArtistNavKey();
+      currentIndex = activeList.findIndex((item) => normalizeArtistNavPathKey(item) === currentArtistKey);
+
+      if (currentIndex === -1) {
+        currentIndex = activeList.findIndex((item) => normalizePathForNav(item) === currentPath);
+      }
+    } else {
+      currentIndex = activeList.findIndex((item) => normalizePathForNav(item) === currentPath);
+    }
     if (currentIndex === -1) return;
   }
 
-  const prevPath = currentIndex > 0 ? activeList[currentIndex - 1] : null;
-  const nextPath = currentIndex < activeList.length - 1 ? activeList[currentIndex + 1] : null;
   const activeIsSongList = isSongPage && activeList === songNavList;
   const isSong = activeIsSongList || (navOrder && activeList === navOrder.songs);
   const isAlbum = Boolean(navOrder && activeList === navOrder.albums);
+  const isArtist = Boolean(navOrder && activeList === navOrder.artists);
+
+  const currentFamilyKey = isSong
+    ? getSongNavFamilyKey(activeList[currentIndex])
+    : (isArtist
+      ? getArtistNavFamilyKey(activeList[currentIndex])
+      : (isAlbum ? getAlbumNavFamilyKey(activeList[currentIndex]) : ''));
+  const familyResolver = isSong
+    ? getSongNavFamilyKey
+    : (isArtist
+      ? getArtistNavFamilyKey
+      : (isAlbum ? getAlbumNavFamilyKey : null));
+  const preferredPathResolver = isAlbum ? getAlbumFamilyPreferredPath : null;
+
+  const prevPath = findAdjacentNavPath(activeList, currentIndex, -1, currentFamilyKey, familyResolver, preferredPathResolver);
+  const nextPath = findAdjacentNavPath(activeList, currentIndex, 1, currentFamilyKey, familyResolver, preferredPathResolver);
 
   let containers = Array.from(document.querySelectorAll('.song-nav-buttons, .album-nav-buttons'));
 
@@ -1295,8 +1566,19 @@ function installProgressiveArtObserver() {
 installProgressiveArtObserver();
 
 const loadCoverArtistCsvPath = basePath + '/public/csv/JamiePedia Data - Cover Artists.csv';
+const loadArtistCsvPath = basePath + '/public/csv/JamiePedia Data - Artists.csv';
 let loadCoverArtistsByFilename = {};
 let loadCoverArtistsLoadPromise = null;
+let artistDirectoryLoadPromise = null;
+let artistDirectoryLoaded = false;
+let artistDirectory = {
+  pages: [],
+  byId: Object.create(null),
+  byName: Object.create(null),
+  bySlug: Object.create(null),
+  byRouteKey: Object.create(null),
+  byLyricTag: Object.create(null)
+};
 
 function splitCoverArtistCsvLine(line) {
   const values = [];
@@ -1390,6 +1672,652 @@ function getCoverArtist(filename) {
 }
 
 window.getCoverArtist = getCoverArtist;
+
+function normalizeArtistDirectoryKey(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function splitArtistDataValues(value) {
+  return String(value || '')
+    .split(/\s*\|\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeArtistPageSlug(value) {
+  const normalized = normalizeArtistDirectoryKey(value)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || '';
+}
+
+function normalizeArtistPageHashToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^#/, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function splitArtistPageId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return { pageId: '', hashToken: '' };
+  }
+
+  const splitIndex = raw.indexOf('#');
+  return {
+    pageId: (splitIndex === -1 ? raw : raw.slice(0, splitIndex)).trim(),
+    hashToken: splitIndex === -1 ? '' : raw.slice(splitIndex + 1).trim()
+  };
+}
+
+function normalizeArtistPageRouteKey(value) {
+  const source = splitArtistPageId(value);
+  const slug = normalizeArtistPageSlug(source.pageId);
+  if (!slug) {
+    return '';
+  }
+
+  const hashToken = normalizeArtistPageHashToken(source.hashToken);
+  return hashToken ? ('/artists/' + slug + '#' + hashToken) : ('/artists/' + slug);
+}
+
+function normalizeArtistColorValue(value, fallback) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return fallback;
+  }
+
+  const prefixed = raw.startsWith('#') ? raw : ('#' + raw);
+  return /^#[0-9a-fA-F]{6}$/.test(prefixed) ? prefixed.toUpperCase() : fallback;
+}
+
+function normalizeArtistType(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'musical artist' || raw === 'music artist' || raw === 'artist') {
+    return 'Musical Artist';
+  }
+  if (raw === 'vocalist' || raw === 'voicebank' || raw === 'voice bank') {
+    return 'Vocalist';
+  }
+  if (raw === 'graphic artist' || raw === 'visual artist' || raw === 'illustrator') {
+    return 'Visual Artist';
+  }
+  if (raw === 'misc' || raw === 'misc.' || raw === 'miscellaneous') {
+    return 'Misc.';
+  }
+  return 'Misc.';
+}
+
+function resolveArtistImagePath(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  if (/^(https?:|data:)/i.test(raw)) {
+    return raw;
+  }
+
+  if (raw.startsWith('../public/')) {
+    return withBasePath('/' + raw.replace(/^\.\.\//, '')).replace(/"/g, '%22');
+  }
+
+  if (raw.startsWith('/public/')) {
+    return withBasePath(raw).replace(/"/g, '%22');
+  }
+
+  if (raw.startsWith('public/')) {
+    return withBasePath('/' + raw).replace(/"/g, '%22');
+  }
+
+  if (raw.includes('/')) {
+    return withBasePath('/' + raw.replace(/^\/+/, '')).replace(/"/g, '%22');
+  }
+
+  return withBasePath('/public/images/contributors/' + raw).replace(/"/g, '%22');
+}
+
+function buildArtistDirectoryFromCsv(text) {
+  const directory = {
+    pages: [],
+    byId: Object.create(null),
+    byName: Object.create(null),
+    bySlug: Object.create(null),
+    byRouteKey: Object.create(null),
+    byLyricTag: Object.create(null)
+  };
+
+  const lines = String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) {
+    return directory;
+  }
+
+  const headers = splitCoverArtistCsvLine(lines[0]).map((header) => String(header || '').trim().toLowerCase());
+  const artistIdIndex = headers.indexOf('artist id');
+  const lyricTagIndex = headers.indexOf('lyric tag');
+  const artistNameIndex = headers.indexOf('artist name');
+  const artistImageIndex = headers.indexOf('artist image');
+  const imageLabelIndex = headers.indexOf('image label');
+  const artistColorIndex = headers.indexOf('artist color');
+  const artistTypeIndex = headers.indexOf('artist type');
+  const themeIndex = headers.indexOf('theme');
+  const linkTextIndex = headers.indexOf('link text');
+  const artistLinksIndex = headers.indexOf('artist links');
+  const descriptionIndex = headers.indexOf('description');
+  const hasPageIndex = headers.indexOf('has page?') !== -1 ? headers.indexOf('has page?') : headers.indexOf('has page');
+
+  if (artistIdIndex === -1 || artistNameIndex === -1) {
+    return directory;
+  }
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitCoverArtistCsvLine(lines[index]);
+    const ids = splitArtistDataValues(values[artistIdIndex] || '').map((value) => normalizeArtistDirectoryKey(value)).filter(Boolean);
+    if (!ids.length) {
+      continue;
+    }
+
+    const names = splitArtistDataValues(values[artistNameIndex] || '');
+    const lyricTags = splitArtistDataValues(values[lyricTagIndex] || '').map((value) => normalizeArtistDirectoryKey(value));
+    const images = splitArtistDataValues(values[artistImageIndex] || '');
+    const imageLabels = splitArtistDataValues(values[imageLabelIndex] || '');
+    const colors = splitArtistDataValues(values[artistColorIndex] || '');
+    const descriptions = splitArtistDataValues(values[descriptionIndex] || '');
+    const linkLabels = splitArtistDataValues(values[linkTextIndex] || '');
+    const linkHrefs = splitArtistDataValues(values[artistLinksIndex] || '');
+    const primaryPageId = splitArtistPageId(ids[0]);
+    const pageSlug = normalizeArtistPageSlug(primaryPageId.pageId);
+    const legacyPageSlug = normalizeArtistPageSlug(ids[0]);
+    const pageRouteKey = normalizeArtistPageRouteKey(ids[0]);
+    const hasPage = String(values[hasPageIndex] || '').trim().toUpperCase();
+    const pageEnabled = hasPage === 'TRUE' || hasPage === 'YES' || hasPage === '1' || hasPage === '';
+
+    if (!pageSlug) {
+      continue;
+    }
+
+    const page = {
+      slug: pageSlug,
+      routeKey: pageEnabled ? (pageRouteKey || ('/artists/' + pageSlug)) : '',
+      ids: ids.slice(),
+      names: names.slice(),
+      imagePaths: images.map((value) => resolveArtistImagePath(value)).filter(Boolean),
+      imageLabels: imageLabels.slice(),
+      primaryId: ids[0],
+      pageId: primaryPageId.pageId || ids[0],
+      pageHashToken: normalizeArtistPageHashToken(primaryPageId.hashToken),
+      primaryName: String(names[0] || ids[0]).trim(),
+      theme: String(values[themeIndex] || '').trim(),
+      type: normalizeArtistType(values[artistTypeIndex] || ''),
+      hasPage: pageEnabled,
+      links: [],
+      aliases: []
+    };
+
+    const totalLinks = Math.max(linkLabels.length, linkHrefs.length);
+    for (let linkIndex = 0; linkIndex < totalLinks; linkIndex += 1) {
+      const label = String(linkLabels[linkIndex] || '').trim();
+      const href = String(linkHrefs[linkIndex] || '').trim();
+      if (!label || !href) {
+        continue;
+      }
+      page.links.push({ label, href });
+    }
+
+    ids.forEach((id, aliasIndex) => {
+      const aliasPageId = splitArtistPageId(id);
+      const aliasSlug = normalizeArtistPageSlug(aliasPageId.pageId);
+      const aliasRouteKey = normalizeArtistPageRouteKey(id);
+      const aliasHasPage = pageEnabled && Boolean(aliasSlug);
+      const aliasHref = aliasHasPage
+        ? (typeof window !== 'undefined' && typeof window.toSiteHref === 'function'
+          ? window.toSiteHref(aliasRouteKey || ('/artists/' + aliasSlug))
+          : (aliasRouteKey || ('/artists/' + aliasSlug)))
+        : String(linkHrefs[0] || linkHrefs[aliasIndex] || '').trim();
+
+      const alias = {
+        id,
+        pageSlug: aliasSlug,
+        pageRouteKey: aliasRouteKey,
+        href: aliasHref,
+        hasPage: aliasHasPage,
+        name: String(names[aliasIndex] || names[0] || id).trim(),
+        image: page.imagePaths[aliasIndex] || page.imagePaths[0] || resolveArtistImagePath(images[aliasIndex] || images[0] || ''),
+        imageLabel: String(imageLabels[aliasIndex] || imageLabels[0] || '').trim(),
+        color: normalizeArtistColorValue(colors[aliasIndex] || colors[0] || '', '#F05E55'),
+        description: String(descriptions[aliasIndex] || descriptions[0] || '').trim(),
+        lyricTag: String(lyricTags[aliasIndex] || lyricTags[0] || '').trim(),
+        type: page.type,
+        theme: page.theme,
+        links: page.links,
+        pageName: page.primaryName
+      };
+
+      page.aliases.push(alias);
+      directory.byId[id] = alias;
+      if (pageEnabled && aliasRouteKey && !directory.byRouteKey[aliasRouteKey]) {
+        directory.byRouteKey[aliasRouteKey] = page;
+      }
+      if (alias.name) {
+        const normalizedAliasName = normalizeArtistDirectoryKey(alias.name);
+        if (normalizedAliasName && !directory.byName[normalizedAliasName]) {
+          directory.byName[normalizedAliasName] = alias;
+        }
+      }
+
+      const explicitName = String(names[aliasIndex] || '').trim();
+      if (explicitName) {
+        const normalizedExplicitName = normalizeArtistDirectoryKey(explicitName);
+        if (normalizedExplicitName && !directory.byName[normalizedExplicitName]) {
+          directory.byName[normalizedExplicitName] = alias;
+        }
+      }
+
+      if (alias.lyricTag && !directory.byLyricTag[normalizeArtistDirectoryKey(alias.lyricTag)]) {
+        directory.byLyricTag[normalizeArtistDirectoryKey(alias.lyricTag)] = alias;
+      }
+    });
+
+    const primaryAlias = page.aliases[0] || null;
+    page.href = primaryAlias
+      ? String(primaryAlias.href || '').trim()
+      : '';
+
+    names.forEach((name) => {
+      const normalizedName = normalizeArtistDirectoryKey(name);
+      if (normalizedName && !directory.byName[normalizedName]) {
+        directory.byName[normalizedName] = page.aliases[0] || null;
+      }
+    });
+
+    directory.pages.push(page);
+    if (pageEnabled) {
+      const existingPage = directory.bySlug[pageSlug] || null;
+      const shouldReplaceExisting = Boolean(
+        existingPage
+        && existingPage.pageHashToken
+        && !page.pageHashToken
+      );
+
+      if (pageSlug && (!existingPage || shouldReplaceExisting)) {
+        directory.bySlug[pageSlug] = page;
+      }
+      if (legacyPageSlug && !directory.bySlug[legacyPageSlug]) {
+        directory.bySlug[legacyPageSlug] = page;
+      }
+      if (pageRouteKey && !directory.byRouteKey[pageRouteKey]) {
+        directory.byRouteKey[pageRouteKey] = page;
+      }
+    }
+  }
+
+  return directory;
+}
+
+function ensureArtistDirectoryLoaded() {
+  if (artistDirectoryLoadPromise) {
+    return artistDirectoryLoadPromise;
+  }
+
+  artistDirectoryLoadPromise = fetch(loadArtistCsvPath, { cache: 'no-store' })
+    .then((response) => response.ok ? response.text() : '')
+    .then((text) => {
+      artistDirectory = buildArtistDirectoryFromCsv(text);
+      artistDirectoryLoaded = true;
+      return artistDirectory;
+    })
+    .catch(() => {
+      artistDirectory = {
+        pages: [],
+        byId: Object.create(null),
+        byName: Object.create(null),
+        bySlug: Object.create(null),
+        byRouteKey: Object.create(null),
+        byLyricTag: Object.create(null)
+      };
+      artistDirectoryLoaded = true;
+      return artistDirectory;
+    });
+
+  return artistDirectoryLoadPromise;
+}
+
+function getArtistPreviewEntryById(id) {
+  return artistDirectory.byId[normalizeArtistDirectoryKey(id)] || null;
+}
+
+function getArtistPreviewEntry(value) {
+  const key = normalizeArtistDirectoryKey(value);
+  if (!key) {
+    return null;
+  }
+
+  return artistDirectory.byId[key]
+    || artistDirectory.byName[key]
+    || artistDirectory.byLyricTag[key]
+    || null;
+}
+
+function getArtistPageEntryBySlug(slug, hashToken) {
+  return getArtistPageEntryBySlugWithHash(slug, hashToken);
+}
+
+function getArtistPageEntryBySlugWithHash(slug, hashToken) {
+  const normalizedSlug = normalizeArtistPageSlug(slug);
+  const normalizedHash = normalizeArtistPageHashToken(hashToken);
+  const routeKey = normalizedSlug
+    ? ('/artists/' + normalizedSlug + (normalizedHash ? ('#' + normalizedHash) : ''))
+    : '';
+
+  return (routeKey && artistDirectory.byRouteKey[routeKey])
+    || artistDirectory.bySlug[normalizedSlug]
+    || artistDirectory.bySlug[normalizeArtistPageSlug(slug)]
+    || null;
+}
+
+function escapeArtistHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function isArtistMentionBoundary(char) {
+  if (!char) {
+    return true;
+  }
+  return !/[A-Za-z0-9]/.test(char);
+}
+
+function getArtistMentionPatterns() {
+  const patterns = [];
+  const seen = Object.create(null);
+
+  function pushPattern(value, artist) {
+    const raw = String(value || '').trim();
+    const normalized = normalizeArtistDirectoryKey(raw);
+    if (!normalized || seen[normalized] || !artist) {
+      return;
+    }
+
+    seen[normalized] = true;
+    patterns.push({
+      needle: normalized,
+      artist
+    });
+  }
+
+  (artistDirectory.pages || []).forEach((page) => {
+    (page.aliases || []).forEach((alias) => {
+      pushPattern(alias.id, alias);
+      pushPattern(alias.name, alias);
+    });
+
+    (page.names || []).forEach((name, index) => {
+      pushPattern(name, (page.aliases || [])[index] || (page.aliases || [])[0] || null);
+    });
+  });
+
+  patterns.sort((left, right) => right.needle.length - left.needle.length);
+  return patterns;
+}
+
+function buildArtistMentionRanges(entry) {
+  const source = String(entry || '');
+  const normalizedSource = source.toLowerCase();
+  const ranges = [];
+  const patterns = getArtistMentionPatterns();
+
+  patterns.forEach((pattern) => {
+    let index = normalizedSource.indexOf(pattern.needle);
+    while (index !== -1) {
+      const end = index + pattern.needle.length;
+      const overlaps = ranges.some((range) => !(end <= range.start || index >= range.end));
+      const boundaryBefore = isArtistMentionBoundary(source[index - 1] || '');
+      const boundaryAfter = isArtistMentionBoundary(source[end] || '');
+
+      if (!overlaps && boundaryBefore && boundaryAfter) {
+        ranges.push({
+          start: index,
+          end,
+          artist: pattern.artist
+        });
+      }
+
+      index = normalizedSource.indexOf(pattern.needle, index + 1);
+    }
+  });
+
+  ranges.sort((left, right) => left.start - right.start);
+  return ranges;
+}
+
+function buildArtistMentionLinkHtml(text, artist) {
+  const href = String((artist && artist.href) || '').trim()
+    || ((artist && artist.pageSlug)
+      ? (typeof window.toSiteHref === 'function'
+        ? window.toSiteHref('/artists/' + artist.pageSlug)
+        : ('/artists/' + artist.pageSlug))
+      : '');
+
+  return '<a href="' + escapeArtistHtml(href) + '" class="artist-credit-link" data-artist-preview-id="' + escapeArtistHtml(artist.id) + '">' + escapeArtistHtml(text) + '</a>';
+}
+
+function buildArtistCreditEntryHtml(entry) {
+  const source = String(entry || '');
+  const ranges = buildArtistMentionRanges(source);
+  if (!ranges.length) {
+    const artist = getArtistPreviewEntry(source);
+    if (!artist) {
+      return escapeArtistHtml(source);
+    }
+
+    return buildArtistMentionLinkHtml(source, artist);
+  }
+
+  let cursor = 0;
+  let html = '';
+  ranges.forEach((range) => {
+    if (range.start > cursor) {
+      html += escapeArtistHtml(source.slice(cursor, range.start));
+    }
+
+    html += buildArtistMentionLinkHtml(source.slice(range.start, range.end), range.artist);
+    cursor = range.end;
+  });
+
+  if (cursor < source.length) {
+    html += escapeArtistHtml(source.slice(cursor));
+  }
+
+  return html;
+}
+
+function buildArtistCreditHtml(value) {
+  const entries = splitArtistDataValues(value);
+  if (!entries.length) {
+    return '';
+  }
+
+  return entries.map((entry) => buildArtistCreditEntryHtml(entry)).join('<br>');
+}
+
+function ensureArtistPreviewStyles() {
+  if (document.getElementById('artistPreviewStyles')) {
+    return;
+  }
+
+  const style = document.createElement('style');
+  style.id = 'artistPreviewStyles';
+  style.textContent = [
+    '.artist-preview-popover{position:fixed;z-index:1100;min-width:300px;max-width:calc(100vw - 24px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}',
+    '.artist-preview-popover.visible{opacity:1;visibility:visible;}',
+    '.artist-preview-popover::before{content:"";position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;bottom:-5px;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--theme-color-border_pill);}',
+    '.artist-preview-popover.below::before{top:-5px;bottom:auto;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid var(--theme-color-border_pill);border-top:none;}',
+    '.artist-preview-card{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;padding:14px 16px;border-radius:0;border:1px solid var(--theme-color-border_pill);background:#ffffff;color:#111111;box-shadow:0 2px 8px var(--theme-color-shadow_soft);}',
+    '.artist-preview-media img{display:block;width:72px;height:72px;object-fit:cover;border-radius:6px;}',
+    '.artist-preview-title{font-size:10.944px;font-weight:700;line-height:16.416px;color:#111111;margin:0 0 2px;}',
+    '.artist-preview-description{font-size:10.944px;line-height:16.416px;color:#111111;overflow-wrap:break-word;}',
+    '@media (max-width:760px){.artist-preview-popover{min-width:min(300px,calc(100vw - 24px));}.artist-preview-card{grid-template-columns:64px minmax(0,1fr);} .artist-preview-media img{width:64px;height:64px;}}'
+  ].join('');
+  document.head.appendChild(style);
+}
+
+function ensureArtistPreviewPopover() {
+  ensureArtistPreviewStyles();
+
+  let popover = document.getElementById('artistPreviewPopover');
+  if (popover) {
+    return popover;
+  }
+
+  popover = document.createElement('div');
+  popover.id = 'artistPreviewPopover';
+  popover.className = 'artist-preview-popover';
+  popover.setAttribute('aria-hidden', 'true');
+  popover.innerHTML = '<div class="artist-preview-card"><div class="artist-preview-media"><img alt=""></div><div class="artist-preview-copy"><div class="artist-preview-title"></div><div class="artist-preview-description"></div></div></div>';
+  document.body.appendChild(popover);
+  return popover;
+}
+
+function hideArtistPreviewPopover() {
+  const popover = document.getElementById('artistPreviewPopover');
+  if (!popover) {
+    return;
+  }
+
+  window.__activeArtistPreviewTarget = null;
+  popover.classList.remove('visible');
+  popover.setAttribute('aria-hidden', 'true');
+}
+
+function positionArtistPreviewPopover(popover, target) {
+  if (!popover || !target) {
+    return;
+  }
+
+  const rect = target.getBoundingClientRect();
+  const popoverRect = popover.getBoundingClientRect();
+  const top = rect.top - popoverRect.height - 18;
+  const left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
+  const boundedLeft = Math.max(12, Math.min(left, window.innerWidth - popoverRect.width - 12));
+  const fallbackTop = rect.bottom + 18;
+  const placeBelow = !(top > 12);
+
+  popover.style.left = boundedLeft + 'px';
+  popover.style.top = (placeBelow ? fallbackTop : top) + 'px';
+  popover.classList.toggle('below', placeBelow);
+}
+
+function showArtistPreviewPopover(target) {
+  const artistId = target ? target.getAttribute('data-artist-preview-id') : '';
+  const artist = getArtistPreviewEntryById(artistId);
+  if (!target || !artist) {
+    hideArtistPreviewPopover();
+    return;
+  }
+
+  const popover = ensureArtistPreviewPopover();
+  const card = popover.querySelector('.artist-preview-card');
+  const media = popover.querySelector('.artist-preview-media');
+  const image = media ? media.querySelector('img') : null;
+  const title = popover.querySelector('.artist-preview-title');
+  const description = popover.querySelector('.artist-preview-description');
+
+  if (card) {
+    card.style.setProperty('--artist-preview-color', artist.color || '#F05E55');
+  }
+  if (image) {
+    if (artist.image) {
+      image.src = artist.image;
+      image.alt = artist.name;
+      media.style.display = '';
+      image.onload = function () {
+        if (window.__activeArtistPreviewTarget) {
+          positionArtistPreviewPopover(popover, window.__activeArtistPreviewTarget);
+        }
+      };
+      image.onerror = function () {
+        media.style.display = 'none';
+        if (window.__activeArtistPreviewTarget) {
+          positionArtistPreviewPopover(popover, window.__activeArtistPreviewTarget);
+        }
+      };
+    } else {
+      image.removeAttribute('src');
+      image.alt = '';
+      media.style.display = 'none';
+    }
+  }
+  if (title) {
+    title.textContent = artist.name;
+  }
+  if (description) {
+    description.textContent = artist.description || '';
+  }
+
+  window.__activeArtistPreviewTarget = target;
+  popover.classList.add('visible');
+  popover.setAttribute('aria-hidden', 'false');
+  positionArtistPreviewPopover(popover, target);
+  requestAnimationFrame(function () {
+    if (window.__activeArtistPreviewTarget) {
+      positionArtistPreviewPopover(popover, window.__activeArtistPreviewTarget);
+    }
+  });
+}
+
+window.addEventListener('scroll', function () {
+  const popover = document.getElementById('artistPreviewPopover');
+  const target = window.__activeArtistPreviewTarget;
+  if (!popover || !target || !popover.classList.contains('visible')) {
+    return;
+  }
+  positionArtistPreviewPopover(popover, target);
+}, { passive: true });
+
+window.addEventListener('resize', function () {
+  const popover = document.getElementById('artistPreviewPopover');
+  const target = window.__activeArtistPreviewTarget;
+  if (!popover || !target || !popover.classList.contains('visible')) {
+    return;
+  }
+  positionArtistPreviewPopover(popover, target);
+});
+
+function initializeArtistCreditPreviews(scope) {
+  const root = scope && scope.querySelectorAll ? scope : document;
+  root.querySelectorAll('[data-artist-preview-id]').forEach((link) => {
+    if (link.dataset.artistPreviewInitialized === 'true') {
+      return;
+    }
+
+    link.dataset.artistPreviewInitialized = 'true';
+    link.addEventListener('mouseenter', function () {
+      showArtistPreviewPopover(link);
+    });
+    link.addEventListener('focus', function () {
+      showArtistPreviewPopover(link);
+    });
+    link.addEventListener('mouseleave', hideArtistPreviewPopover);
+    link.addEventListener('blur', hideArtistPreviewPopover);
+  });
+}
+
+window.ensureArtistDirectoryLoaded = ensureArtistDirectoryLoaded;
+window.getArtistPreviewEntryById = getArtistPreviewEntryById;
+window.getArtistPreviewEntry = getArtistPreviewEntry;
+window.getArtistPageEntryBySlug = getArtistPageEntryBySlug;
+window.initializeArtistCreditPreviews = initializeArtistCreditPreviews;
+window.buildArtistCreditHtml = buildArtistCreditHtml;
 
 function populateAlbumPageCoverCredits() {
   ensureCoverArtistsLoaded().finally(function () {
@@ -1518,8 +2446,9 @@ function populateAlbumSidebarFromRow(sidebar, row) {
   if (artistsEnabled && artists.length > 0) {
     const artistsBlock = createAlbumSidebarBlock(artists.length === 1 ? 'Artist' : 'Artists');
     const artistsContent = artistsBlock.querySelector('.album-info-content');
-    artistsContent.innerHTML = artists.join('<br>');
+    artistsContent.innerHTML = buildArtistCreditHtml((row || {}).artists || '');
     sidebar.appendChild(artistsBlock);
+    initializeArtistCreditPreviews(artistsBlock);
   }
 
   const mixing = splitAlbumDataValues((row || {}).mixing || '');
@@ -1527,8 +2456,9 @@ function populateAlbumSidebarFromRow(sidebar, row) {
   if (mixingEnabled && mixing.length > 0) {
     const mixingBlock = createAlbumSidebarBlock('Mixing');
     const mixingContent = mixingBlock.querySelector('.album-info-content');
-    mixingContent.innerHTML = mixing.join('<br>');
+    mixingContent.innerHTML = buildArtistCreditHtml((row || {}).mixing || '');
     sidebar.appendChild(mixingBlock);
+    initializeArtistCreditPreviews(mixingBlock);
   }
 
   const mastering = splitAlbumDataValues((row || {}).mastering || '');
@@ -1536,8 +2466,9 @@ function populateAlbumSidebarFromRow(sidebar, row) {
   if (masteringEnabled && mastering.length > 0) {
     const masteringBlock = createAlbumSidebarBlock('Mastering');
     const masteringContent = masteringBlock.querySelector('.album-info-content');
-    masteringContent.innerHTML = mastering.join('<br>');
+    masteringContent.innerHTML = buildArtistCreditHtml((row || {}).mastering || '');
     sidebar.appendChild(masteringBlock);
+    initializeArtistCreditPreviews(masteringBlock);
   }
 
   const instrumentals = splitAlbumDataValues((row || {}).instrumentals || '');
@@ -1545,8 +2476,9 @@ function populateAlbumSidebarFromRow(sidebar, row) {
   if (instrumentalsEnabled && instrumentals.length > 0) {
     const instrumentalsBlock = createAlbumSidebarBlock('Instrumentals');
     const instrumentalsContent = instrumentalsBlock.querySelector('.album-info-content');
-    instrumentalsContent.innerHTML = instrumentals.join('<br>');
+    instrumentalsContent.innerHTML = buildArtistCreditHtml((row || {}).instrumentals || '');
     sidebar.appendChild(instrumentalsBlock);
+    initializeArtistCreditPreviews(instrumentalsBlock);
   }
 
   const vocalists = splitAlbumDataValues((row || {}).vocalists || '');
@@ -1554,8 +2486,9 @@ function populateAlbumSidebarFromRow(sidebar, row) {
   if (vocalistsEnabled && vocalists.length > 0) {
     const vocalistsBlock = createAlbumSidebarBlock(vocalists.length === 1 ? 'Vocalist' : 'Vocalists');
     const vocalistsContent = vocalistsBlock.querySelector('.album-info-content');
-    vocalistsContent.innerHTML = vocalists.join('<br>');
+    vocalistsContent.innerHTML = buildArtistCreditHtml((row || {}).vocalists || '');
     sidebar.appendChild(vocalistsBlock);
+    initializeArtistCreditPreviews(vocalistsBlock);
   }
 
   const listenBlock = createAlbumSidebarBlock('Listen');
@@ -1714,6 +2647,83 @@ function initializeAlbumTabs() {
   switchAlbumTab('tracklist');
 }
 
+function splitAlbumDisplayTitleLines(value) {
+  const lines = String(value || '')
+    .split(/\s*\|\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (lines.length) {
+    return lines;
+  }
+
+  const plain = String(value || '').trim();
+  return plain ? [plain] : [];
+}
+
+function setAlbumDisplayTitle(node, value) {
+  if (!node) {
+    return;
+  }
+
+  const lines = splitAlbumDisplayTitleLines(value);
+  node.textContent = '';
+
+  if (!lines.length) {
+    return;
+  }
+
+  lines.forEach((line, index) => {
+    if (index > 0) {
+      node.appendChild(document.createElement('br'));
+    }
+    node.appendChild(document.createTextNode(line));
+  });
+}
+
+function getHardcodedAlbumAltTabs(albumId) {
+  const normalizedAlbumId = String(albumId || '').trim().toLowerCase();
+  if (normalizedAlbumId !== 'cc' && normalizedAlbumId !== 'ccde') {
+    return [];
+  }
+
+  return [
+    { id: 'cc', label: 'CC' },
+    { id: 'ccde', label: 'CCDE' }
+  ];
+}
+
+function appendHardcodedAlbumAltTabs(tabsEl, albumId) {
+  if (!tabsEl) {
+    return;
+  }
+
+  const variants = getHardcodedAlbumAltTabs(albumId);
+  if (!variants.length) {
+    return;
+  }
+
+  const normalizedAlbumId = String(albumId || '').trim().toLowerCase();
+  variants.forEach((variant) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'version-tab' + (variant.id === normalizedAlbumId ? ' active' : '');
+    button.textContent = variant.label;
+    button.addEventListener('click', function () {
+      if (variant.id === normalizedAlbumId) {
+        return;
+      }
+
+      const targetRoute = '/music/' + variant.id;
+      window.location.href = typeof window.toSiteHref === 'function'
+        ? window.toSiteHref(targetRoute)
+        : withBasePath(targetRoute);
+    });
+
+    tabsEl.appendChild(button);
+  });
+}
+
 window.switchAlbumTab = switchAlbumTab;
 
 function buildAlbumPageFromRow(row) {
@@ -1777,6 +2787,7 @@ function buildAlbumPageFromRow(row) {
   tabs.appendChild(summaryTab);
   tabs.appendChild(extendedTab);
   tabs.appendChild(spacer);
+  appendHardcodedAlbumAltTabs(tabs, albumId);
   tabsContainer.appendChild(tabs);
 
   const header = document.createElement('div');
@@ -1804,15 +2815,16 @@ function buildAlbumPageFromRow(row) {
   infoHeader.className = 'album-info';
 
   const titleEl = document.createElement('h1');
-  titleEl.textContent = title;
+  setAlbumDisplayTitle(titleEl, title);
   infoHeader.appendChild(titleEl);
 
   const meta = document.createElement('div');
   meta.className = 'album-meta';
   if (artists) {
     const byP = document.createElement('p');
-    byP.textContent = 'By ' + artists + '.';
+    byP.innerHTML = 'By ' + buildArtistCreditHtml(artists) + '.';
     meta.appendChild(byP);
+    initializeArtistCreditPreviews(byP);
   }
   if (releaseDate) {
     const releaseP = document.createElement('p');
@@ -1888,8 +2900,10 @@ function initializeAlbumPageFromCsv(onReady) {
       return;
     }
 
-    buildAlbumPageFromRow(row);
-    done();
+    ensureArtistDirectoryLoaded().finally(function () {
+      buildAlbumPageFromRow(row);
+      done();
+    });
   });
 }
 
@@ -1901,6 +2915,8 @@ function runPageInitializers() {
   }
   pageInitializersRan = true;
 
+  const albumPage = isAlbumIndexPage();
+
   initializeAlbumPageFromCsv(function () {
     initializeAlbumTabs();
     populateAlbumPageCoverCredits();
@@ -1908,6 +2924,10 @@ function runPageInitializers() {
     initializeAlbumSummary();
     initializeAlbumExtendedInfo();
     initializeDataNavButtons();
+
+    if (albumPage && typeof window.releaseThemeGate === 'function') {
+      window.releaseThemeGate();
+    }
   });
   initializeSongSidebarData();
 }
@@ -2481,6 +3501,10 @@ function buildSongSidebarValueHtml(fieldKey, value, row) {
     return buildSongSidebarAppearsOnHtml(row);
   }
 
+  if (['artists', 'mixing', 'mastering', 'instrumentals', 'vocalists'].includes(fieldKey)) {
+    return buildArtistCreditHtml(value);
+  }
+
   const entries = splitSongSidebarValues(value);
 
   if (!entries.length) {
@@ -2634,10 +3658,12 @@ function populateSongSidebarBlock(block, row, key) {
   const outputHtml = buildSongSidebarValueHtml(key, value, row);
   if (contentEl && contentEl.classList && contentEl.classList.contains('song-info-content')) {
     contentEl.innerHTML = outputHtml;
+    initializeArtistCreditPreviews(contentEl);
   } else {
     const contentWrapper = document.createElement('div');
     contentWrapper.className = 'song-info-content';
     contentWrapper.innerHTML = outputHtml;
+    initializeArtistCreditPreviews(contentWrapper);
     const existing = block.querySelector('.song-info-content');
     if (existing) {
       existing.replaceWith(contentWrapper);
@@ -2697,6 +3723,13 @@ function getOrCreateSongSidebarBlock(sidebarScope, field) {
 
 function initializeSongSidebarData() {
   if (!document.querySelector('.song-page-wrapper')) {
+    return;
+  }
+
+  if (!artistDirectoryLoaded) {
+    ensureArtistDirectoryLoaded().finally(function () {
+      initializeSongSidebarData();
+    });
     return;
   }
 
@@ -3004,6 +4037,24 @@ function getPrimaryAlbumIdForSongRow(row) {
   return ids[0] || '';
 }
 
+function applyHardcodedTracklistAlbumOverride(row, albumId) {
+  const normalizedAlbumId = String(albumId || '').trim().toLowerCase();
+  if (!row || normalizedAlbumId !== 'cc') {
+    return normalizedAlbumId;
+  }
+
+  const rowAlbumIds = splitSongSidebarValues((row || {}).album_id || '')
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter((value) => value && value !== 'x');
+
+  // Shared Constant Companions songs should always use the Deluxe tracklist sidebar.
+  if (rowAlbumIds.includes('cc') && rowAlbumIds.includes('ccde')) {
+    return 'ccde';
+  }
+
+  return normalizedAlbumId;
+}
+
 function getAlbumTitleForTracklist(albumId, rows) {
   const normalizedAlbumId = String(albumId || '').trim().toLowerCase();
   if (!normalizedAlbumId) {
@@ -3095,6 +4146,8 @@ function initializeTracklistSidebar() {
       if (!mainAlbumId && albumRow) {
         mainAlbumId = String((albumRow || {}).album_id || '').trim().toLowerCase();
       }
+
+      mainAlbumId = applyHardcodedTracklistAlbumOverride(row, mainAlbumId);
 
       if (!mainAlbumId) {
         return;

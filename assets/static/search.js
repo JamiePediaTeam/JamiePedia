@@ -9,7 +9,8 @@ let searchContentIndexPromise = null;
 let searchContentIndex = {
   songs: Object.create(null),
   albums: Object.create(null),
-  motifs: Object.create(null)
+  motifs: Object.create(null),
+  artists: Object.create(null)
 };
 
 const searchSongCsvHeaderAliases = {
@@ -351,11 +352,15 @@ function ensureSearchContentIndexLoaded(basePath) {
       const motifs = payload && payload.motifs && typeof payload.motifs === 'object'
         ? payload.motifs
         : Object.create(null);
+      const artists = payload && payload.artists && typeof payload.artists === 'object'
+        ? payload.artists
+        : Object.create(null);
 
       searchContentIndex = {
         songs,
         albums,
-        motifs
+        motifs,
+        artists
       };
       return searchContentIndex;
     })
@@ -363,7 +368,8 @@ function ensureSearchContentIndexLoaded(basePath) {
       searchContentIndex = {
         songs: Object.create(null),
         albums: Object.create(null),
-        motifs: Object.create(null)
+        motifs: Object.create(null),
+        artists: Object.create(null)
       };
       return searchContentIndex;
     });
@@ -601,6 +607,96 @@ function buildSearchImageMapFromMotifCsv(csvText) {
   return map;
 }
 
+function normalizeSearchArtistSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function splitSearchArtistPageId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return { pageId: '', hashToken: '' };
+  }
+
+  const splitIndex = raw.indexOf('#');
+  return {
+    pageId: splitIndex === -1 ? raw : raw.slice(0, splitIndex),
+    hashToken: splitIndex === -1 ? '' : raw.slice(splitIndex + 1)
+  };
+}
+
+function normalizeSearchArtistHashToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^#/, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function buildSearchArtistInternalPath(value) {
+  const parts = splitSearchArtistPageId(value);
+  const slug = normalizeSearchArtistSlug(parts.pageId);
+  const hashToken = normalizeSearchArtistHashToken(parts.hashToken);
+  if (!slug) {
+    return '';
+  }
+
+  return hashToken ? ('/artists/' + slug + '#' + hashToken) : ('/artists/' + slug);
+}
+
+function buildSearchArtistMapFromCsv(csvText) {
+  const imageByPath = Object.create(null);
+  const summaryBySlug = Object.create(null);
+  const lines = String(csvText || '').split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
+    return { imageByPath, summaryBySlug };
+  }
+
+  const headers = splitSearchCsvLine(lines[0]).map((header) => header.toLowerCase());
+  const artistIdIndex = headers.indexOf('artist id');
+  const artistNameIndex = headers.indexOf('artist name');
+  const artistImageIndex = headers.indexOf('artist image');
+  const artistLinksIndex = headers.indexOf('artist links');
+  const hasPageIndex = headers.indexOf('has page?') !== -1 ? headers.indexOf('has page?') : headers.indexOf('has page');
+  const descriptionIndex = headers.indexOf('description');
+  if (artistIdIndex === -1) {
+    return { imageByPath, summaryBySlug };
+  }
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitSearchCsvLine(lines[index]);
+    const firstArtistId = splitSearchPipeValues(values[artistIdIndex] || '')[0] || '';
+    const firstArtistName = splitSearchPipeValues(values[artistNameIndex] || '')[0] || firstArtistId;
+    const parts = splitSearchArtistPageId(firstArtistId);
+    const slug = normalizeSearchArtistSlug(parts.pageId || firstArtistId);
+    const internalPath = buildSearchArtistInternalPath(firstArtistId);
+    if (!slug) {
+      continue;
+    }
+
+    const hasPage = String(values[hasPageIndex] || '').trim().toUpperCase();
+    const links = splitSearchPipeValues(values[artistLinksIndex] || '');
+    const externalHref = String(links[0] || '').trim();
+    const path = (hasPage === 'FALSE' || hasPage === 'NO' || hasPage === '0') && externalHref
+      ? externalHref
+      : internalPath;
+    const firstImage = splitSearchPipeValues(values[artistImageIndex] || '')[0] || '';
+    const normalizedImage = normalizeSearchImagePath(firstImage);
+    if (normalizedImage) {
+      imageByPath[path] = normalizedImage;
+    }
+
+    const description = String(values[descriptionIndex] || '').trim();
+    summaryBySlug[slug] = [firstArtistName, description].filter(Boolean).join(' ').trim();
+  }
+
+  return { imageByPath, summaryBySlug };
+}
+
 function ensureSearchImageCsvLoaded(basePath) {
   if (searchImageCsvPromise) {
     return searchImageCsvPromise;
@@ -609,17 +705,26 @@ function ensureSearchImageCsvLoaded(basePath) {
   const songCsvUrl = (basePath || '') + '/public/csv/JamiePedia Data - Songs.csv';
   const motifCsvUrl = (basePath || '') + '/public/csv/JamiePedia Data - Motifs.csv';
   const albumCsvUrl = (basePath || '') + '/public/csv/JamiePedia Data - Albums.csv';
+  const artistCsvUrl = (basePath || '') + '/public/csv/JamiePedia Data - Artists.csv';
 
   searchImageCsvPromise = Promise.all([
     fetch(songCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
     fetch(motifCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
-    fetch(albumCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : '')
-  ]).then(([songCsvText, motifCsvText, albumCsvText]) => {
+    fetch(albumCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
+    fetch(artistCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : '')
+  ]).then(([songCsvText, motifCsvText, albumCsvText, artistCsvText]) => {
     const songMap = buildSearchImageMapFromSongCsv(songCsvText);
     const motifMap = buildSearchImageMapFromMotifCsv(motifCsvText);
     const albumMaps = buildSearchAlbumMapsFromAlbumCsv(albumCsvText);
+    const artistMaps = buildSearchArtistMapFromCsv(artistCsvText);
     searchAlbumTitleByPath = albumMaps.titleByPath;
-    searchImageByPath = Object.assign(Object.create(null), motifMap, albumMaps.imageByPath, songMap);
+    searchImageByPath = Object.assign(Object.create(null), artistMaps.imageByPath, motifMap, albumMaps.imageByPath, songMap);
+    Object.keys(artistMaps.summaryBySlug).forEach((slug) => {
+      if (!searchContentIndex.artists) {
+        searchContentIndex.artists = Object.create(null);
+      }
+      searchContentIndex.artists[slug] = artistMaps.summaryBySlug[slug];
+    });
     return searchImageByPath;
   }).catch(() => {
     searchImageByPath = Object.create(null);
@@ -639,6 +744,12 @@ function getSearchMotifSummaryText(motifKeys) {
     .filter(Boolean)
     .join(' ')
     .trim();
+}
+
+function getSearchArtistSummaryText(routePath) {
+  const artistIndex = (searchContentIndex && searchContentIndex.artists) || Object.create(null);
+  const slug = String((routePath || '').split('/').filter(Boolean).pop() || '').trim().toLowerCase();
+  return String(artistIndex[slug] || '').trim();
 }
 
 function buildSearchSnippet(text, query) {
@@ -738,6 +849,7 @@ function searchFile(fileEntry, query, searchContext) {
     const pathParts = routePath.split('/').filter(Boolean);
     const isMotifPage = routePath === '/motifs' || pathParts[0] === 'motifs';
     const isMusicPage = pathParts[0] === 'music';
+    const isArtistPage = routePath === '/artists' || pathParts[0] === 'artists';
     const motifRouteSlug = pathParts[1] || '';
     const motifCategoryId = String((fileEntry || {}).motifCategoryId || motifRouteSlug || '').trim();
     const motifIdFromEntry = String((fileEntry || {}).motifId || '').trim();
@@ -786,6 +898,10 @@ function searchFile(fileEntry, query, searchContext) {
         return motifSlug ? motifSlug.replace(/-/g, ' ') : 'Motifs';
       }
 
+      if (isArtistPage) {
+        return String((fileEntry || {}).title || '').trim() || ((pathParts[1] || '').replace(/-/g, ' ') || 'Artists');
+      }
+
       const fileName = String(routePath || '').split('/').pop() || '';
       return fileName.replace(/-/g, ' ');
     })();
@@ -811,6 +927,8 @@ function searchFile(fileEntry, query, searchContext) {
         ? getSearchAlbumExternalContent(routePath)
         : isMotifPage
           ? { summary: getSearchMotifSummaryText(motifSummaryKeys), lyrics: '', extended: '' }
+          : isArtistPage
+            ? { summary: getSearchArtistSummaryText(routePath), lyrics: '', extended: '' }
           : { summary: '', lyrics: '', extended: '' };
 
     const motifRelatedText = isMotifPage && typeof window.SongData !== 'undefined' && window.SongData && typeof window.SongData.getSongsWithMotifId === 'function'

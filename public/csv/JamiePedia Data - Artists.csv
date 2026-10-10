@@ -1,0 +1,10 @@
+Artist ID,Lyric Tag,Artist Name,Has Page?,Artist Image,Image Label,Artist Color,Artist Type,Theme,Link Text,Artist Links,Description
+jamie-paige,jamie,Jamie Paige,TRUE,public/images/artist-art/jamie_paige.jpg,,F11519,Musical Artist,default,Bandcamp | YouTube | Bluesky,https://jamiepaige.bandcamp.com | https://www.youtube.com/@jamiepaige | https://bsky.app/profile/jamiepaige.bsky.social,Example
+marcy-nabors,,Marcy Nabors,TRUE,public/images/artist-art/shadolith.jpg,,D13FC6,Musical Artist,default,Website,https://marcynabors.com/,
+oddeeo,,ODDEEO | unit.0,TRUE,public/images/artist-art/oddeeo.jpg | public/images/artist-art/unit0.jpg,ODDEEO | unit.0,7B6D87,Musical Artist,default,Twitter ODDEEO | Twitter unit.0,https://x.com/_ODDEEO_ | https://x.com/unit0dev,
+gumi#v6,gumiv6,GUMI Megpoid | GUMI V6,TRUE,public/images/artist-art/gumiv6.png,,B4D898,Vocalist,default,Official Site,https://internetmusicsoft.com/v6mph/index.html,
+gumi#synthv,gumisv,GUMI Synthesizer V,TRUE,public/images/artist-art/gumi.png,,3FB1E4,Vocalist,default,Official Site,https://www.ssw.co.jp/en/products/synth_v/gumi/,
+gumi#english-v3,gumiv3e,GUMI VOCALOID3 English,TRUE,public/images/artist-art/gumiv3.png,,7ED881,Vocalist,default,Official Site,https://www.ssw.co.jp/products/vocal3/megpoid/,
+kasane-teto#synthv,tetosv,Kasane Teto | Kasane Teto Synthesizer V,TRUE,public/images/artist-art/kasane_teto.png,,C6344C,Vocalist,default,Official Site,https://www.ssw.co.jp/en/products/synth_v/gumi/,
+kasane-teto#utau,tetoutau,Kasane Teto Utau,TRUE,public/images/artist-art/kasane_teto_utau.png,,E9617B,Vocalist,default,Official Site,https://www.ssw.co.jp/en/products/synth_v/gumi/,
+reverieque,,REVERIEQUE,TRUE,public/images/artist-art/reverieque.jpg,,D2453C,Visual Artist,default,Bluesky,https://bsky.app/profile/reverieque.bsky.social,
