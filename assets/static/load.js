@@ -1148,6 +1148,28 @@ function setNavLinkTarget(element, targetPath) {
   element.style.pointerEvents = 'none';
 }
 
+function getArtistNavListWithPageAvailability(list) {
+  const items = Array.isArray(list) ? list : [];
+  if (!items.length) {
+    return [];
+  }
+
+  return items.filter((item) => {
+    const normalized = normalizeArtistNavPathKey(item);
+    if (!normalized) {
+      return false;
+    }
+
+    const slug = (normalized.split('#')[0] || '').split('/').filter(Boolean).pop() || '';
+    if (!slug) {
+      return false;
+    }
+
+    const page = typeof getArtistPageEntryBySlug === 'function' ? getArtistPageEntryBySlug(slug) : null;
+    return Boolean(page && page.hasPage !== false);
+  });
+}
+
 function getNavListForPath(currentPath) {
   const navOrder = window.navOrder;
   if (!navOrder) return null;
@@ -1165,7 +1187,7 @@ function getNavListForPath(currentPath) {
   }
 
   if (Array.isArray(navOrder.artists) && navOrder.artists.some((item) => normalizePathForNav(item) === currentPath)) {
-    return navOrder.artists;
+    return getArtistNavListWithPageAvailability(navOrder.artists);
   }
 
   return null;
@@ -1229,7 +1251,7 @@ function initializeDataNavButtons() {
     const currentPath = normalizePathForNav(window.location.pathname);
     activeList = getNavListForPath(currentPath);
     if (!activeList) return;
-    const activeIsArtistList = Boolean(navOrder && activeList === navOrder.artists);
+    const activeIsArtistList = Boolean(navOrder && Array.isArray(navOrder.artists) && navOrder.artists.some((item) => normalizePathForNav(item) === currentPath));
     if (activeIsArtistList) {
       const currentArtistKey = getCurrentArtistNavKey();
       currentIndex = activeList.findIndex((item) => normalizeArtistNavPathKey(item) === currentArtistKey);
@@ -1724,20 +1746,38 @@ function normalizeArtistColorValue(value, fallback) {
 }
 
 function normalizeArtistType(value) {
-  const raw = String(value || '').trim().toLowerCase();
-  if (raw === 'musical artist' || raw === 'music artist' || raw === 'artist') {
-    return 'Musical Artist';
+  const candidates = splitArtistDataValues(value)
+    .map((entry) => String(entry || '').trim().toLowerCase())
+    .filter(Boolean);
+
+  const raw = candidates[0] || '';
+  if (!raw) {
+    return 'Miscellaneous';
   }
-  if (raw === 'vocalist' || raw === 'voicebank' || raw === 'voice bank') {
-    return 'Vocalist';
+
+  if (raw === 'musical artist' || raw === 'music artist' || raw === 'artist' || raw === 'musical artists' || raw === 'music artists' || raw === 'musical artists') {
+    return 'Musical Artists';
   }
-  if (raw === 'graphic artist' || raw === 'visual artist' || raw === 'illustrator') {
-    return 'Visual Artist';
+  if (raw === 'music group' || raw === 'music groups' || raw === 'musical group' || raw === 'musical groups') {
+    return 'Musical Groups';
   }
-  if (raw === 'misc' || raw === 'misc.' || raw === 'miscellaneous') {
-    return 'Misc.';
+  if (raw === 'vocalist' || raw === 'vocalists') {
+    return 'Vocalists';
   }
-  return 'Misc.';
+  if (raw === 'voicebank' || raw === 'voice bank' || raw === 'voicebanks' || raw === 'voice banks') {
+    return 'Voice Banks';
+  }
+  if (raw === 'text-to-speech' || raw === 'text to speech' || raw === 'text-to-speechs' || raw === 'text to speeches') {
+    return 'Text-to-Speech';
+  }
+  if (raw === 'graphic artist' || raw === 'graphic artists' || raw === 'visual artist' || raw === 'visual artists' || raw === 'illustrator') {
+    return 'Visual Artists';
+  }
+  if (raw === 'misc' || raw === 'misc.' || raw === 'miscellaneous' || raw === 'miscellaneouss') {
+    return 'Miscellaneous';
+  }
+
+  return String(value || '').trim() || 'Miscellaneous';
 }
 
 function resolveArtistImagePath(value) {
@@ -1821,6 +1861,8 @@ function buildArtistDirectoryFromCsv(text) {
     const descriptions = splitArtistDataValues(values[descriptionIndex] || '');
     const linkLabels = splitArtistDataValues(values[linkTextIndex] || '');
     const linkHrefs = splitArtistDataValues(values[artistLinksIndex] || '');
+    const artistTypeValues = splitArtistDataValues(values[artistTypeIndex] || '');
+    const primaryArtistType = normalizeArtistType(artistTypeValues[0] || '');
     const primaryPageId = splitArtistPageId(ids[0]);
     const pageSlug = normalizeArtistPageSlug(primaryPageId.pageId);
     const legacyPageSlug = normalizeArtistPageSlug(ids[0]);
@@ -1844,7 +1886,8 @@ function buildArtistDirectoryFromCsv(text) {
       pageHashToken: normalizeArtistPageHashToken(primaryPageId.hashToken),
       primaryName: String(names[0] || ids[0]).trim(),
       theme: String(values[themeIndex] || '').trim(),
-      type: normalizeArtistType(values[artistTypeIndex] || ''),
+      type: primaryArtistType,
+      types: artistTypeValues.map((value) => normalizeArtistType(value)).filter(Boolean),
       hasPage: pageEnabled,
       links: [],
       aliases: []
@@ -2356,7 +2399,7 @@ const albumCsvHeaderAliases = {
   listen: ['listen'],
   listen_enabled: ['listen_enabled', 'listen enabled'],
   theme: ['theme', 'version_theme'],
-  music_page_section: ['music_page_section', 'music page section', 'music_files_group', 'group', 'music files group']
+  music_page_section: ['music_page_section', 'category','music page section', 'songs and albums default', 'songs_and_albums_default', 'music_files_group', 'group', 'music files group']
 };
 
 function splitAlbumDataValues(value) {
@@ -2972,7 +3015,7 @@ const songSidebarHeaderAliases = {
   album_track: ['album_track', 'track number'],
   album_art_paths: ['album_art_paths', 'album path', 'album art'],
   album_tab_labels: ['album_tab_labels', 'cover art labels'],
-  music_page_section: ['music_page_section', 'music page section'],
+  music_page_section: ['music_page_section', 'category', 'music page section', 'songs and albums default', 'songs_and_albums_default'],
   appears_on: ['appears_on', 'appears on text'],
   release_date: ['release_date', 'release date'],
   artists: ['artists'],
@@ -3221,7 +3264,7 @@ function getSongSidebarAlbumTrackTotals(rows) {
       return;
     }
 
-    if (songSidebarIsSecretSection((row || {}).music_page_section || '')) {
+    if (songSidebarIsSecretSection((row || {}).songs_and_albums_default || (row || {}).music_page_section || '')) {
       return;
     }
 
