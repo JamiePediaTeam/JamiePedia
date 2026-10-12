@@ -289,14 +289,44 @@ function getSongMotifsState() {
       lyricalRefs: [],
       karaokeCurrentIndex: -2,
       karaokeWrap: null,
+      karaokeViewport: null,
       karaokeLayerHost: null,
       karaokeActiveLayer: null,
       karaokeTransitionTimer: null,
+      karaokeMainReentryAnimationTimer: null,
+      karaokeWrapResizeTimer: null,
+      karaokeLayoutMode: 'hidden',
+      karaokeConfiguredBackingTrackCount: 0,
+      karaokeBackingVisible: false,
+      karaokeBackingWrap: null,
+      karaokeBackingTracks: [],
       karaokePrimarySingerToken: '',
       karaokePrimarySingerArtist: null
     };
   }
   return window.__songMotifsState;
+}
+
+function songMotifsFindCurrentEntryIndex(entries, syncedTime) {
+  const list = Array.isArray(entries) ? entries : [];
+  if (!list.length) {
+    return -1;
+  }
+
+  let currentIndex = -1;
+  for (let i = 0; i < list.length; i += 1) {
+    if ((Number(list[i].time) || 0) <= syncedTime + 0.01) {
+      currentIndex = i;
+    } else {
+      break;
+    }
+  }
+
+  return currentIndex;
+}
+
+function songMotifsEntryHasRenderableText(entry) {
+  return Boolean(String((entry || {}).text || '').trim());
 }
 
 function songMotifsBuildKaraokePayload(currentIndex) {
@@ -305,6 +335,21 @@ function songMotifsBuildKaraokePayload(currentIndex) {
   const currentEntry = currentIndex >= 0 ? state.karaokeEntries[currentIndex] : null;
   const nextEntry = currentIndex >= 0 && currentIndex + 1 < state.karaokeEntries.length
     ? state.karaokeEntries[currentIndex + 1]
+    : null;
+
+  return {
+    previousEntry,
+    currentEntry,
+    nextEntry
+  };
+}
+
+function songMotifsBuildKaraokePayloadForEntries(entries, currentIndex) {
+  const list = Array.isArray(entries) ? entries : [];
+  const previousEntry = currentIndex > 0 ? list[currentIndex - 1] : null;
+  const currentEntry = currentIndex >= 0 ? list[currentIndex] : null;
+  const nextEntry = currentIndex >= 0 && currentIndex + 1 < list.length
+    ? list[currentIndex + 1]
     : null;
 
   return {
@@ -638,7 +683,7 @@ function songMotifsBuildKaraokeLineHtml(entry) {
 
   const singers = songMotifsResolveSingersForEntry(entry);
   if (!singers.length) {
-    return rendered;
+    return '<span class="song-karaoke-line-fit-target">' + rendered + '</span>';
   }
 
   const singerGradient = songMotifsBuildSingerGradientValue(singers);
@@ -656,11 +701,47 @@ function songMotifsBuildKaraokeLineHtml(entry) {
     return '<a class="song-karaoke-singer-link song-karaoke-singer-hitbox" href="' + songMotifsEscapeHtml(singerHref || '#') + '" aria-label="' + songMotifsEscapeHtml(ariaLabel) + '" style="--karaoke-singer-color: ' + songMotifsEscapeHtml(singerColor) + ';"' + previewAttr + '></a>';
   }).join('');
 
-  return '<span class="song-karaoke-singer-line" style="--singer-gradient: ' + songMotifsEscapeHtml(singerGradient) + '; --singer-count: ' + singerCount + ';">' +
+  return '<span class="song-karaoke-singer-line song-karaoke-line-fit-target" style="--singer-gradient: ' + songMotifsEscapeHtml(singerGradient) + '; --singer-count: ' + singerCount + ';">' +
     '<span class="song-karaoke-singer-text">' + rendered + '</span>' +
     '<span class="song-karaoke-singer-underline" aria-hidden="true"></span>' +
     '<span class="song-karaoke-singer-hitboxes">' + hitboxesHtml + '</span>' +
     '</span>';
+}
+
+function songMotifsFitBackingLaneText(lane) {
+  if (!lane || !lane.isBacking || !lane.layerHost) {
+    return;
+  }
+
+  const lineNodes = Array.from(lane.layerHost.querySelectorAll('.song-karaoke-line'));
+  lineNodes.forEach((lineNode) => {
+    const fitTarget = lineNode.querySelector('.song-karaoke-line-fit-target');
+    if (!fitTarget) {
+      return;
+    }
+
+    fitTarget.style.setProperty('--karaoke-fit-scale', '1');
+    const availableWidth = Math.max(0, lineNode.clientWidth - 16);
+    const contentWidth = Math.ceil(fitTarget.scrollWidth || 0);
+
+    if (availableWidth <= 0 || contentWidth <= 0) {
+      return;
+    }
+
+    const rawScale = availableWidth / contentWidth;
+    const scale = Math.max(0.22, Math.min(1, rawScale * 0.92));
+    fitTarget.style.setProperty('--karaoke-fit-scale', String(scale));
+  });
+}
+
+function songMotifsLaneHasRenderableLyrics(payload) {
+  if (!payload) {
+    return false;
+  }
+
+  return songMotifsEntryHasRenderableText(payload.previousEntry)
+    || songMotifsEntryHasRenderableText(payload.currentEntry)
+    || songMotifsEntryHasRenderableText(payload.nextEntry);
 }
 
 function songMotifsPopulateKaraokeLine(node, entry) {
@@ -692,7 +773,290 @@ function songMotifsBuildKaraokeLayer(payload, layerClassName) {
   return layer;
 }
 
+function songMotifsResetKaraokeLane(lane) {
+  if (!lane) {
+    return;
+  }
+
+  if (lane.transitionTimer) {
+    clearTimeout(lane.transitionTimer);
+    lane.transitionTimer = null;
+  }
+
+  lane.currentIndex = -2;
+  lane.activeLayer = null;
+  if (lane.layerHost) {
+    lane.layerHost.innerHTML = '';
+  }
+}
+
+function songMotifsUpdateKaraokeLane(lane, payload, currentIndex) {
+  if (!lane || !lane.layerHost) {
+    return;
+  }
+
+  if (currentIndex === lane.currentIndex) {
+    return;
+  }
+
+  const previousIndex = lane.currentIndex;
+  lane.currentIndex = currentIndex;
+
+  if (lane.transitionTimer) {
+    clearTimeout(lane.transitionTimer);
+    lane.transitionTimer = null;
+  }
+
+  if (lane.activeLayer) {
+    lane.activeLayer.classList.remove('song-karaoke-layer-entering');
+    lane.activeLayer.classList.remove('song-karaoke-layer-entering-play');
+    lane.activeLayer.classList.remove('song-karaoke-layer-leaving');
+    lane.activeLayer.classList.add('song-karaoke-layer-active');
+  }
+
+  Array.from(lane.layerHost.children).forEach((child) => {
+    if (child !== lane.activeLayer) {
+      child.remove();
+    }
+  });
+
+  if (!lane.activeLayer) {
+    const initialLayer = songMotifsBuildKaraokeLayer(payload, 'song-karaoke-layer-active');
+    lane.layerHost.innerHTML = '';
+    lane.layerHost.appendChild(initialLayer);
+    lane.activeLayer = initialLayer;
+    if (lane.isBacking) {
+      songMotifsFitBackingLaneText(lane);
+    }
+    return;
+  }
+
+  const shouldAnimate = Math.abs(currentIndex - previousIndex) === 1;
+  if (!shouldAnimate) {
+    const replacementLayer = songMotifsBuildKaraokeLayer(payload, 'song-karaoke-layer-active');
+    lane.layerHost.innerHTML = '';
+    lane.layerHost.appendChild(replacementLayer);
+    lane.activeLayer = replacementLayer;
+    if (lane.isBacking) {
+      songMotifsFitBackingLaneText(lane);
+    }
+    return;
+  }
+
+  const leavingLayer = lane.activeLayer;
+  leavingLayer.classList.remove('song-karaoke-layer-active');
+  leavingLayer.classList.add('song-karaoke-layer-leaving');
+
+  const enteringLayer = songMotifsBuildKaraokeLayer(payload, 'song-karaoke-layer-entering');
+  lane.layerHost.appendChild(enteringLayer);
+  lane.activeLayer = enteringLayer;
+  if (lane.isBacking) {
+    songMotifsFitBackingLaneText(lane);
+  }
+  void enteringLayer.offsetWidth;
+  enteringLayer.classList.add('song-karaoke-layer-entering-play');
+
+  lane.transitionTimer = setTimeout(() => {
+    if (leavingLayer.parentNode) {
+      leavingLayer.remove();
+    }
+    enteringLayer.classList.remove('song-karaoke-layer-entering');
+    enteringLayer.classList.remove('song-karaoke-layer-entering-play');
+    enteringLayer.classList.add('song-karaoke-layer-active');
+    if (lane.isBacking) {
+      songMotifsFitBackingLaneText(lane);
+    }
+    lane.transitionTimer = null;
+  }, 500);
+}
+
 const SONG_MOTIFS_KARAOKE_SYNC_LEAD_SECONDS = 0.9;
+const SONG_MOTIFS_KARAOKE_PRE_GROW_LEAD_SECONDS = 0.5;
+const SONG_MOTIFS_KARAOKE_WRAP_RESIZE_MS = 500;
+
+function songMotifsClearKaraokeWrapResizeAnimation(state) {
+  if (!state || !state.karaokeWrap) {
+    return;
+  }
+
+  if (state.karaokeWrapResizeTimer) {
+    clearTimeout(state.karaokeWrapResizeTimer);
+    state.karaokeWrapResizeTimer = null;
+  }
+
+  state.karaokeWrap.classList.remove('song-karaoke-measure-layout');
+  state.karaokeWrap.style.height = '';
+  state.karaokeWrap.style.overflow = '';
+  state.karaokeWrap.style.transition = '';
+  state.karaokeWrap.style.willChange = '';
+}
+
+function songMotifsApplyKaraokeLayoutState(state, options) {
+  if (!state || !state.karaokeWrap) {
+    return;
+  }
+
+  const config = options || {};
+  const showMainViewport = !!config.showMainViewport;
+  const shouldPreGrowMain = !!config.shouldPreGrowMain;
+  const hasBackingLyricsOnScreen = !!config.hasBackingLyricsOnScreen;
+  const showBackingOnlyLayout = !!config.showBackingOnlyLayout;
+  const backingTrackCount = Math.max(0, Number(config.backingTrackCount) || 0);
+  const nextLayoutMode = String(config.nextLayoutMode || 'hidden');
+  const previousLayoutMode = String(state.karaokeLayoutMode || 'hidden');
+  const previousBackingTrackCount = Math.max(0, Number(state.karaokeConfiguredBackingTrackCount) || 0);
+  const previousBackingVisible = !!state.karaokeBackingVisible;
+  const wrap = state.karaokeWrap;
+
+  const applyLayoutState = () => {
+    wrap.style.display = '';
+    wrap.classList.toggle('song-karaoke-backing-count-1', backingTrackCount === 1);
+    wrap.classList.toggle('song-karaoke-backing-count-2', backingTrackCount >= 2);
+    wrap.classList.toggle('song-karaoke-layout-with-main', showMainViewport);
+    wrap.classList.toggle('song-karaoke-layout-backing-only', showBackingOnlyLayout);
+    wrap.classList.toggle('song-karaoke-main-preopen', shouldPreGrowMain);
+
+    if (state.karaokeViewport) {
+      state.karaokeViewport.classList.toggle('is-open', showMainViewport);
+      state.karaokeViewport.classList.toggle('is-preopen', shouldPreGrowMain);
+    }
+
+    if (state.karaokeBackingWrap) {
+      state.karaokeBackingWrap.style.display = hasBackingLyricsOnScreen ? 'grid' : 'none';
+    }
+  };
+
+  const shouldAnimateWrapResize = previousLayoutMode !== 'hidden'
+    && nextLayoutMode !== 'hidden'
+    && (
+      previousLayoutMode !== nextLayoutMode
+      || previousBackingTrackCount !== backingTrackCount
+      || previousBackingVisible !== hasBackingLyricsOnScreen
+    );
+
+  if (!shouldAnimateWrapResize) {
+    applyLayoutState();
+    state.karaokeLayoutMode = nextLayoutMode;
+    state.karaokeConfiguredBackingTrackCount = backingTrackCount;
+    state.karaokeBackingVisible = hasBackingLyricsOnScreen;
+    return;
+  }
+
+  const startHeight = wrap.getBoundingClientRect().height;
+
+  wrap.classList.add('song-karaoke-measure-layout');
+  applyLayoutState();
+  void wrap.offsetHeight;
+  const targetHeight = wrap.getBoundingClientRect().height;
+  wrap.classList.remove('song-karaoke-measure-layout');
+
+  songMotifsClearKaraokeWrapResizeAnimation(state);
+  state.karaokeLayoutMode = nextLayoutMode;
+  state.karaokeConfiguredBackingTrackCount = backingTrackCount;
+  state.karaokeBackingVisible = hasBackingLyricsOnScreen;
+
+  if (startHeight <= 0 || targetHeight <= 0 || Math.abs(targetHeight - startHeight) < 0.75) {
+    return;
+  }
+
+  wrap.style.height = startHeight + 'px';
+  wrap.style.overflow = 'hidden';
+  wrap.style.willChange = 'height';
+  void wrap.offsetHeight;
+  wrap.style.transition = 'height ' + SONG_MOTIFS_KARAOKE_WRAP_RESIZE_MS + 'ms ease';
+  wrap.style.height = targetHeight + 'px';
+
+  state.karaokeWrapResizeTimer = setTimeout(() => {
+    songMotifsClearKaraokeWrapResizeAnimation(state);
+  }, SONG_MOTIFS_KARAOKE_WRAP_RESIZE_MS + 40);
+}
+
+function songMotifsFindUpcomingMainReentryCue(entries, currentIndex) {
+  const list = Array.isArray(entries) ? entries : [];
+  if (!list.length) {
+    return null;
+  }
+
+  let nextTextIndex = -1;
+  for (let i = Math.max(-1, currentIndex) + 1; i < list.length; i += 1) {
+    if (songMotifsEntryHasRenderableText(list[i])) {
+      nextTextIndex = i;
+      break;
+    }
+  }
+
+  if (nextTextIndex < 0) {
+    return null;
+  }
+
+  let cueTime = null;
+  for (let i = nextTextIndex - 1; i >= 0; i -= 1) {
+    if (!songMotifsEntryHasRenderableText(list[i])) {
+      cueTime = Number(list[i].time);
+      break;
+    }
+    if (songMotifsEntryHasRenderableText(list[i])) {
+      break;
+    }
+  }
+
+  if (!Number.isFinite(cueTime)) {
+    return null;
+  }
+
+  const nextTextTime = Number(list[nextTextIndex].time);
+  if (!Number.isFinite(nextTextTime)) {
+    return null;
+  }
+
+  return {
+    cueTime,
+    nextTextTime
+  };
+}
+
+function songMotifsSyncHiddenMainLane(state, currentIndex) {
+  if (!state || !state.karaokeLayerHost) {
+    return;
+  }
+
+  if (state.karaokeTransitionTimer) {
+    clearTimeout(state.karaokeTransitionTimer);
+    state.karaokeTransitionTimer = null;
+  }
+
+  if (currentIndex === state.karaokeCurrentIndex && state.karaokeActiveLayer) {
+    return;
+  }
+
+  state.karaokeCurrentIndex = currentIndex;
+  const payload = songMotifsBuildKaraokePayload(currentIndex);
+  const hiddenLayer = songMotifsBuildKaraokeLayer(payload, 'song-karaoke-layer-active');
+  state.karaokeLayerHost.innerHTML = '';
+  state.karaokeLayerHost.appendChild(hiddenLayer);
+  state.karaokeActiveLayer = hiddenLayer;
+}
+
+function songMotifsAnimateMainReentryBottomLine(state) {
+  if (!state || !state.karaokeActiveLayer) {
+    return;
+  }
+
+  if (state.karaokeMainReentryAnimationTimer) {
+    clearTimeout(state.karaokeMainReentryAnimationTimer);
+    state.karaokeMainReentryAnimationTimer = null;
+  }
+
+  const layer = state.karaokeActiveLayer;
+  layer.classList.remove('song-karaoke-layer-main-reentry');
+  void layer.offsetWidth;
+  layer.classList.add('song-karaoke-layer-main-reentry');
+
+  state.karaokeMainReentryAnimationTimer = setTimeout(() => {
+    layer.classList.remove('song-karaoke-layer-main-reentry');
+    state.karaokeMainReentryAnimationTimer = null;
+  }, 500);
+}
 
 function songMotifsUpdateKaraoke(currentTime) {
   const state = getSongMotifsState();
@@ -700,21 +1064,133 @@ function songMotifsUpdateKaraoke(currentTime) {
     return;
   }
 
-  if (!Array.isArray(state.karaokeEntries) || state.karaokeEntries.length === 0) {
+  const wasMainViewportVisible = state.karaokeLayoutMode === 'with-main';
+  const syncedTime = currentTime + SONG_MOTIFS_KARAOKE_SYNC_LEAD_SECONDS;
+  const hasMainEntries = Array.isArray(state.karaokeEntries) && state.karaokeEntries.length > 0;
+  const backingTracks = Array.isArray(state.karaokeBackingTracks) ? state.karaokeBackingTracks : [];
+  const hasBackingEntries = backingTracks.some((track) => Array.isArray(track.entries) && track.entries.length > 0);
+
+  if (!hasMainEntries && !hasBackingEntries) {
+    songMotifsClearKaraokeWrapResizeAnimation(state);
+    state.karaokeLayoutMode = 'hidden';
+    state.karaokeBackingVisible = false;
     state.karaokeWrap.style.display = 'none';
     return;
   }
 
-  state.karaokeWrap.style.display = '';
-  const syncedTime = currentTime + SONG_MOTIFS_KARAOKE_SYNC_LEAD_SECONDS;
+  const currentIndex = hasMainEntries
+    ? songMotifsFindCurrentEntryIndex(state.karaokeEntries, syncedTime)
+    : -1;
+  const currentMainEntry = currentIndex >= 0 ? state.karaokeEntries[currentIndex] : null;
+  const hasMainLine = songMotifsEntryHasRenderableText(currentMainEntry);
+  let hasActiveBackingLine = false;
+  let hasBackingLyricsOnScreen = false;
+  const configuredBackingTrackCount = backingTracks.reduce((count, track) => {
+    return count + ((track && Array.isArray(track.entries) && track.entries.length > 0) ? 1 : 0);
+  }, 0);
 
-  let currentIndex = -1;
-  for (let i = 0; i < state.karaokeEntries.length; i += 1) {
-    if (state.karaokeEntries[i].time <= syncedTime + 0.01) {
-      currentIndex = i;
-    } else {
-      break;
+  backingTracks.forEach((track) => {
+    if (!track || !Array.isArray(track.entries)) {
+      return;
     }
+
+    const trackHasEntries = track.entries.length > 0;
+    if (track.trackNode) {
+      track.trackNode.style.display = trackHasEntries ? '' : 'none';
+    }
+
+    if (!trackHasEntries) {
+      songMotifsResetKaraokeLane(track);
+      return;
+    }
+
+    const trackIndex = songMotifsFindCurrentEntryIndex(track.entries, syncedTime);
+    const trackEntry = trackIndex >= 0 ? track.entries[trackIndex] : null;
+    const hasTrackLine = songMotifsEntryHasRenderableText(trackEntry);
+    if (hasTrackLine) {
+      hasActiveBackingLine = true;
+    }
+
+    const payload = songMotifsBuildKaraokePayloadForEntries(track.entries, trackIndex);
+    if (songMotifsLaneHasRenderableLyrics(payload)) {
+      hasBackingLyricsOnScreen = true;
+    }
+    songMotifsUpdateKaraokeLane(track, payload, trackIndex);
+    songMotifsFitBackingLaneText(track);
+
+    if (track.trackNode) {
+      track.trackNode.classList.toggle('is-empty', !hasTrackLine);
+    }
+  });
+
+  if (!hasMainLine && !hasActiveBackingLine && !hasMainEntries) {
+    songMotifsClearKaraokeWrapResizeAnimation(state);
+    state.karaokeLayoutMode = 'hidden';
+    state.karaokeBackingVisible = false;
+    state.karaokeWrap.style.display = 'none';
+    return;
+  }
+
+  const computeMainViewportVisibility = (sampleSyncedTime) => {
+    const sampleMainIndex = hasMainEntries
+      ? songMotifsFindCurrentEntryIndex(state.karaokeEntries, sampleSyncedTime)
+      : -1;
+    const sampleMainEntry = sampleMainIndex >= 0 ? state.karaokeEntries[sampleMainIndex] : null;
+    const sampleHasMainLine = songMotifsEntryHasRenderableText(sampleMainEntry);
+    let sampleHasBackingLyricsOnScreen = false;
+
+    backingTracks.forEach((track) => {
+      if (!track || !Array.isArray(track.entries)) {
+        return;
+      }
+      const sampleTrackIndex = songMotifsFindCurrentEntryIndex(track.entries, sampleSyncedTime);
+      const samplePayload = songMotifsBuildKaraokePayloadForEntries(track.entries, sampleTrackIndex);
+      if (songMotifsLaneHasRenderableLyrics(samplePayload)) {
+        sampleHasBackingLyricsOnScreen = true;
+      }
+    });
+
+    return hasMainEntries && (sampleHasMainLine || !sampleHasBackingLyricsOnScreen);
+  };
+
+  const reentryCue = hasMainEntries
+    ? songMotifsFindUpcomingMainReentryCue(state.karaokeEntries, currentIndex)
+    : null;
+  const showMainDuringCueWindow = !hasMainLine
+    && hasBackingLyricsOnScreen
+    && reentryCue
+    && syncedTime >= reentryCue.cueTime
+    && syncedTime < reentryCue.nextTextTime;
+
+  const showMainViewport = hasMainEntries
+    && (hasMainLine || !hasBackingLyricsOnScreen || showMainDuringCueWindow);
+  let shouldPreGrowMain = !showMainViewport
+    && computeMainViewportVisibility(syncedTime + SONG_MOTIFS_KARAOKE_PRE_GROW_LEAD_SECONDS);
+  const showBackingOnlyLayout = !showMainViewport && hasBackingLyricsOnScreen;
+
+  if (!showMainViewport && hasMainEntries && reentryCue && syncedTime >= reentryCue.cueTime && syncedTime < reentryCue.nextTextTime) {
+    shouldPreGrowMain = true;
+  }
+  const nextLayoutMode = showMainViewport
+    ? 'with-main'
+    : (showBackingOnlyLayout ? 'backing-only' : 'idle');
+
+  songMotifsApplyKaraokeLayoutState(state, {
+    showMainViewport,
+    shouldPreGrowMain,
+    hasBackingLyricsOnScreen,
+    showBackingOnlyLayout,
+    backingTrackCount: configuredBackingTrackCount,
+    nextLayoutMode
+  });
+
+  if (showMainViewport && !wasMainViewportVisible && showMainDuringCueWindow) {
+    songMotifsAnimateMainReentryBottomLine(state);
+  }
+
+  if (!showMainViewport) {
+    songMotifsSyncHiddenMainLane(state, currentIndex);
+    return;
   }
 
   if (currentIndex === state.karaokeCurrentIndex) {
@@ -892,6 +1368,87 @@ function songMotifsApplyKaraokeEntries(entries) {
   songMotifsUpdateKaraoke(0);
 }
 
+function songMotifsNormalizeKaraokeEntries(entries) {
+  const source = Array.isArray(entries) ? entries : [];
+  const sortedEntries = source
+    .filter((entry) => entry && typeof entry.time === 'number' && typeof entry.text === 'string')
+    .sort((a, b) => a.time - b.time);
+
+  return sortedEntries.map((entry, index) => {
+    const next = sortedEntries[index + 1];
+    const nextTime = next && typeof next.time === 'number' ? next.time : (entry.time + 8);
+    const endTime = nextTime > entry.time ? nextTime : (entry.time + 0.01);
+    const singerTags = Array.isArray(entry.singerTags)
+      ? entry.singerTags.map((tag) => String(tag || '').trim().toLowerCase()).filter(Boolean)
+      : [];
+
+    return {
+      time: entry.time,
+      text: entry.text,
+      singerTag: String(entry.singerTag || '').trim().toLowerCase(),
+      singerTags,
+      endTime
+    };
+  });
+}
+
+function songMotifsApplyKaraokeBundle(bundle) {
+  const state = getSongMotifsState();
+  const payload = bundle || {};
+  const mainEntries = songMotifsNormalizeKaraokeEntries(Array.isArray(payload.mainEntries) ? payload.mainEntries : []);
+  const backingTracksPayload = Array.isArray(payload.backingTracks) ? payload.backingTracks : [];
+
+  songMotifsRefreshPrimarySingerContext();
+  state.karaokeEntries = mainEntries;
+
+  const existingTracks = Array.isArray(state.karaokeBackingTracks) ? state.karaokeBackingTracks : [];
+  state.karaokeBackingTracks = backingTracksPayload.map((track, index) => {
+    const existing = existingTracks[index] || {};
+    return {
+      id: String((track || {}).id || ('backing' + String(index + 1))).trim(),
+      entries: songMotifsNormalizeKaraokeEntries((track || {}).entries),
+      trackNode: existing.trackNode || null,
+      layerHost: existing.layerHost || null,
+      activeLayer: null,
+      transitionTimer: null,
+      currentIndex: -2
+    };
+  });
+
+  state.karaokeDuration = Math.max(
+    state.karaokeEntries.length > 0
+      ? Math.max(...state.karaokeEntries.map((entry) => Number(entry.time) || 0))
+      : 0,
+    state.karaokeBackingTracks.reduce((max, track) => {
+      const entries = Array.isArray((track || {}).entries) ? track.entries : [];
+      if (!entries.length) {
+        return max;
+      }
+      return Math.max(max, Math.max(...entries.map((entry) => Number(entry.time) || 0)));
+    }, 0)
+  );
+
+  if (state.karaokeLayerHost) {
+    state.karaokeLayerHost.innerHTML = '';
+  }
+  state.karaokeBackingTracks.forEach((track) => {
+    songMotifsResetKaraokeLane(track);
+  });
+  state.karaokeActiveLayer = null;
+  state.karaokeCurrentIndex = -2;
+
+  if (!Number.isFinite(Number(state.youtubeDuration)) || Number(state.youtubeDuration) <= 0) {
+    state.duration = songMotifsResolvePlaybackDuration();
+    if (state.durationLabel && songMotifsHasMeasuredPlaybackDuration()) {
+      state.durationLabel.textContent = songMotifFormatTime(state.duration);
+    } else if (state.durationLabel) {
+      state.durationLabel.textContent = '';
+    }
+  }
+
+  songMotifsUpdateKaraoke(0);
+}
+
 function setSongMotifsVolume(value) {
   const state = getSongMotifsState();
   const nextVolume = Math.max(0, Math.min(100, Number(value) || 0));
@@ -1049,32 +1606,128 @@ function songMotifsLoadKaraokeEntries() {
   const candidateSlugs = songMotifsResolveSongSlugs();
   const primarySlug = candidateSlugs[0] || '';
 
-  if (window.SongLyrics && typeof window.SongLyrics.loadCurrentSongLyrics === 'function') {
-    return window.SongLyrics.loadCurrentSongLyrics()
-      .then((data) => data || (primarySlug ? window.SongLyrics.loadCurrentSongLyrics(primarySlug) : null))
-      .then((data) => {
-        if (!data || !Array.isArray(data.timedEntries)) {
-          return [];
-        }
-        return data.timedEntries;
-      });
+  function buildBackingSlug(baseSlug, backingSuffix) {
+    const slug = String(baseSlug || '').trim().toLowerCase();
+    if (!slug) {
+      return '';
+    }
+
+    const hashIndex = slug.indexOf('#');
+    const slugBase = hashIndex === -1 ? slug : slug.slice(0, hashIndex);
+    const slugHash = hashIndex === -1 ? '' : slug.slice(hashIndex);
+    return slugBase + backingSuffix + slugHash;
   }
 
-  const file = primarySlug;
-  if (!file) {
-    return Promise.resolve([]);
-  }
+  function buildBackingCandidates(backingSuffix) {
+    const slugs = [];
+    const seen = new Set();
+    const baseSlug = songMotifsGetBaseSongSlug();
+    const sources = candidateSlugs.concat([primarySlug, baseSlug]);
 
-  const path = '../../public/songs/lyrics/' + encodeURIComponent(file) + '.lrc';
-  return fetch(path, { cache: 'no-store' })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error('No LRC file');
+    sources.forEach((source) => {
+      const candidate = buildBackingSlug(source, backingSuffix);
+      if (!candidate || seen.has(candidate)) {
+        return;
       }
-      return response.text();
-    })
-    .then((text) => songMotifsParseLrcTimedEntries(text))
-    .catch(() => []);
+      seen.add(candidate);
+      slugs.push(candidate);
+    });
+
+    return slugs;
+  }
+
+  function loadTimedEntriesBySlugCandidates(slugCandidates) {
+    const candidates = Array.isArray(slugCandidates) ? slugCandidates.filter(Boolean) : [];
+    if (!candidates.length) {
+      return Promise.resolve([]);
+    }
+
+    if (window.SongLyrics && typeof window.SongLyrics.loadCurrentSongLyrics === 'function') {
+      const attempt = (index) => {
+        if (index >= candidates.length) {
+          return Promise.resolve([]);
+        }
+
+        return window.SongLyrics.loadCurrentSongLyrics(candidates[index])
+          .then((data) => {
+            if (data && Array.isArray(data.timedEntries) && data.timedEntries.length > 0) {
+              return data.timedEntries;
+            }
+            return attempt(index + 1);
+          })
+          .catch(() => attempt(index + 1));
+      };
+
+      return attempt(0);
+    }
+
+    const fetchAttempt = (index) => {
+      if (index >= candidates.length) {
+        return Promise.resolve([]);
+      }
+
+      const path = '../../public/songs/lyrics/' + encodeURIComponent(candidates[index]) + '.lrc';
+      return fetch(path, { cache: 'no-store' })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('No LRC file');
+          }
+          return response.text();
+        })
+        .then((text) => songMotifsParseLrcTimedEntries(text))
+        .then((entries) => (Array.isArray(entries) && entries.length > 0 ? entries : fetchAttempt(index + 1)))
+        .catch(() => fetchAttempt(index + 1));
+    };
+
+    return fetchAttempt(0);
+  }
+
+  if (window.SongLyrics && typeof window.SongLyrics.loadCurrentSongLyrics === 'function') {
+    return Promise.all([
+      window.SongLyrics.loadCurrentSongLyrics()
+        .then((data) => data || (primarySlug ? window.SongLyrics.loadCurrentSongLyrics(primarySlug) : null))
+        .catch(() => null),
+      loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing1')),
+      loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing2'))
+    ]).then((results) => {
+      const mainData = results[0];
+      const mainEntries = mainData && Array.isArray(mainData.timedEntries) ? mainData.timedEntries : [];
+      return {
+        mainEntries,
+        backingTracks: [
+          { id: 'backing1', entries: Array.isArray(results[1]) ? results[1] : [] },
+          { id: 'backing2', entries: Array.isArray(results[2]) ? results[2] : [] }
+        ]
+      };
+    });
+  }
+
+  if (!primarySlug) {
+    return Promise.resolve({ mainEntries: [], backingTracks: [] });
+  }
+
+  const mainPath = '../../public/songs/lyrics/' + encodeURIComponent(primarySlug) + '.lrc';
+  return Promise.all([
+    fetch(mainPath, { cache: 'no-store' })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('No LRC file');
+        }
+        return response.text();
+      })
+      .then((text) => songMotifsParseLrcTimedEntries(text))
+      .catch(() => []),
+    loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing1')),
+    loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing2'))
+  ]).then((results) => {
+    return {
+      mainEntries: Array.isArray(results[0]) ? results[0] : [],
+      backingTracks: [
+        { id: 'backing1', entries: Array.isArray(results[1]) ? results[1] : [] },
+        { id: 'backing2', entries: Array.isArray(results[2]) ? results[2] : [] }
+      ]
+    };
+  });
 }
 
 function buildSongMotifsVolumeControl() {
@@ -1104,6 +1757,22 @@ function buildSongMotifsVolumeControl() {
 
   state.volumeInput = input;
   return wrap;
+}
+
+function songMotifsCreateBackingTrack(index) {
+  const track = document.createElement('div');
+  track.className = 'song-karaoke-backing-track';
+  track.setAttribute('data-karaoke-backing-track', String(index + 1));
+
+  const viewport = document.createElement('div');
+  viewport.className = 'song-karaoke-backing-viewport';
+  track.appendChild(viewport);
+
+  const layerHost = document.createElement('div');
+  layerHost.className = 'song-karaoke-layer-host';
+  viewport.appendChild(layerHost);
+
+  return { track, layerHost };
 }
 
 function songMotifsFindSong() {
@@ -1262,6 +1931,14 @@ function songMotifsDisposeRuntimeState() {
     clearTimeout(state.karaokeTransitionTimer);
     state.karaokeTransitionTimer = null;
   }
+
+  if (state.karaokeMainReentryAnimationTimer) {
+    clearTimeout(state.karaokeMainReentryAnimationTimer);
+    state.karaokeMainReentryAnimationTimer = null;
+  }
+
+  songMotifsClearKaraokeWrapResizeAnimation(state);
+  state.karaokeLayoutMode = 'hidden';
 
   if (state.player && typeof state.player.destroy === 'function') {
     try {
@@ -1579,6 +2256,16 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   karaokeLayerHost.className = 'song-karaoke-layer-host';
   karaokeViewport.appendChild(karaokeLayerHost);
 
+  const karaokeBackingWrap = document.createElement('div');
+  karaokeBackingWrap.className = 'song-karaoke-backing-wrap';
+  karaokeBackingWrap.style.display = 'none';
+  karaokeWrap.appendChild(karaokeBackingWrap);
+
+  const backingTrackNodes = [songMotifsCreateBackingTrack(0), songMotifsCreateBackingTrack(1)];
+  backingTrackNodes.forEach((entry) => {
+    karaokeBackingWrap.appendChild(entry.track);
+  });
+
   const songColor = String(song && song.color ? song.color : '').trim() || '#ef8a85';
 
   const timelineWrap = document.createElement('div');
@@ -1751,7 +2438,20 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   state.mainTrack = mainTrack;
   state.playButton = overlayPlayButton;
   state.karaokeWrap = karaokeWrap;
+  state.karaokeViewport = karaokeViewport;
   state.karaokeLayerHost = karaokeLayerHost;
+  state.karaokeBackingWrap = karaokeBackingWrap;
+  state.karaokeLayoutMode = 'hidden';
+  state.karaokeBackingTracks = backingTrackNodes.map((entry, index) => ({
+    id: 'backing' + String(index + 1),
+    entries: [],
+    trackNode: entry.track,
+    isBacking: true,
+    layerHost: entry.layerHost,
+    activeLayer: null,
+    transitionTimer: null,
+    currentIndex: -2
+  }));
   state.karaokeActiveLayer = null;
 
   if (overlayPlayButton) {
@@ -1910,8 +2610,8 @@ function renderSongMotifsSection() {
   const groupedSampleRefs = songMotifsGroupSampleRefs(song);
   songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId);
 
-  songMotifsLoadKaraokeEntries().then((entries) => {
-    songMotifsApplyKaraokeEntries(entries);
+  songMotifsLoadKaraokeEntries().then((karaokeBundle) => {
+    songMotifsApplyKaraokeBundle(karaokeBundle);
   });
 
   if (youtubeId && window.YT && window.YT.Player) {

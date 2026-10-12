@@ -100,6 +100,15 @@ function songLyricsParseLrc(text) {
   const lines = String(text || '').split(/\r?\n/);
   const timedEntries = [];
   const offsetSeconds = songLyricsParseOffsetSeconds(text);
+  let currentSingerTags = [];
+  const singerTagsByLyricKey = Object.create(null);
+
+  function normalizeLyricKey(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  }
 
   lines.forEach((line) => {
     const timestamps = [];
@@ -116,8 +125,26 @@ function songLyricsParseLrc(text) {
 
     const lyricParts = songLyricsParseLyricLineAndSingerTags(line.replace(/\[[^\]]+\]/g, ''));
     const lyric = lyricParts.text;
-    const singerTag = lyricParts.singerTag;
-    const singerTags = lyricParts.singerTags;
+    const explicitSingerTags = (Array.isArray(lyricParts.singerTags) ? lyricParts.singerTags : [])
+      .map((tag) => String(tag || '').trim().toLowerCase())
+      .filter(Boolean);
+    const lyricKey = normalizeLyricKey(lyric);
+    let singerTags = [];
+
+    if (explicitSingerTags.length > 0) {
+      singerTags = explicitSingerTags.slice();
+      currentSingerTags = explicitSingerTags.slice();
+      if (lyricKey) {
+        singerTagsByLyricKey[lyricKey] = explicitSingerTags.slice();
+      }
+    } else if (lyricKey && Array.isArray(singerTagsByLyricKey[lyricKey]) && singerTagsByLyricKey[lyricKey].length > 0) {
+      singerTags = singerTagsByLyricKey[lyricKey].slice();
+      currentSingerTags = singerTags.slice();
+    } else if (currentSingerTags.length > 0) {
+      singerTags = currentSingerTags.slice();
+    }
+
+    const singerTag = singerTags[0] || '';
 
     timestamps.forEach((stamp) => {
       timedEntries.push({

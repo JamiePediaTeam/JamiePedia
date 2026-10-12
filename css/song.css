@@ -550,16 +550,245 @@ html {
   --karaoke-next-y: calc(var(--karaoke-lane-step) * 2);
 }
 
+.song-karaoke-wrap.song-karaoke-layout-with-main {
+  padding-bottom: 10px;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-backing-only {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  padding-left: 7px;
+  padding-right: 7px;
+}
+
 .song-karaoke-viewport {
   position: relative;
   height: calc(var(--karaoke-next-y) + var(--karaoke-line-height));
   overflow: hidden;
+  max-height: calc(var(--karaoke-next-y) + var(--karaoke-line-height));
+  opacity: 1;
+  transition: max-height 0.5s ease, opacity 0.22s ease;
+}
+
+.song-karaoke-viewport:not(.is-open):not(.is-preopen) {
+  max-height: 0;
+  opacity: 0;
+}
+
+.song-karaoke-viewport.is-preopen {
+  max-height: calc((var(--karaoke-next-y) + var(--karaoke-line-height)) * 0.38);
+  opacity: 0;
+}
+
+.song-karaoke-wrap.song-karaoke-measure-layout .song-karaoke-viewport {
+  transition: none !important;
 }
 
 .song-karaoke-layer-host {
   position: relative;
   width: 100%;
   height: 100%;
+}
+
+.song-karaoke-backing-wrap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-backing-only .song-karaoke-backing-wrap {
+  margin-top: 0;
+}
+
+.song-karaoke-wrap.song-karaoke-backing-count-1 .song-karaoke-backing-wrap {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-with-main.song-karaoke-backing-count-1 .song-karaoke-backing-track {
+  --karaoke-backing-line-height: 0.86rem;
+  --karaoke-backing-lane-step: 0.74rem;
+  min-height: 2.1rem;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-backing-only.song-karaoke-backing-count-1 .song-karaoke-backing-track {
+  --karaoke-backing-line-height: 0.9rem;
+  --karaoke-backing-lane-step: 0.79rem;
+  min-height: 2.2rem;
+}
+
+.song-karaoke-backing-track {
+  --karaoke-backing-prev-size: 0.42em;
+  --karaoke-backing-current-size: 0.5em;
+  --karaoke-backing-next-size: 0.42em;
+  --karaoke-backing-line-height: 0.82rem;
+  --karaoke-backing-lane-step: 0.7rem;
+  --karaoke-line-height: var(--karaoke-backing-line-height);
+  --karaoke-lane-step: var(--karaoke-backing-lane-step);
+  --karaoke-prev-y: 0rem;
+  --karaoke-current-y: var(--karaoke-backing-lane-step);
+  --karaoke-next-y: calc(var(--karaoke-backing-lane-step) * 2);
+  min-height: 1.96rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  display: block;
+  box-sizing: border-box;
+}
+
+.song-karaoke-backing-viewport {
+  position: relative;
+  height: calc(var(--karaoke-next-y) + var(--karaoke-line-height));
+  overflow: hidden;
+}
+
+.song-karaoke-backing-track .song-karaoke-line {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: calc(var(--karaoke-line-height) * 0.82);
+}
+
+.song-karaoke-backing-track .song-karaoke-line-prev {
+  font-size: var(--karaoke-backing-prev-size);
+}
+
+.song-karaoke-backing-track .song-karaoke-line-current {
+  font-size: var(--karaoke-backing-current-size);
+}
+
+.song-karaoke-backing-track .song-karaoke-line-next {
+  font-size: var(--karaoke-backing-next-size);
+}
+
+.song-karaoke-wrap.song-karaoke-layout-backing-only .song-karaoke-backing-track .song-karaoke-line-prev {
+  font-size: 0.46em;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-backing-only .song-karaoke-backing-track .song-karaoke-line-current {
+  font-size: 0.54em;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-backing-only .song-karaoke-backing-track .song-karaoke-line-next {
+  font-size: 0.46em;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-backing-only .song-karaoke-backing-track {
+  --karaoke-backing-prev-size: 0.46em;
+  --karaoke-backing-current-size: 0.54em;
+  --karaoke-backing-next-size: 0.46em;
+  --karaoke-backing-line-height: 0.86rem;
+  --karaoke-backing-lane-step: 0.74rem;
+}
+
+.song-karaoke-backing-track .song-karaoke-line-prev,
+.song-karaoke-backing-track .song-karaoke-line-current,
+.song-karaoke-backing-track .song-karaoke-line-next,
+.song-karaoke-backing-track .song-karaoke-layer-entering .song-karaoke-line-prev,
+.song-karaoke-backing-track .song-karaoke-layer-entering .song-karaoke-line-current,
+.song-karaoke-backing-track .song-karaoke-layer-entering .song-karaoke-line-next,
+.song-karaoke-backing-track .song-karaoke-layer-leaving .song-karaoke-line-prev,
+.song-karaoke-backing-track .song-karaoke-layer-leaving .song-karaoke-line-current,
+.song-karaoke-backing-track .song-karaoke-layer-leaving .song-karaoke-line-next {
+  line-height: calc(var(--karaoke-line-height) * 0.82) !important;
+}
+
+.song-karaoke-backing-track .song-karaoke-layer-entering .song-karaoke-line-prev {
+  transform: translateY(var(--karaoke-current-y));
+  font-size: var(--karaoke-backing-current-size);
+  color: var(--theme-color-text_primary);
+  font-weight: 800;
+  --karaoke-outline-color: var(--theme-color-text_primary);
+}
+
+.song-karaoke-backing-track .song-karaoke-layer-entering .song-karaoke-line-current {
+  transform: translateY(var(--karaoke-next-y));
+  font-size: var(--karaoke-backing-next-size);
+  color: var(--theme-color-text_karaoke_next);
+  font-weight: 600;
+  --karaoke-outline-color: var(--theme-color-text_karaoke_next);
+}
+
+.song-karaoke-backing-track .song-karaoke-layer-entering .song-karaoke-line-next {
+  opacity: 0;
+  transform: translateY(calc(var(--karaoke-next-y) + 0.42rem));
+}
+
+.song-karaoke-backing-track .song-karaoke-layer-entering.song-karaoke-layer-entering-play .song-karaoke-line-prev {
+  animation: karaokeMiddleToTopBacking 0.5s ease both;
+}
+
+.song-karaoke-backing-track .song-karaoke-layer-entering.song-karaoke-layer-entering-play .song-karaoke-line-current {
+  animation: karaokeBottomToMiddleBacking 0.5s ease both;
+}
+
+.song-karaoke-backing-track .song-karaoke-layer-entering.song-karaoke-layer-entering-play .song-karaoke-line-next {
+  animation: karaokeNewBottomInBacking 0.5s ease both;
+}
+
+@keyframes karaokeMiddleToTopBacking {
+  0% {
+    transform: translateY(var(--karaoke-current-y));
+    font-size: var(--karaoke-backing-current-size);
+    line-height: calc(var(--karaoke-line-height) * 0.82);
+    color: var(--theme-color-text_primary);
+    font-weight: 800;
+  }
+  100% {
+    transform: translateY(var(--karaoke-prev-y));
+    font-size: var(--karaoke-backing-prev-size);
+    line-height: calc(var(--karaoke-line-height) * 0.82);
+    color: var(--theme-color-text_muted);
+    font-weight: 600;
+  }
+}
+
+@keyframes karaokeBottomToMiddleBacking {
+  0% {
+    transform: translateY(var(--karaoke-next-y));
+    font-size: var(--karaoke-backing-next-size);
+    line-height: calc(var(--karaoke-line-height) * 0.82);
+    color: var(--theme-color-text_karaoke_next);
+    font-weight: 600;
+  }
+  100% {
+    transform: translateY(var(--karaoke-current-y));
+    font-size: var(--karaoke-backing-current-size);
+    line-height: calc(var(--karaoke-line-height) * 0.82);
+    color: var(--theme-color-text_primary);
+    font-weight: 800;
+  }
+}
+
+@keyframes karaokeNewBottomInBacking {
+  0% {
+    transform: translateY(calc(var(--karaoke-next-y) + 0.42rem));
+    opacity: 0;
+    font-size: calc(var(--karaoke-backing-next-size) * 0.88);
+    line-height: calc(var(--karaoke-line-height) * 0.82);
+    color: var(--theme-color-text_transcript_muted);
+  }
+  100% {
+    transform: translateY(var(--karaoke-next-y));
+    opacity: 1;
+    font-size: var(--karaoke-backing-next-size);
+    line-height: calc(var(--karaoke-line-height) * 0.82);
+    color: var(--theme-color-text_karaoke_next);
+  }
+}
+
+.song-karaoke-line-fit-target {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  transform-origin: center center;
+  transform: scale(var(--karaoke-fit-scale, 1));
+}
+
+.song-karaoke-backing-track.is-empty {
+  opacity: 0.5;
 }
 
 .song-karaoke-layer {
@@ -726,6 +955,10 @@ html {
 }
 
 .song-karaoke-layer-entering.song-karaoke-layer-entering-play .song-karaoke-line-next {
+  animation: karaokeNewBottomIn 0.5s ease both;
+}
+
+.song-karaoke-layer.song-karaoke-layer-main-reentry .song-karaoke-line-next {
   animation: karaokeNewBottomIn 0.5s ease both;
 }
 
