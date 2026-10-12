@@ -130,7 +130,21 @@
   }
 
   function sectionDisplayName(value) {
-    return String(value || '').trim();
+    const primary = splitPipeValues(value)[0] || String(value || '').trim();
+    return primary.trim();
+  }
+
+  function getDefaultCategoryValue(row) {
+    return String(
+      row.songs_and_albums_default
+      || row['songs and albums default']
+      || row.category
+      || row['music page section']
+      || row.music_page_section
+      || row.section
+      || row.name
+      || ''
+    ).trim();
   }
 
   function cleanSongTitle(value) {
@@ -168,7 +182,7 @@
   }
 
   function hasSecretSection(sectionValue) {
-    return sectionMapKey(sectionValue).includes('bonus');
+    return splitPipeValues(sectionValue).some((entry) => sectionMapKey(entry).includes('bonus'));
   }
 
   function parseTrackNumber(value) {
@@ -236,7 +250,7 @@
       return false;
     }
 
-    const section = String(row.music_page_section || '').trim();
+    const section = sectionDisplayName(getDefaultCategoryValue(row));
     if (!section || hasSecretSection(section)) {
       return false;
     }
@@ -270,7 +284,7 @@
         return;
       }
 
-      if (hasSecretSection(String(row.music_page_section || ''))) {
+      if (hasSecretSection(String(getDefaultCategoryValue(row) || ''))) {
         return;
       }
 
@@ -344,17 +358,17 @@
     const basePath = getBasePath();
     const albumsCsvUrl = basePath + '/public/csv/JamiePedia Data - Albums.csv';
     const songsCsvUrl = basePath + '/public/csv/JamiePedia Data - Songs.csv';
-    const sectionsCsvUrl = basePath + '/public/csv/JamiePedia Data - Music Page Sections.csv';
+    const categoriesCsvUrl = basePath + '/public/csv/JamiePedia Data - Categories.csv';
 
     Promise.all([
       fetch(albumsCsvUrl, { cache: 'no-store' }).then((res) => (res.ok ? res.text() : '')),
       fetch(songsCsvUrl, { cache: 'no-store' }).then((res) => (res.ok ? res.text() : '')),
-      fetch(sectionsCsvUrl, { cache: 'no-store' }).then((res) => (res.ok ? res.text() : ''))
+      fetch(categoriesCsvUrl, { cache: 'no-store' }).then((res) => (res.ok ? res.text() : ''))
     ])
-      .then(([albumsCsvText, songsCsvText, sectionsCsvText]) => {
+      .then(([albumsCsvText, songsCsvText, categoriesCsvText]) => {
         const albumRows = parseCsvRows(albumsCsvText);
         const songRows = parseCsvRows(songsCsvText);
-        const sectionRows = parseCsvRows(sectionsCsvText);
+        const categoryRows = parseCsvRows(categoriesCsvText);
         const sectionToTiles = new Map();
         const seenRoutes = new Set();
         const orderedSections = [];
@@ -362,8 +376,16 @@
         let tileOrder = 0;
 
         const trackCountByAlbumId = buildAlbumTrackCountMap(songRows);
-        const sectionOrderFromCsv = sectionRows
-          .map((row) => sectionDisplayName(row.music_page_section || row.section || row.name || ''))
+        const sectionOrderFromCsv = categoryRows
+          .map((row) => (
+            row.songs_and_albums_default
+            || row['songs and albums default']
+            || row.category
+            || row['music page section']
+            || row.music_page_section
+            || ''
+          ))
+          .map((value) => sectionDisplayName(value))
           .filter(Boolean);
 
         function registerSection(section) {
@@ -395,7 +417,7 @@
             return;
           }
 
-          const section = sectionDisplayName(row.music_page_section || 'Miscellaneous') || 'Miscellaneous';
+          const section = sectionDisplayName(getDefaultCategoryValue(row) || 'Miscellaneous') || 'Miscellaneous';
           const title = String(row.album_title || row.page_title || '').trim() || 'Untitled';
           const coverArt = firstCoverFilename(row.album_art || row.album_art_paths || '');
           const albumId = sectionMapKey(row.album_id || '');
@@ -424,7 +446,7 @@
             return;
           }
 
-          const section = String(row.music_page_section || '').trim();
+          const section = sectionDisplayName(getDefaultCategoryValue(row) || '');
           if (!section) {
             return;
           }

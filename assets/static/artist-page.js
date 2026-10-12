@@ -361,7 +361,80 @@
     renderArtistLinks(linksNode, page.links || []);
   }
 
-  function initializeArtistTabs() {
+  function getArtistTabStateKey(page) {
+    const slug = String((page && page.slug) || getArtistSlugFromLocation() || '').trim().toLowerCase();
+    return slug || 'artist';
+  }
+
+  function getStoredArtistTab(page) {
+    const key = getArtistTabStateKey(page);
+    const state = window.__artistTabState || (window.__artistTabState = Object.create(null));
+    const stored = String(state[key] || '').trim().toLowerCase();
+    return stored === 'summary' || stored === 'credits' ? stored : null;
+  }
+
+  function setStoredArtistTab(page, tabName) {
+    const key = getArtistTabStateKey(page);
+    const state = window.__artistTabState || (window.__artistTabState = Object.create(null));
+    const safeName = tabName === 'summary' || tabName === 'credits' ? tabName : 'credits';
+    state[key] = safeName;
+  }
+
+  function ensureArtistSummaryTabState(page, summaryText, primaryDescription) {
+    const tabsContainer = document.querySelector('.artist-tabs');
+    const leftView = document.querySelector('.artist-leftview');
+    const hasSummary = Boolean(String(summaryText || primaryDescription || '').trim());
+
+    if (!hasSummary) {
+      const summaryTab = tabsContainer ? tabsContainer.querySelector('.artist-tab[data-artist-tab="summary"]') : null;
+      const summaryPanel = leftView ? leftView.querySelector('[data-artist-panel="summary"]') : null;
+      if (summaryTab) {
+        summaryTab.remove();
+      }
+      if (summaryPanel) {
+        summaryPanel.remove();
+      }
+      setStoredArtistTab(page, 'credits');
+      return false;
+    }
+
+    const creditsTab = tabsContainer ? tabsContainer.querySelector('.artist-tab[data-artist-tab="credits"]') : null;
+    let summaryTab = tabsContainer ? tabsContainer.querySelector('.artist-tab[data-artist-tab="summary"]') : null;
+    const creditsPanel = leftView ? leftView.querySelector('[data-artist-panel="credits"]') : null;
+    let summaryPanel = leftView ? leftView.querySelector('[data-artist-panel="summary"]') : null;
+
+    if (!summaryTab && tabsContainer) {
+      summaryTab = document.createElement('button');
+      summaryTab.type = 'button';
+      summaryTab.className = 'song-tab artist-tab';
+      summaryTab.setAttribute('data-artist-tab', 'summary');
+      summaryTab.textContent = 'Summary';
+      if (creditsTab && creditsTab.parentNode === tabsContainer) {
+        tabsContainer.insertBefore(summaryTab, creditsTab.nextSibling);
+      } else {
+        tabsContainer.appendChild(summaryTab);
+      }
+    }
+
+    if (!summaryPanel && leftView) {
+      summaryPanel = document.createElement('section');
+      summaryPanel.className = 'song-content artist-content';
+      summaryPanel.setAttribute('data-artist-panel', 'summary');
+      const content = document.createElement('div');
+      content.id = 'artistSummaryContent';
+      content.className = 'artist-summary-content';
+      summaryPanel.appendChild(content);
+      if (creditsPanel && creditsPanel.parentNode === leftView) {
+        leftView.insertBefore(summaryPanel, creditsPanel.nextSibling);
+      } else {
+        leftView.appendChild(summaryPanel);
+      }
+    }
+
+    return true;
+  }
+
+  function initializeArtistTabs(page) {
     const tabs = Array.from(document.querySelectorAll('.artist-tab'));
     const panels = Array.from(document.querySelectorAll('[data-artist-panel]'));
     if (!tabs.length || !panels.length) {
@@ -369,21 +442,35 @@
     }
 
     const setActiveTab = (tabName) => {
+      const safeTabName = tabName === 'summary' || tabName === 'credits' ? tabName : 'credits';
       tabs.forEach((tab) => {
-        tab.classList.toggle('active', tab.getAttribute('data-artist-tab') === tabName);
+        tab.classList.toggle('active', tab.getAttribute('data-artist-tab') === safeTabName);
       });
       panels.forEach((panel) => {
-        panel.classList.toggle('artist-content-active', panel.getAttribute('data-artist-panel') === tabName);
+        panel.classList.toggle('artist-content-active', panel.getAttribute('data-artist-panel') === safeTabName);
       });
+      if (page) {
+        setStoredArtistTab(page, safeTabName);
+      }
     };
 
     tabs.forEach((tab) => {
+      if (tab.dataset.artistTabBound === 'true') {
+        return;
+      }
+      tab.dataset.artistTabBound = 'true';
       tab.addEventListener('click', function () {
-        setActiveTab(tab.getAttribute('data-artist-tab') || 'summary');
+        const nextTab = tab.getAttribute('data-artist-tab') || 'credits';
+        setActiveTab(nextTab);
       });
     });
 
-    setActiveTab('summary');
+    const storedTab = page ? getStoredArtistTab(page) : null;
+    const preferredTab = storedTab || (tabs[0] && tabs[0].getAttribute('data-artist-tab')) || 'credits';
+    const usableTab = tabs.some((tab) => tab.getAttribute('data-artist-tab') === preferredTab)
+      ? preferredTab
+      : (tabs[0] && tabs[0].getAttribute('data-artist-tab')) || 'credits';
+    setActiveTab(usableTab);
   }
 
   function buildArtistImageOptions(page, primaryAlias) {
@@ -768,7 +855,7 @@
       const primaryAlias = (page.aliases || [])[0] || null;
       const primaryDescription = primaryAlias && primaryAlias.description ? primaryAlias.description : '';
 
-      initializeArtistTabs();
+      initializeArtistTabs(page);
 
       applyArtistDocumentState(page, primaryDescription, displayProfile.titleName);
       document.documentElement.style.setProperty('--artist-accent', primaryAlias && primaryAlias.color ? primaryAlias.color : '#F05E55');
@@ -806,10 +893,15 @@
         const albumRows = results[2];
         const coverArtistMap = results[3];
 
+        const hasSummaryContent = ensureArtistSummaryTabState(page, summaryText, primaryDescription);
         const summaryNode = document.getElementById('artistSummaryContent');
         if (summaryNode) {
           const summaryHtml = renderSummaryParagraphs(summaryText || primaryDescription);
           summaryNode.innerHTML = summaryHtml || '<div class="artist-empty-box">This artist has no summary yet.</div>';
+        }
+
+        if (!hasSummaryContent) {
+          initializeArtistTabs(page);
         }
 
         const songItems = buildSongItems(page, songRows, coverArtistMap);

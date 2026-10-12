@@ -44,13 +44,87 @@
 
     <script>
       (function () {
-        const orderedTypes = ['Musical Artist', 'Vocalist', 'Visual Artist', 'Misc.'];
+        const fallbackOrderedTypes = ['Musical Artists', 'Musical Groups', 'Vocalists', 'Voice Banks', 'Text-to-Speech', 'Visual Artists', 'Miscellaneous'];
         const headingLabels = {
-          'Musical Artist': 'Musical Artists',
-          'Vocalist': 'Vocalists',
-          'Visual Artist': 'Visual Artists',
-          'Misc.': 'Miscellaneous'
+          'Musical Artists': 'Musical Artists',
+          'Musical Groups': 'Musical Groups',
+          'Vocalists': 'Vocalists',
+          'Voice Banks': 'Voice Banks',
+          'Text-to-Speech': 'Text-to-Speech',
+          'Visual Artists': 'Visual Artists',
+          'Miscellaneous': 'Miscellaneous'
         };
+
+        function splitPipeValues(value) {
+          return String(value || '')
+            .split(/\s*\|\s*/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+
+        function normalizeArtistCategoryType(value) {
+          const raw = splitPipeValues(value)[0] || '';
+          if (!raw) {
+            return '';
+          }
+          const normalized = raw.toLowerCase();
+          if (normalized === 'musical artists' || normalized === 'musical artist' || normalized === 'music artists' || normalized === 'music artist') {
+            return 'Musical Artists';
+          }
+          if (normalized === 'musical groups' || normalized === 'music group' || normalized === 'music groups' || normalized === 'musical group') {
+            return 'Musical Groups';
+          }
+          if (normalized === 'vocalists' || normalized === 'vocalist') {
+            return 'Vocalists';
+          }
+          if (normalized === 'voice banks' || normalized === 'voice bank' || normalized === 'voicebanks' || normalized === 'voicebank') {
+            return 'Voice Banks';
+          }
+          if (normalized === 'text-to-speech' || normalized === 'text to speech' || normalized === 'text-to-speechs' || normalized === 'text to speeches') {
+            return 'Text-to-Speech';
+          }
+          if (normalized === 'visual artists' || normalized === 'visual artist' || normalized === 'graphic artist' || normalized === 'graphic artists') {
+            return 'Visual Artists';
+          }
+          if (normalized === 'miscellaneous' || normalized === 'misc.' || normalized === 'misc') {
+            return 'Miscellaneous';
+          }
+          return raw;
+        }
+
+        function getArtistCategoryOrder() {
+          const basePath = window.location.pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
+          return fetch(basePath + '/public/csv/JamiePedia Data - Categories.csv', { cache: 'no-store' })
+            .then((response) => (response.ok ? response.text() : ''))
+            .then((text) => {
+              const lines = String(text || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+              if (lines.length < 2) {
+                return fallbackOrderedTypes;
+              }
+
+              const headers = lines[0].split(',').map((header) => String(header || '').trim().toLowerCase());
+              const artistsDefaultIndex = headers.indexOf('artists default');
+              if (artistsDefaultIndex === -1) {
+                return fallbackOrderedTypes;
+              }
+
+              const orderedTypes = [];
+              const seen = new Set();
+              lines.slice(1).forEach((line) => {
+                const values = line.split(',');
+                const value = String(values[artistsDefaultIndex] || '').trim();
+                const normalized = normalizeArtistCategoryType(value);
+                if (!normalized || seen.has(normalized)) {
+                  return;
+                }
+                orderedTypes.push(normalized);
+                seen.add(normalized);
+              });
+
+              return orderedTypes.length ? orderedTypes : fallbackOrderedTypes;
+            })
+            .catch(() => fallbackOrderedTypes);
+        }
 
         function getArtistTileHref(page, hasSiblingVariants) {
           if (!page) {
@@ -118,7 +192,10 @@
             return;
           }
 
-          ensureArtistDirectoryLoaded().then(function (directory) {
+          Promise.all([
+            ensureArtistDirectoryLoaded(),
+            getArtistCategoryOrder()
+          ]).then(function ([directory, orderedTypes]) {
             const allPages = directory && Array.isArray(directory.pages)
               ? directory.pages.filter(function (page) { return page && page.hasPage !== false; })
               : [];
@@ -143,7 +220,8 @@
             });
 
             mount.innerHTML = '';
-            orderedTypes.forEach(function (type) {
+            const effectiveTypes = (orderedTypes && orderedTypes.length ? orderedTypes : fallbackOrderedTypes);
+            effectiveTypes.forEach(function (type) {
               const matches = pages
                 .filter(function (page) { return page && page.type === type; })
                 .sort(function (a, b) { return String(a.primaryName || '').localeCompare(String(b.primaryName || '')); });
