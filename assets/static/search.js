@@ -753,7 +753,10 @@ function getSearchArtistSummaryText(routePath) {
 }
 
 function buildSearchSnippet(text, query) {
-  const sourceText = String(text || '').replace(/\s+/g, ' ').trim();
+  const sourceText = String(text || '')
+    .replace(/\s*\|\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   const normalizedQuery = String(query || '').toLowerCase();
   if (!sourceText || !normalizedQuery) {
     return {

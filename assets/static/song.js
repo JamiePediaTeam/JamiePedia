@@ -610,6 +610,10 @@ function ensureCloseupTabButton(versionName) {
 
 const VERSION_SELECTOR_ALT_DROPDOWN_THRESHOLD = 2;
 
+function getVersionSelectorAltDropdownThreshold() {
+  return songHasCloseup ? Math.max(0, VERSION_SELECTOR_ALT_DROPDOWN_THRESHOLD - 1) : VERSION_SELECTOR_ALT_DROPDOWN_THRESHOLD;
+}
+
 function closeAllVersionDropdownMenus() {
   document.querySelectorAll('.version-dropdown').forEach((dropdown) => {
     dropdown.classList.remove('open');
@@ -744,7 +748,7 @@ function createVersionDropdown(versionRows) {
 function renderVersionTabsFromRows(songRows) {
   const versionRows = getVersionRows(songRows);
   const altCount = Math.max(0, versionRows.length - 1);
-  const shouldUseDropdown = altCount > VERSION_SELECTOR_ALT_DROPDOWN_THRESHOLD;
+  const shouldUseDropdown = altCount > getVersionSelectorAltDropdownThreshold();
   const tabsContainers = Array.from(document.querySelectorAll('.song-tabs'));
   if (!tabsContainers.length) {
     return;
@@ -2019,7 +2023,8 @@ function songLyricsFallbackParseRawLines(text) {
       return;
     }
 
-    const lyricParts = songLyricsFallbackParseLyricLineAndSingerTags(line.replace(/\[[^\]]+\]/g, ''));
+    const lyricSource = line.replace(/\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]/g, '');
+    const lyricParts = songLyricsFallbackParseLyricLineAndSingerTags(lyricSource);
     const lyric = lyricParts.text;
 
     timestamps.forEach((stamp) => {

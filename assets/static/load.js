@@ -1920,7 +1920,16 @@ function buildArtistDirectoryFromCsv(text) {
         pageRouteKey: aliasRouteKey,
         href: aliasHref,
         hasPage: aliasHasPage,
-        name: String(names[aliasIndex] || names[0] || id).trim(),
+        name: String(
+          aliasIndex === 0 && names.length > 1
+            ? (names[1] || names[0] || id)
+            : (names[aliasIndex] || names[0] || id)
+        ).trim(),
+        previewName: String(
+          aliasIndex === 0 && names.length > 1
+            ? (names[1] || names[0] || id)
+            : (names[aliasIndex] || names[0] || id)
+        ).trim(),
         image: page.imagePaths[aliasIndex] || page.imagePaths[0] || resolveArtistImagePath(images[aliasIndex] || images[0] || ''),
         imageLabel: String(imageLabels[aliasIndex] || imageLabels[0] || '').trim(),
         color: normalizeArtistColorValue(colors[aliasIndex] || colors[0] || '', '#F05E55'),
@@ -2270,7 +2279,7 @@ function showArtistPreviewPopover(target) {
   if (image) {
     if (artist.image) {
       image.src = artist.image;
-      image.alt = artist.name;
+      image.alt = artist.previewName || artist.name;
       media.style.display = '';
       image.onload = function () {
         if (window.__activeArtistPreviewTarget) {
@@ -2290,7 +2299,7 @@ function showArtistPreviewPopover(target) {
     }
   }
   if (title) {
-    title.textContent = artist.name;
+    title.textContent = artist.previewName || artist.name;
   }
   if (description) {
     description.textContent = artist.description || '';
@@ -3994,14 +4003,11 @@ function buildTracklistSidebarEl(headerText, headerHref, entries, currentPath, u
   headerDiv.className = 'tracklist-header';
 
   var titleLink = document.createElement('a');
-  titleLink.href = 'javascript:void(0);';
+  titleLink.href = typeof window.toSiteHref === 'function'
+    ? window.toSiteHref(headerHref)
+    : withBasePath(headerHref);
   titleLink.className = 'tracklist-album-title';
   titleLink.textContent = headerText;
-  titleLink.addEventListener('click', function () {
-    window.location.href = typeof window.toSiteHref === 'function'
-      ? window.toSiteHref(headerHref)
-      : withBasePath(headerHref);
-  });
 
   headerDiv.appendChild(titleLink);
 
@@ -4044,13 +4050,10 @@ function buildTracklistSidebarEl(headerText, headerHref, entries, currentPath, u
       li.classList.add('tracklist-current');
     }
     var a = document.createElement('a');
-    a.href = 'javascript:void(0);';
+    a.href = typeof window.toSiteHref === 'function'
+      ? window.toSiteHref(entryPath)
+      : withBasePath(entryPath.startsWith('/') ? entryPath : ('/' + entryPath));
     a.textContent = entry.name || pathToPageName(entry.path);
-    a.addEventListener('click', function () {
-      window.location.href = typeof window.toSiteHref === 'function'
-        ? window.toSiteHref(entryPath)
-        : withBasePath(entryPath.startsWith('/') ? entryPath : ('/' + entryPath));
-    });
     li.appendChild(a);
     listEl.appendChild(li);
   });
