@@ -1,0 +1,13 @@
+formatting options for txt files
+
+*italicize*
+
+**bold**
+
+***italicize + bold***
+
+# header1
+
+## header2
+
+### header3
