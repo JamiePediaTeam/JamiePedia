@@ -123,7 +123,8 @@ function songLyricsParseLrc(text) {
       return;
     }
 
-    const lyricParts = songLyricsParseLyricLineAndSingerTags(line.replace(/\[[^\]]+\]/g, ''));
+    const lyricSource = line.replace(/\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]/g, '');
+    const lyricParts = songLyricsParseLyricLineAndSingerTags(lyricSource);
     const lyric = lyricParts.text;
     const explicitSingerTags = (Array.isArray(lyricParts.singerTags) ? lyricParts.singerTags : [])
       .map((tag) => String(tag || '').trim().toLowerCase())
@@ -290,14 +291,18 @@ function songLyricsGetVersionRows(rows) {
   return mainRow ? [mainRow].concat(altRows) : altRows;
 }
 
-function songLyricsRowToPathIdSlug(row) {
+function songLyricsRowToPathIdSlug(row, preserveHash) {
   const normalized = songLyricsNormalizeRowPath(songLyricsGetSongRowPathValue(row));
   if (!normalized) {
     return '';
   }
 
-  const withoutPrefix = normalized.replace(/^\/music\//i, '').split('#')[0].trim();
-  return withoutPrefix || '';
+  const withoutPrefix = normalized.replace(/^\/music\//i, '').trim();
+  if (!withoutPrefix) {
+    return '';
+  }
+
+  return preserveHash ? withoutPrefix : withoutPrefix.split('#')[0].trim();
 }
 
 function songLyricsResolveScopedSlug(baseSlug, variantSuffix) {
@@ -335,7 +340,14 @@ function songLyricsResolveActiveSlug(baseSlug) {
     return rowHash === hashToken || tabNameToken === hashToken;
   });
 
-  return songLyricsRowToPathIdSlug(matched || rows[0]) || baseSlug;
+  if (matched) {
+    const matchedSlug = songLyricsRowToPathIdSlug(matched, true);
+    if (matchedSlug) {
+      return matchedSlug;
+    }
+  }
+
+  return songLyricsRowToPathIdSlug(rows[0]) || baseSlug;
 }
 
 function songLyricsGetContainerVariantSuffix(containerId, idPrefix) {
@@ -415,27 +427,48 @@ const SongLyrics = {
       return SongLyrics._cacheBySlug.get(slug);
     }
 
-    const lrcPath = songLyricsBuildLrcPath(slug);
-    if (!lrcPath) {
+    const slugCandidates = [slug];
+    if (slug.indexOf('#') !== -1) {
+      slugCandidates.push(slug.split('#')[0]);
+    }
+
+    const uniqueCandidates = slugCandidates
+      .map((candidate) => String(candidate || '').toLowerCase())
+      .filter((candidate, index, list) => candidate && list.indexOf(candidate) === index);
+
+    if (!uniqueCandidates.length) {
       return Promise.resolve(null);
     }
 
-    const loadPromise = fetch(lrcPath, { cache: 'no-store' })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('No LRC found for current song');
+    const loadPromise = uniqueCandidates.reduce((chain, candidateSlug) => {
+      return chain.then((found) => {
+        if (found) {
+          return found;
         }
-        return response.text();
-      })
-      .then((text) => {
-        const parsed = songLyricsParseLrc(text);
-        return {
-          path: lrcPath,
-          timedEntries: parsed.timedEntries,
-          rawLines: parsed.rawLines
-        };
-      })
-      .catch(() => null);
+
+        const lrcPath = songLyricsBuildLrcPath(candidateSlug);
+        if (!lrcPath) {
+          return null;
+        }
+
+        return fetch(lrcPath, { cache: 'no-store' })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error('No LRC found for current song');
+            }
+            return response.text();
+          })
+          .then((text) => {
+            const parsed = songLyricsParseLrc(text);
+            return {
+              path: lrcPath,
+              timedEntries: parsed.timedEntries,
+              rawLines: parsed.rawLines
+            };
+          })
+          .catch(() => null);
+      });
+    }, Promise.resolve(null));
 
     SongLyrics._cacheBySlug.set(slug, loadPromise);
     return loadPromise;

@@ -95,7 +95,7 @@ function createSoundfontSampler(instrumentFolder) {
     },
     release: 1,
     baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/MusyngKite/' + instrumentFolder + '-mp3/'
-  }).toDestination();
+  }).connect(getMotifTranscriptMasterGain());
 }
 
 function createSalamanderPianoSampler() {
@@ -121,7 +121,7 @@ function createSalamanderPianoSampler() {
     },
     release: 1,
     baseUrl: 'https://tonejs.github.io/audio/salamander/'
-  }).toDestination();
+  }).connect(getMotifTranscriptMasterGain());
 }
 
 function createMeowSampler() {
@@ -131,7 +131,7 @@ function createMeowSampler() {
     },
     release: 0.9,
     baseUrl: '../public/samples/'
-  }).toDestination();
+  }).connect(getMotifTranscriptMasterGain());
 }
 
 function createWscPluckSampler() {
@@ -141,7 +141,7 @@ function createWscPluckSampler() {
     },
     release: 0.8,
     baseUrl: '../public/samples/'
-  }).toDestination();
+  }).connect(getMotifTranscriptMasterGain());
 }
 
 function createWoofSampler() {
@@ -151,7 +151,7 @@ function createWoofSampler() {
     },
     release: 0.9,
     baseUrl: '../public/samples/'
-  }).toDestination();
+  }).connect(getMotifTranscriptMasterGain());
 }
 
 function createPaisleyHornsSampler() {
@@ -162,7 +162,7 @@ function createPaisleyHornsSampler() {
     },
     release: 0.9,
     baseUrl: '../public/samples/'
-  }).toDestination();
+  }).connect(getMotifTranscriptMasterGain());
 }
 
 function createWHTSampler() {
@@ -172,7 +172,7 @@ function createWHTSampler() {
     },
     release: 0.9,
     baseUrl: '../public/samples/'
-  }).toDestination();
+  }).connect(getMotifTranscriptMasterGain());
 }
 
 function createMpPianoSampler() {
@@ -182,7 +182,7 @@ function createMpPianoSampler() {
     },
     release: 0.9,
     baseUrl: '../public/samples/'
-  }).toDestination();
+  }).connect(getMotifTranscriptMasterGain());
 }
 function createPPPPluckSampler() {
   return new window.Tone.Sampler({
@@ -191,7 +191,7 @@ function createPPPPluckSampler() {
     },
     release: 0.9,
     baseUrl: '../public/samples/'
-  }).toDestination();
+  }).connect(getMotifTranscriptMasterGain());
 }
 
 function getMotifTranscriptInstrumentOptions() {
@@ -1052,6 +1052,7 @@ function getMotifTranscriptPlayerState() {
     window.__motifTranscriptPlayerState = {
       loadedTone: false,
       synth: null,
+      masterGain: null,
       instrumentKey: getMotifTranscriptInstrumentOption(getMotifTranscriptDefaultInstrumentKey()).key,
       part: null,
       duration: 0,
@@ -1077,6 +1078,21 @@ function getMotifTranscriptPlayerState() {
   }
 
   return window.__motifTranscriptPlayerState;
+}
+
+function getMotifTranscriptMasterGain() {
+  const state = getMotifTranscriptPlayerState();
+  if (!window.Tone) {
+    return null;
+  }
+
+  if (!state.masterGain) {
+    state.masterGain = new window.Tone.Gain(1);
+    state.masterGain.toDestination();
+    state.masterGain.gain.value = Math.max(0, Math.min(1, Number(PlayerStore.volume) / 100));
+  }
+
+  return state.masterGain;
 }
 
 function motifTranscriptMidiToNoteName(midiValue) {
@@ -2748,6 +2764,11 @@ function setMotifPageVolume(value) {
   const nextVolume = Math.max(0, Math.min(100, Number(value) || 0));
   PlayerStore.volume = nextVolume;
   persistPlayerVolume(nextVolume);
+
+  const transcriptState = getMotifTranscriptPlayerState();
+  if (transcriptState.masterGain && transcriptState.masterGain.gain) {
+    transcriptState.masterGain.gain.value = nextVolume / 100;
+  }
 
   if (PlayerStore.volumeInput) {
     PlayerStore.volumeInput.value = String(nextVolume);
