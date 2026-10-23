@@ -3,7 +3,7 @@ next up in my threads about my album, Bittersweet, we've got the general midi gu
 [04 Nothing (with You) Close-Up - Video.mp4]
 
 and here's the bandcamp link so you can listen along/check out the full album! 
-<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/album=1120010418/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/artwork=small/track=2864064853/transparent=true/" seamless><a href="https://jamiepaige.bandcamp.com/album/bittersweet">Bittersweet by Jamie Paige</a></iframe>
+<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/size=medium/bgcol=ffffff/linkcol=0687f5/notracklist=true/transparent=true/track=2864064853" seamless><a href="https://jamiepaige.bandcamp.com/album/bittersweet">Bittersweet by Jamie Paige</a></iframe>
 
 well the gist of this song is pretty easy to sum up - **i hate rainbow capitalism!** i hate the idea of trying to fit queerness into some pristine flawless easily-digested bubble for society at large to consume! im aware of the irony of writing a catchy sub-4 minute pop song abt this
 
@@ -19,7 +19,7 @@ that idea quickly latched onto my brain, and i very quickly went and started wri
 
 musically, a lot of little obsessions of mine get to show up: straight-up general midi soundfonts, mp3 compression, weird text-to-speech vocals - the idea of having them in tandem with the vocals was from a real old demo of mine, refined in this iteration
 
-the mp3 compression stuff was thanks to goodhertz's Lossy, which is just a FANTASTIC plugin. musical mp3 compression emulator! its the coolest thing!!
+the mp3 compression stuff was thanks to [goodhertz's Lossy](https://goodhertz.com/lossy/), which is just a FANTASTIC plugin. musical mp3 compression emulator! its the coolest thing!!
 
 i also decided super quickly that it was going to be sung by gumi
 

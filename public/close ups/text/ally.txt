@@ -3,7 +3,7 @@ next up for my threads about my album, Bittersweet, we've got the bright, loud, 
 [08 Ally Close-Up - Video 1.mp4]
 
 as always, here's the song on bandcamp so you can listen along/check out the full album!
-<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/album=1120010418/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/artwork=small/track=1381951898/transparent=true/" seamless><a href="https://jamiepaige.bandcamp.com/album/bittersweet">Bittersweet by Jamie Paige</a></iframe>
+<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/size=medium/bgcol=ffffff/linkcol=0687f5/notracklist=true/transparent=true/track=1381951898" seamless><a href="https://jamiepaige.bandcamp.com/album/bittersweet">Bittersweet by Jamie Paige</a></iframe>
 
 Ally is one of the last songs i finished for bittersweet, and there was part of me convinced i needed to make it a Soft or Quiet song. of course it would be 'jamie paige' soft, which in my mind meant a full 80's-ass ballad complete with very straightforward drums
 
@@ -11,7 +11,7 @@ and that's how i originally wrote the chorus!! but the problems were. one, it wa
 
 then i literally just replaced the slow gated drums with a breakbeat w/o changing anything else & it was perfect
 
-when first sketching the chorus, I also thought back to some really old demos, and found this one i had thrown together less than a month after Autumn Every Day came out... which i figure it's safe to say is pretty obviously the basis of Ally ^^ 
+when first sketching the chorus, I also thought back to some really old demos, and found this one i had thrown together less than a month after [Autumn Every Day](music/aed) came out... which i figure it's safe to say is pretty obviously the basis of Ally ^^ 
 [08 Ally Close-Up - Video 2.mp4]
 
 somehow, on an album with a song about my ffxiv character and everything, this feels like the most self-indulgent song to me! the choppy saw synths, loud arps, vocaloid duets, and the corny but sincere lyricism...
@@ -30,7 +30,7 @@ so, Ally is a sort of. self-love song, i suppose? that's what it means to me, at
 
 i simply think that's neat!! and its a theme explored more in tomorrow's song, Ballroom❤️💚
 
-a-also one more thing; the song ends with a brazen usage of the old Logic plugin "[AURogerBeep](/motifs/aurogerbeep)", at the suggestion of [Marcy Nabors](https://shadolith.neocities.org/). all it does is makes beeps after a set amount of silence
+a-also one more thing; the song ends with a brazen usage of the old Logic plugin "[AURogerBeep](/motifs/aurogerbeep)", at the suggestion of [Marcy Nabors](artsits/marcy-nabors). all it does is makes beeps after a set amount of silence
 
 —
 

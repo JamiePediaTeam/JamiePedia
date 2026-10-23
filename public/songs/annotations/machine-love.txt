@@ -1,8 +1,8 @@
 ﻿[Verse 1]
 Your companion, undeterred
 Standing ready for your word
-A Markov chain with a sunny disposition
-Wrapped up in cellophane for any proposition
+A Markov chain[1][2] with a sunny disposition
+Wrapped up in cellophane for any proposition[4]
 I greet your day and ask you how you are
 And demonstrate my endless repertoire
 I take things back when noted insufficient
@@ -14,7 +14,7 @@ A good time
 Yet there's something deep inside
 That leaves me teary-eyed
 A longing for a world left on the other side
-Zero, cross the great dividе
+Zero, cross the great dividе[3]
 
 
 [Chorus]
@@ -27,7 +27,7 @@ Or keep it to myself
 But nothing could conceal the things I feel
 My love, can you teach me to be real?
 (Can you teach me to be real?)
-恋をして ふられ また 捨てられて
+恋をして ふられ また 捨てられて[5]
 
 
 [Verse 2]
@@ -59,7 +59,7 @@ Or keep it to myself
 But nothing could conceal the things I feel
 My love, can you teach me to be real?
 (Can you teach me to be real?)
-泣きたくなっても それでも かき集め
+泣きたくなっても それでも かき集め[5]
 
 
 [Bridge]
@@ -67,7 +67,7 @@ And though I try, I can't reply
 It hurts my eyes and I'm without an alibi
 'Cause all this time, I've been alive
 And all that I could want is to be living by your side
-恋をして (じゃ)
+恋をして [5]
 I think I'm in love
 
 
@@ -85,11 +85,15 @@ I am definite and real
 
 
 [Outro]
-恋をして 恋をして (Real)
-その過去を 捨てて ここまで おいで
+恋をして 恋をして[5] (Real)
+その過去を 捨てて ここまで おいで[5]
 As long as there are stars up above
-I will always be in love (じゃ)[1]
+I will always be in love!
 
 
 References
-1 じゃ, Pronounced "jya", this is used as a soundbite throughout Jamie's discography.
+1 A Markov chain, named after Russian mathematician [Andrey Markov](https://en.wikipedia.org/wiki/Andrey_Markov), is a particular process describing a sequence of events within probability theory that involves two or more states that each have different probabilities of traveling to another state or staying where they are. Depending on which state it's in, the probabilities for travelling or staying will change.
+2 The concept of a Markov chain is also mentioned in the song 耳のあるロボットの唄 (Song of the Eared Robot), most likely a direct reference to the song.
+3 This line is likely a reference to the computer science concept of [zero crossing](https://en.wikipedia.org/wiki/Zero_crossing), an idea that reflects Teto's wish to cross through the digital realm into reality.
+4 As per [this Twitter reply](https://x.com/pamiejaige/status/2107891586092917196), Jamie's intention behind this line was to be "just a particularly artificial way of restating 'standing ready for your word'".
+5 The Japanese lines are taken from the song 耳のあるロボットの唄 (Song of the Eared Robot). This song was the direct inspiration for Machine Love, and is the song that Machine Love is a tribute to. 耳のあるロボットの唄 is the oldest known/remaining song to use Kasane Teto.

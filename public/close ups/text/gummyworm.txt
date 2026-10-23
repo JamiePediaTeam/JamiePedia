@@ -5,7 +5,7 @@ good morning y'all!! i'm keeping at the threads abt my album, Bittersweet, with 
 [06 Gummyworm Close-Up - Video.mp4]
 
 and here's the link to listen along/check out the full album!
-<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/album=1120010418/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/artwork=small/track=4199186211/transparent=true/" seamless><a href="https://jamiepaige.bandcamp.com/album/bittersweet">Bittersweet by Jamie Paige</a></iframe>
+<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/size=medium/bgcol=ffffff/linkcol=0687f5/notracklist=true/transparent=true/track=4199186211" seamless><a href="https://jamiepaige.bandcamp.com/album/bittersweet">Bittersweet by Jamie Paige</a></iframe>
 
 gummyworm is... a song that was very cathartic to write. i'm not comfortable going too far into the details of Why, but i will say it's pulling from personal experience.
 
@@ -23,7 +23,7 @@ and i'm really, really glad ppl like this song so much!
 
 —
 
-the synth refrain was written by [blackwinterwells](https://x.com/blackwntrwells) back in 2018, & it's probably my favorite part of this song musically. a melancholy melody, played loud & boisterously, as if to own it & accept the person you are Now. i'm real fond of it
+the synth refrain was written by [blackwinterwells](artists/drainpuppet) back in 2018, & it's probably my favorite part of this song musically. a melancholy melody, played loud & boisterously, as if to own it & accept the person you are Now. i'm real fond of it
 
 i also used tons of izotope's fantastic vocalsynth plugin to add some texture to my voice throughout the song. i wanted to sound like a malfunctioning robot - coupled with some glitchy melodyne stuff, i think it does a good job of coming off as such
 

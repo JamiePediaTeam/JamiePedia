@@ -3,7 +3,7 @@ we're nearing the end of the daily threads for my album, Bittersweet, and that m
 [10 Bittersweet Close-Up - Video.mp4]
 
 as always, here's the song on bandcamp so you can listen along/check out the full album!
-<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/album=1120010418/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/artwork=small/track=3465604932/transparent=true/" seamless><a href="https://jamiepaige.bandcamp.com/album/bittersweet">Bittersweet by Jamie Paige</a></iframe>
+<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/size=medium/bgcol=ffffff/linkcol=0687f5/notracklist=true/transparent=true/track=3465604932" seamless><a href="https://jamiepaige.bandcamp.com/album/bittersweet">Bittersweet by Jamie Paige</a></iframe>
 
 i've been thinking a lot recently about the long period of burnout i went through, starting back in late 2017. between bittersweet's release, the live set i did for Digital Stars, and my continued work on other projects, happening in the spaces Between my life instead of Being it
 
@@ -27,7 +27,7 @@ my one note on the production side is that my roommate called the last chorus th
 
 —
 
-that's it for now! tomorrow, i'll be wrapping these threads up by talking about the endlessly cathartic Close, featuring [Bluffy](https://savecomplete.bearblog.dev/) and [Mattmatatt](https://linktr.ee/Mattmatatt)!!
+that's it for now! tomorrow, i'll be wrapping these threads up by talking about the endlessly cathartic Close, featuring [Bluffy](artists/bluffy) and [Mattmatatt](artists/mattmatatt)!!
 
 thanks for reading! and check out the album here if you haven't already❤️💚 
 

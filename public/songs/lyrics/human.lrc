@@ -1,5 +1,6 @@
+[offset:00:00:50]
 [00:00.00]
-[00:13.03]Power on
+[00:13.03]Power on{mikisv2}
 [00:15.01]Face the blinding skyline in artificial dawn
 [00:18.93]Withdrawn
 [00:20.22]In simple lexicon
@@ -38,16 +39,16 @@
 [02:10.48]Oh, to play pretend until the ending calls
 [02:13.85]Is that human after all?
 [02:16.26](May I ask something?)
-[02:17.77](Go ahead.)
-[02:18.90](Why are you always looking at the stars?)
-[02:21.32](Why am I always looking at the stars?)
+[02:17.77](Go ahead.){kiyoteru}
+[02:18.90](Why are you always looking at the stars?){mikisv2}
+[02:21.32](Why am I always looking at the stars?){kiyoteru}
 [02:23.20](Well, I like them, I guess.)
-[02:25.95](May I ask something else?)
-[02:27.66](You may.)
-[02:28.99](Why do you like the stars?)
-[02:31.80](Hah.)
+[02:25.95](May I ask something else?){mikisv2}
+[02:27.66](You may.){kiyoteru}
+[02:28.99](Why do you like the stars?){mikisv2}
+[02:31.80](Hah.){kiyoteru}
 [02:32.96](That's a good question.)
-[02:34.90]Every night as the stars align
+[02:34.90]Every night as the stars align{mikisv2}
 [02:36.82]My weary parts, my rusty heart
 [02:39.36]Recall to mind of your hand in mine
 [02:41.62]And the words I often heard said
