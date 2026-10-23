@@ -50,8 +50,10 @@ html {
 .song-title {
   font-size: 2.5em;
   font-weight: bold;
-  margin: 0 0 5px 0;
+  margin: 0 0 15px 0;
   line-height: 1.0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--theme-color-border_segment);
 }
 
 .song-subtitle {
@@ -499,16 +501,21 @@ html {
 }
 
 .song-motif-yt-host {
-  width: 100%;
-  min-height: 210px;
-  border-radius: 6px;
+  width: 0;
+  height: 0;
   overflow: hidden;
-  margin: 0 0 12px;
-  background: var(--theme-color-text_primary);
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
-#songMotifPlayerHost {
-  pointer-events: none;
+#songMotifPlayerHost,
+#songMotifPlayerHost iframe {
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  display: block !important;
 }
 
 .song-motif-video-wrap {
@@ -517,8 +524,17 @@ html {
 }
 
 .song-motif-volume-wrap {
-  width: min(198px, 90%);
-  margin: 0 auto 12px;
+  width: 100%;
+  margin: 0 0 20px;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+
+.song-motif-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 .song-motif-volume-label {
@@ -531,8 +547,22 @@ html {
 }
 
 .song-motif-volume-slider {
-  width: 100%;
-  margin: 0;
+  flex: 1;
+  max-width: 180px;
+  margin: 0 auto;
+  display: block;
+}
+
+.song-motif-play-button {
+  width: 44px;
+  height: 32px;
+  border: 1px solid var(--theme-color-border_pill);
+  border-radius: 6px;
+  background: var(--theme-color-background_base);
+  color: var(--theme-color-text_primary);
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .song-karaoke-wrap {
@@ -1052,21 +1082,6 @@ html {
 
 .song-karaoke-layer-leaving .song-karaoke-line-next {
   opacity: 0;
-}
-
-.song-motif-overlay-play {
-  position: absolute;
-  left: 12px;
-  bottom: 22px;
-  width: 48px;
-  height: 36px;
-  border: none;
-  border-radius: 4px;
-  background: var(--theme-color-border_card_soft);
-  color: var(--theme-color-text_primary);
-  font-weight: 700;
-  cursor: pointer;
-  z-index: 2;
 }
 
 .song-motif-controls {

@@ -145,6 +145,7 @@
 
         function createArtistTile(page, hasSiblingVariants) {
           const alias = (page.aliases || [])[0] || {};
+          const tileName = String((page && (page.artistCategory || page.category || page.primaryName)) || '').trim() || 'Untitled';
           const tile = document.createElement('div');
           tile.className = 'album-tile';
 
@@ -154,7 +155,7 @@
 
           const image = document.createElement('img');
           image.className = 'album-cover';
-          image.alt = (page.primaryName || 'Artist') + ' image';
+          image.alt = tileName + ' image';
           if (alias.image) {
             image.src = alias.image;
           }
@@ -162,7 +163,7 @@
 
           const title = document.createElement('span');
           title.className = 'album-title';
-          title.textContent = page.primaryName || 'Untitled';
+          title.textContent = tileName;
           link.appendChild(title);
 
           return tile;

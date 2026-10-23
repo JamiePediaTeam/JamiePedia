@@ -10,6 +10,23 @@ let songCloseupAvailabilityByVersion = {};
 const songCloseupAvailabilityBySlug = Object.create(null);
 let songCloseupSourceSlugByVersion = {};
 const CLOSEUP_TAB_NAME = 'closeup';
+const SONG_SECTION_BY_TAB = {
+  motifs: 'connections',
+  summary: 'summary',
+  lyrics: 'lyrics',
+  extended: 'extended',
+  closeup: 'close-up'
+};
+
+const SONG_TAB_BY_SECTION = {
+  connections: 'motifs',
+  motifs: 'motifs',
+  summary: 'summary',
+  lyrics: 'lyrics',
+  extended: 'extended',
+  'close-up': CLOSEUP_TAB_NAME,
+  closeup: CLOSEUP_TAB_NAME
+};
 
 function splitSongDataValues(value) {
   return String(value || '')
@@ -41,6 +58,11 @@ function ensureSongSidebarRowsLoaded() {
 }
 
 function normalizeCurrentSongPathForRows() {
+  const route = getSongRouteContext();
+  if (route.basePath) {
+    return route.basePath;
+  }
+
   if (typeof toExtensionlessPath === 'function') {
     return toExtensionlessPath(window.location.pathname || '');
   }
@@ -207,7 +229,6 @@ function buildSongContainerShellHtml(versionName, isOriginal) {
     '<div' + idAttr + ' class="song-container"' + styleAttr + '>',
     '  <div class="song-leftview">',
     '    <h1 class="song-title"></h1>',
-    '    <p class="song-length"></p>',
     '    <div id="content-lyrics' + suffix + '" class="song-content active">',
     '      <div id="lyrics-annotated' + suffix + '" class="lyrics-content active"></div>',
     '    </div>',
@@ -829,16 +850,108 @@ function loadVersionConfig(songRows) {
 }
 
 function normalizeVersionHashToken(value) {
-  return String(value || '')
+  const source = String(value || '').trim();
+  const withoutHash = source.replace(/^#/, '');
+  const versionPart = withoutHash.split('/')[0] || '';
+  return String(versionPart || '')
     .trim()
     .toLowerCase()
-    .replace(/^#/, '')
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
 }
 
+function normalizeSongSectionToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function parseSongHashRoutingState(value) {
+  const source = String(value || '').trim().replace(/^#/, '');
+  if (!source) {
+    return { versionToken: '', sectionToken: '' };
+  }
+
+  const parts = source.split('/').map((part) => String(part || '').trim()).filter(Boolean);
+  const versionToken = normalizeVersionHashToken(parts[0] || '');
+  const sectionToken = normalizeSongSectionToken(parts[1] || '');
+  return { versionToken, sectionToken };
+}
+
+function getSongRouteContext() {
+  if (typeof getMusicRouteContext === 'function') {
+    return getMusicRouteContext(window.location.pathname || '');
+  }
+
+  const path = String(window.location.pathname || '').split('?')[0].split('#')[0].replace(/\.html$/i, '');
+  const parts = path.split('/').filter(Boolean);
+  if (parts[0] !== 'music') {
+    return { slug: '', section: '', basePath: '' };
+  }
+
+  const slug = String(parts[1] || '').trim().toLowerCase();
+  const section = String(parts[2] || '').trim().toLowerCase();
+  return {
+    slug,
+    section,
+    basePath: slug ? ('/music/' + slug) : ''
+  };
+}
+
+function getCurrentSongSectionFromPath() {
+  const route = getSongRouteContext();
+  return String(route.section || '').trim().toLowerCase();
+}
+
+function getSongTabForCurrentUrl() {
+  const section = getCurrentSongSectionFromPath();
+  if (section && SONG_TAB_BY_SECTION[section]) {
+    return SONG_TAB_BY_SECTION[section];
+  }
+
+  const hashState = parseSongHashRoutingState(window.location.hash || '');
+  if (hashState.sectionToken && SONG_TAB_BY_SECTION[hashState.sectionToken]) {
+    return SONG_TAB_BY_SECTION[hashState.sectionToken];
+  }
+
+  return null;
+}
+
+function updateSongSectionUrl(tabName, mode) {
+  if (!window.history) {
+    return;
+  }
+
+  const action = mode === 'push' ? 'pushState' : 'replaceState';
+  if (typeof window.history[action] !== 'function') {
+    return;
+  }
+
+  const route = getSongRouteContext();
+  const basePath = route.basePath || normalizeCurrentSongPathForRows();
+  if (!basePath) {
+    return;
+  }
+
+  const normalizedTabName = String(tabName || '').trim().toLowerCase();
+  const sectionToken = SONG_SECTION_BY_TAB[normalizedTabName] || SONG_SECTION_BY_TAB.motifs;
+
+  const versionName = getActiveVersionName();
+  const hashToken = getHashTokenForVersion(versionName);
+  const isAltVersion = Boolean(hashToken);
+  const nextPath = isAltVersion ? basePath : (sectionToken ? (basePath + '/' + sectionToken) : basePath);
+  const nextHash = isAltVersion ? (hashToken + (sectionToken ? ('/' + sectionToken) : '')) : '';
+  const href = (typeof window.withBasePath === 'function' ? window.withBasePath(nextPath) : nextPath) + (nextHash ? ('#' + nextHash) : '');
+  const currentHref = window.location.pathname + window.location.search + window.location.hash;
+  if (href !== currentHref) {
+    window.history[action](null, '', href);
+  }
+}
+
 function getCurrentHashVersionName() {
-  const token = normalizeVersionHashToken(window.location.hash);
+  const token = parseSongHashRoutingState(window.location.hash || '').versionToken;
   if (!token || !versionOrder || versionOrder.length === 0) {
     return null;
   }
@@ -885,9 +998,18 @@ function syncVersionHash(versionName) {
   }
 
   const token = getHashTokenForVersion(versionName);
-  const url = new URL(window.location.href);
-  url.hash = token ? ('#' + token) : '';
-  window.history.replaceState(null, '', url.toString());
+  const route = getSongRouteContext();
+  const tabName = getActiveMainTabName() || 'motifs';
+  const section = SONG_SECTION_BY_TAB[String(tabName || '').trim().toLowerCase()] || SONG_SECTION_BY_TAB.motifs;
+  const basePath = route.basePath || normalizeCurrentSongPathForRows();
+  const isAltVersion = Boolean(token);
+  const targetPath = isAltVersion ? basePath : (section ? (basePath + '/' + section) : basePath);
+  const targetHash = isAltVersion ? (token + (section ? ('/' + section) : '')) : '';
+  const href = (typeof window.withBasePath === 'function' ? window.withBasePath(targetPath) : targetPath) + (targetHash ? ('#' + targetHash) : '');
+  const currentHref = window.location.pathname + window.location.search + window.location.hash;
+  if (href !== currentHref) {
+    window.history.replaceState(null, '', href);
+  }
 }
 
 function getActiveVersionName() {
@@ -1048,7 +1170,56 @@ function applyAlbumArtToScope(scope, filename, buttonElement) {
   const coverArtistDisplay = scope.querySelector('[id^="cover-artist-display"], .cover-art-credit span');
   if (coverArtistDisplay) {
     const artist = getCoverArtist(filename);
-    coverArtistDisplay.textContent = artist !== null ? artist : '';
+    renderCoverArtistDisplay(coverArtistDisplay, artist !== null ? artist : '');
+  }
+}
+
+function renderCoverArtistDisplay(display, artistName) {
+  if (!display) {
+    return;
+  }
+
+  const rawText = String(artistName || '').trim();
+  display.textContent = '';
+
+  if (!rawText) {
+    return;
+  }
+
+  const artistEntry = typeof window !== 'undefined' && typeof window.getArtistPreviewEntry === 'function'
+    ? window.getArtistPreviewEntry(rawText)
+    : null;
+
+  if (!artistEntry) {
+    display.textContent = rawText;
+    return;
+  }
+
+  const href = String((artistEntry && artistEntry.href) || '').trim()
+    || ((artistEntry && artistEntry.pageSlug)
+      ? ((typeof window !== 'undefined' && typeof window.toSiteHref === 'function')
+        ? window.toSiteHref('/artists/' + artistEntry.pageSlug)
+        : ('/artists/' + artistEntry.pageSlug))
+      : '');
+
+  if (!href) {
+    display.textContent = rawText;
+    return;
+  }
+
+  const link = document.createElement('a');
+  link.href = href;
+  link.className = 'artist-credit-link';
+  link.textContent = rawText;
+
+  const previewId = String((artistEntry && (artistEntry.id || artistEntry.pageId || artistEntry.pageSlug || artistEntry.name)) || '').trim();
+  if (previewId) {
+    link.setAttribute('data-artist-preview-id', previewId);
+  }
+
+  display.appendChild(link);
+  if (typeof window !== 'undefined' && typeof window.initializeArtistCreditPreviews === 'function') {
+    window.initializeArtistCreditPreviews(display);
   }
 }
 
@@ -1060,16 +1231,6 @@ function renderSongPresentationIntoScope(scope, row) {
   const titleElement = scope.querySelector('.song-title');
   if (titleElement) {
     titleElement.innerHTML = formatSongTitleHtml(String(row.page_title || '').trim());
-  }
-
-  const songLengthElement = scope.querySelector('.song-length');
-  if (songLengthElement) {
-    const lengthValue = String(row.song_length || '').trim();
-    const hasEmbedLink = songHasEmbedLinkForRow(row);
-    const hasManualLength = !hasEmbedLink && lengthValue && lengthValue.toLowerCase() !== 'x';
-    songLengthElement.dataset.songLengthSource = hasManualLength ? 'manual' : 'youtube';
-    songLengthElement.textContent = hasManualLength ? ('Length: ' + lengthValue) : '';
-    songLengthElement.style.display = hasManualLength ? '' : 'none';
   }
 
   const albumTabs = scope.querySelector('.album-tabs');
@@ -1108,7 +1269,7 @@ function renderSongPresentationIntoScope(scope, row) {
     const firstArtPath = splitSongDataValues(row.album_art_paths || '')[0] || '';
     const artist = getCoverArtist(firstArtPath);
     if (artist !== null) {
-      coverArtistDisplay.textContent = artist;
+      renderCoverArtistDisplay(coverArtistDisplay, artist);
     }
   }
 
@@ -1226,6 +1387,8 @@ function refreshSongRowDependentUi() {
 
 function switchVersion(versionName, options) {
   const settings = options || {};
+  const previousVersionName = getActiveVersionName();
+  const versionIsChanging = String(previousVersionName || '') !== String(versionName || '');
   const nextTabName = settings.preserveTab === false ? 'motifs' : getActiveMainTabName();
   // Hide all version content
   versionOrder.forEach(version => {
@@ -1287,6 +1450,10 @@ function switchVersion(versionName, options) {
     renderCloseupForSongVersion(versionName);
   }
 
+  if (versionIsChanging && typeof window.resetSongMotifsPlaybackForVersionChange === 'function') {
+    window.resetSongMotifsPlaybackForVersionChange();
+  }
+
   if (!settings.skipHashUpdate) {
     syncVersionHash(versionName);
   }
@@ -1301,7 +1468,8 @@ function switchVersion(versionName, options) {
 window.switchVersion = switchVersion;
 
 
-function switchTab(tabName) {
+function switchTab(tabName, options) {
+  const settings = options || {};
   const normalizedTabName = String(tabName || '').trim().toLowerCase();
   const isCloseupTab = normalizedTabName === CLOSEUP_TAB_NAME;
   const activeVersionName = getActiveVersionName();
@@ -1310,7 +1478,7 @@ function switchTab(tabName) {
     if (isCloseupSectionHash(window.location.hash)) {
       syncVersionHash(activeVersionName);
     }
-    switchTab('motifs');
+    switchTab('motifs', settings);
     return;
   }
 
@@ -1371,6 +1539,9 @@ function switchTab(tabName) {
   setSongCloseupModeEnabled(isCloseupTab);
 
   if (isCloseupTab) {
+    if (!settings.skipUrlUpdate) {
+      updateSongSectionUrl(CLOSEUP_TAB_NAME, settings.urlMode === 'replace' ? 'replace' : 'push');
+    }
     renderCloseupForSongVersion(activeVersionName);
     if (lyricsSubtabsContainer) {
       lyricsSubtabsContainer.classList.remove('active');
@@ -1393,6 +1564,10 @@ function switchTab(tabName) {
 
   if (tabName === 'motifs' && typeof window.renderSongMotifsSection === 'function') {
     window.renderSongMotifsSection();
+  }
+
+  if (!settings.skipUrlUpdate) {
+    updateSongSectionUrl(normalizedTabName || 'motifs', settings.urlMode === 'replace' ? 'replace' : 'push');
   }
 }
 
@@ -1581,6 +1756,11 @@ function loadScriptOnce(src) {
 }
 
 function getCurrentSongSlug() {
+  const route = getSongRouteContext();
+  if (route.slug) {
+    return route.slug;
+  }
+
   const pathname = window.location.pathname || '';
   const file = pathname.split('/').pop() || '';
   return file.replace(/\.html$/i, '').toLowerCase();
@@ -2137,7 +2317,7 @@ function renderAnnotatedLyricsContainer(container, text) {
 
   const referencesHtml = parsed.references.length
     ? '<div class="references-section"><h3>References</h3><ol class="references-list">' + parsed.references.map((ref) => {
-      const safeRefText = escapeHtml(ref.text);
+      const safeRefText = renderMarkdownInline(ref.text);
       const refId = 'ref-' + ref.number + '-' + scopeKey;
       const markerId = firstMarkerIdsByRef[ref.number] || '';
       const backLinkHtml = markerId
@@ -2288,7 +2468,7 @@ function initializeCoverArtistCredits() {
 
     const display = container.querySelector('[id^="cover-artist-display"]');
     if (display) {
-      display.textContent = artist;
+      renderCoverArtistDisplay(display, artist);
     }
   });
 }
@@ -2404,13 +2584,18 @@ function initializeSongPage() {
     reorderSongTabs();
     renderSongPagePresentation();
 
+    const initialTabFromUrl = getSongTabForCurrentUrl() || 'motifs';
     const hashVersionName = getCurrentHashVersionName();
     if (hashVersionName && versionConfig[hashVersionName]) {
       switchVersion(hashVersionName, { skipHashUpdate: true, preserveTab: false });
     } else {
-      // Load connections as default tab
-      switchTab('motifs');
+      // Load tab selected by URL section, defaulting to Connections.
+      switchTab(initialTabFromUrl, { skipUrlUpdate: true });
       syncSongDocumentStateToActiveVersion();
+    }
+
+    if (hashVersionName && initialTabFromUrl) {
+      switchTab(initialTabFromUrl, { skipUrlUpdate: true });
     }
 
     // song.js now rebuilds .song-main-col at runtime; rehydrate sidebar fields
@@ -2441,21 +2626,27 @@ function initializeSongPage() {
     const connectionsLoadTask = initializeSongConnectionsFeature();
     await Promise.all([textLoadTask, connectionsLoadTask]);
 
-    if (isCloseupSectionHash(window.location.hash)) {
-      switchTab(CLOSEUP_TAB_NAME);
-    }
-
-    window.addEventListener('hashchange', () => {
-      if (isCloseupSectionHash(window.location.hash)) {
-        switchTab(CLOSEUP_TAB_NAME);
-        return;
-      }
+    window.addEventListener('popstate', () => {
+      const targetTab = getSongTabForCurrentUrl() || 'motifs';
 
       if (versionOrder && versionOrder.length > 0) {
         const versionName = getCurrentHashVersionName() || 'original';
         if (versionConfig[versionName]) {
-          switchVersion(versionName, { skipHashUpdate: true });
+          switchVersion(versionName, { skipHashUpdate: true, preserveTab: true });
         }
+      }
+
+      switchTab(targetTab, { skipUrlUpdate: true, urlMode: 'replace' });
+    });
+
+    window.addEventListener('hashchange', () => {
+      if (!(versionOrder && versionOrder.length > 0)) {
+        return;
+      }
+
+      const versionName = getCurrentHashVersionName() || 'original';
+      if (versionConfig[versionName]) {
+        switchVersion(versionName, { skipHashUpdate: true, preserveTab: true });
       }
     });
 
@@ -2482,22 +2673,8 @@ function formatSongLengthSeconds(totalSeconds) {
 // duration. Updates the visible .song-length paragraph so the user never has
 // to type the duration manually. Falls back to whatever is already in the
 // element when no YouTube link exists (song-motifs.js never calls this).
-window.updateSongLengthFromYoutube = function (totalSeconds) {
-  if (!totalSeconds || totalSeconds <= 0) {
-    return;
-  }
-
-  const text = 'Length: ' + formatSongLengthSeconds(totalSeconds);
-  const nodes = Array.from(document.querySelectorAll('.song-length'));
-
-  // Prefer the element that is currently visible (active version).
-  const visible = nodes.find((n) => n.offsetParent !== null);
-  const target = visible || nodes[0];
-  if (target) {
-    target.dataset.songLengthSource = 'youtube';
-    target.textContent = text;
-    target.style.display = '';
-  }
+window.updateSongLengthFromYoutube = function () {
+  return;
 };
 
 function switchAlbumArt(filename) {

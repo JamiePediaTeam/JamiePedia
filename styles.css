@@ -263,7 +263,7 @@ h1 {
   color: var(--theme-color-link_default);
   text-decoration: none;
   font-weight: bold;
-  line-height: 26px;
+  line-height: 1.35;
   display: block;
   word-break: break-word;
   cursor: pointer;
@@ -276,7 +276,7 @@ h1 {
 
 .tracklist-list {
   margin: 0;
-  line-height: 26px;
+  line-height: 1.35;
 }
 
 ol.tracklist-list {
@@ -343,6 +343,10 @@ ol.tracklist-list {
   padding: 0;
 }
 
+.tracklist-item + .tracklist-item {
+  margin-top: 6px;
+}
+
 ol.tracklist-list .tracklist-item {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
@@ -364,7 +368,7 @@ ol.tracklist-list .tracklist-item > a {
 .tracklist-item a {
   color: var(--theme-color-meta_theme_color);
   text-decoration: none;
-  line-height: 26px;
+  line-height: 1.35;
   display: block;
   word-break: break-word;
   transition: color 0.3s ease;

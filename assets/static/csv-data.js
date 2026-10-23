@@ -63,11 +63,18 @@ function normalizeJamiePediaText(value) {
   return String(value || '').trim();
 }
 
+function stripJamiePediaInsertedLyricGaps(value) {
+  return String(value || '')
+    .replace(/<[^<>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function splitJamiePediaLyricLines(value) {
   return String(value || '')
     .replace(/\r\n/g, '\n')
     .split(/\s*\|\s*/)
-    .map((item) => item.trim())
+    .map((item) => stripJamiePediaInsertedLyricGaps(item))
     .filter(Boolean);
 }
 

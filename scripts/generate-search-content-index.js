@@ -11,6 +11,22 @@ function normalizeKeyFromFileName(fileName) {
     .toLowerCase();
 }
 
+function normalizeSearchContentLineBreaks(source) {
+  const lines = String(source || '')
+    .split(/\r?\n/u)
+    .map((line) => String(line || '').trim())
+    .filter((line) => line && !/^#{1,6}\s*/u.test(line));
+
+  if (!lines.length) {
+    return '';
+  }
+
+  return lines
+    .map((line) => line.replace(/\s+/gu, ' ').trim())
+    .filter(Boolean)
+    .join(' ');
+}
+
 function parseLrcToSearchText(source) {
   const lines = String(source || '').split(/\r?\n/u);
   const collected = [];
@@ -31,7 +47,7 @@ function parseLrcToSearchText(source) {
     }
   }
 
-  return collected.join(' ').replace(/\s+/gu, ' ').trim();
+  return normalizeSearchContentLineBreaks(collected.join('\n'));
 }
 
 async function safeReadDir(dirPath) {
@@ -97,7 +113,7 @@ async function buildSongContentIndex() {
       if (folderName === 'lyrics') {
         bySlug[slugKey][targetKey] = parseLrcToSearchText(source);
       } else {
-        bySlug[slugKey][targetKey] = String(source).replace(/\s+/gu, ' ').trim();
+        bySlug[slugKey][targetKey] = normalizeSearchContentLineBreaks(source);
       }
     }
   }
@@ -130,7 +146,7 @@ async function buildMotifSummaryIndex() {
         continue;
       }
 
-      motifMap[key] = String(text).replace(/\s+/gu, ' ').trim();
+      motifMap[key] = normalizeSearchContentLineBreaks(text);
     }
   }
 
@@ -172,21 +188,48 @@ async function buildAlbumContentIndex() {
         continue;
       }
 
-      bySlug[slugKey][targetKey] = String(source).replace(/\s+/gu, ' ').trim();
+      bySlug[slugKey][targetKey] = normalizeSearchContentLineBreaks(source);
     }
   }
 
   return bySlug;
 }
 
+async function buildArtistSummaryIndex() {
+  const artistSummaryDir = path.join(publicRoot, 'artists', 'summaries');
+  const artistMap = Object.create(null);
+  const entries = await safeReadDir(artistSummaryDir);
+
+  for (const entry of entries) {
+    if (!entry.isFile() || path.extname(entry.name).toLowerCase() !== '.txt') {
+      continue;
+    }
+
+    const key = normalizeKeyFromFileName(entry.name);
+    if (!key || artistMap[key]) {
+      continue;
+    }
+
+    const source = await readTextIfExists(path.join(artistSummaryDir, entry.name));
+    if (!source) {
+      continue;
+    }
+
+    artistMap[key] = normalizeSearchContentLineBreaks(source);
+  }
+
+  return artistMap;
+}
+
 async function generateSearchContentIndex() {
   const outputDir = path.join(publicRoot, 'search');
   const outputPath = path.join(outputDir, 'search-content-index.json');
 
-  const [songs, motifs, albums] = await Promise.all([
+  const [songs, motifs, albums, artists] = await Promise.all([
     buildSongContentIndex(),
     buildMotifSummaryIndex(),
-    buildAlbumContentIndex()
+    buildAlbumContentIndex(),
+    buildArtistSummaryIndex()
   ]);
 
   const output = {
@@ -194,7 +237,8 @@ async function generateSearchContentIndex() {
     generatedAt: new Date().toISOString(),
     songs,
     albums,
-    motifs
+    motifs,
+    artists
   };
 
   await fs.mkdir(outputDir, { recursive: true });
@@ -203,10 +247,12 @@ async function generateSearchContentIndex() {
   const songCount = Object.keys(songs).length;
   const albumCount = Object.keys(albums).length;
   const motifCount = Object.keys(motifs).length;
+  const artistCount = Object.keys(artists).length;
   console.log('Generated search content index at', outputPath);
   console.log('Indexed song slugs:', songCount);
   console.log('Indexed album slugs:', albumCount);
   console.log('Indexed motif summaries:', motifCount);
+  console.log('Indexed artist summaries:', artistCount);
 }
 
 generateSearchContentIndex().catch((error) => {

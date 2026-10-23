@@ -14,6 +14,10 @@ const MOTIF_SHELL_PATH = path.join(__dirname, 'motifs/motif-shell.html');
 const ARTIST_SHELL_PATH = path.join(__dirname, 'artists/artist-shell.html');
 const CLOSEUP_SHELL_PATH = path.join(__dirname, 'music/closeup-shell.html');
 
+const SONG_SECTION_TOKENS = new Set(['connections', 'motifs', 'summary', 'lyrics', 'extended', 'close-up', 'closeup']);
+const ALBUM_SECTION_TOKENS = new Set(['tracklist', 'summary', 'extended']);
+const ARTIST_SECTION_TOKENS = new Set(['credits', 'summary']);
+
 function splitCsvLine(line) {
   const values = [];
   let current = '';
@@ -119,7 +123,7 @@ function normalizeAlbumRoutePath(rawPath) {
     normalized = normalized.replace(/\/+$/, '');
   }
 
-  if (!/^\/music\/[^/]+$/.test(normalized) || normalized === '/music') {
+  if (!/^\/music\/[^/]+(?:\/[^/]+)?$/.test(normalized) || normalized === '/music') {
     return '';
   }
 
@@ -175,7 +179,7 @@ function normalizeArtistRoutePath(rawPath) {
     normalized = normalized.replace(/\/+$/, '');
   }
 
-  if (!/^\/artists\/[^/]+$/.test(normalized) || normalized === '/artists') {
+  if (!/^\/artists\/[^/]+(?:\/[^/]+)?$/.test(normalized) || normalized === '/artists') {
     return '';
   }
 
@@ -482,7 +486,23 @@ function isKnownSongRouteRequest(requestPath) {
     return false;
   }
 
-  return getKnownSongRoutes().has(normalized);
+  const match = normalized.match(/^\/music\/([^/]+)(?:\/([^/]+))?$/i);
+  if (!match) {
+    return false;
+  }
+
+  const slug = String(match[1] || '').trim().toLowerCase();
+  const section = String(match[2] || '').trim().toLowerCase();
+  const baseRoute = '/music/' + slug;
+  if (!getKnownSongRoutes().has(baseRoute)) {
+    return false;
+  }
+
+  if (!section) {
+    return true;
+  }
+
+  return SONG_SECTION_TOKENS.has(section);
 }
 
 function isKnownAlbumRouteRequest(requestPath) {
@@ -491,7 +511,23 @@ function isKnownAlbumRouteRequest(requestPath) {
     return false;
   }
 
-  return getKnownAlbumRoutes().has(normalized);
+  const match = normalized.match(/^\/music\/([^/]+)(?:\/([^/]+))?$/i);
+  if (!match) {
+    return false;
+  }
+
+  const slug = String(match[1] || '').trim().toLowerCase();
+  const section = String(match[2] || '').trim().toLowerCase();
+  const baseRoute = '/music/' + slug;
+  if (!getKnownAlbumRoutes().has(baseRoute)) {
+    return false;
+  }
+
+  if (!section) {
+    return true;
+  }
+
+  return ALBUM_SECTION_TOKENS.has(section);
 }
 
 function isKnownMotifRouteRequest(requestPath) {
@@ -509,7 +545,23 @@ function isKnownArtistRouteRequest(requestPath) {
     return false;
   }
 
-  return getKnownArtistRoutes().has(normalized);
+  const match = normalized.match(/^\/artists\/([^/]+)(?:\/([^/]+))?$/i);
+  if (!match) {
+    return false;
+  }
+
+  const slug = String(match[1] || '').trim().toLowerCase();
+  const section = String(match[2] || '').trim().toLowerCase();
+  const baseRoute = '/artists/' + slug;
+  if (!getKnownArtistRoutes().has(baseRoute)) {
+    return false;
+  }
+
+  if (!section) {
+    return true;
+  }
+
+  return ARTIST_SECTION_TOKENS.has(section);
 }
 
 function isKnownCloseupRouteRequest(requestPath) {
@@ -537,7 +589,7 @@ function getSongSectionHrefFromCloseupRoute(requestPath) {
     return '';
   }
 
-  return '/music/' + slug + '#close-up';
+  return '/music/' + slug + '/close-up';
 }
 
 function detectContentType(filePath) {
@@ -730,16 +782,17 @@ const server = http.createServer((req, res) => {
       }
 
       if (!rawRouteRequested && isKnownCloseupRouteRequest(requestPath)) {
-        const redirectHref = getSongSectionHrefFromCloseupRoute(requestPath);
-        if (redirectHref) {
-          res.writeHead(302, { Location: redirectHref });
-          res.end();
-          return;
-        }
+        fs.readFile(SONG_SHELL_PATH, (shellErr, shellContent) => {
+          if (shellErr) {
+            console.error(`Error reading ${SONG_SHELL_PATH}:`, shellErr.message);
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('500 - Song shell missing', 'utf-8');
+            return;
+          }
 
-        // Safety fallback if route parsing fails unexpectedly.
-        res.writeHead(302, { Location: '/music' });
-        res.end();
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(shellContent, 'utf-8');
+        });
         return;
       }
 

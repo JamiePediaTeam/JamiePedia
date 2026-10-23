@@ -109,13 +109,6 @@ function getSongMotifsMount() {
     return null;
   }
 
-  motifContents.forEach((node) => {
-    if (!node) {
-      return;
-    }
-    node.querySelectorAll('[id^="songMotifsContent"]').forEach((child) => child.remove());
-  });
-
   const suffix = content.id === 'content-motifs'
     ? 'original'
     : content.id.replace(/^content-motifs-/, '') || 'original';
@@ -158,15 +151,23 @@ function songMotifsGetActiveVariantSuffix() {
 }
 
 function songMotifsGetBaseSongSlug() {
+  if (typeof getMusicRouteContext === 'function') {
+    const route = getMusicRouteContext(window.location.pathname || '');
+    if (route && route.slug) {
+      return String(route.slug).toLowerCase();
+    }
+  }
+
   const file = (window.location.pathname.split('/').pop() || '').replace(/\.html$/i, '').toLowerCase();
   return file;
 }
 
 function songMotifsNormalizeVersionHashToken(value) {
-  return String(value || '')
+  const source = String(value || '').trim().replace(/^#/, '');
+  const versionPart = source.split('/')[0] || '';
+  return String(versionPart || '')
     .trim()
     .toLowerCase()
-    .replace(/^#/, '')
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
 }
@@ -301,8 +302,12 @@ function getSongMotifsState() {
       karaokeBackingWrap: null,
       karaokeBackingTracks: [],
       karaokePrimarySingerToken: '',
-      karaokePrimarySingerArtist: null
+      karaokePrimarySingerArtist: null,
+      renderKey: ''
     };
+  }
+  if (typeof window.__songMotifsState.renderKey !== 'string') {
+    window.__songMotifsState.renderKey = '';
   }
   return window.__songMotifsState;
 }
@@ -372,8 +377,95 @@ function songMotifsEscapeRegExp(value) {
   return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function songMotifsNormalizeLyricLine(value) {
+function songMotifsExtractWordSequence(value) {
   return String(value || '')
+    .replace(/<[^<>]*>/g, ' ')
+    .toLowerCase()
+    .match(/[a-z0-9']+/g) || [];
+}
+
+function songMotifsReferenceWordsMatch(sourceText, referenceText) {
+  const sourceWords = songMotifsExtractWordSequence(sourceText);
+  const patternWords = songMotifsExtractWordSequence(referenceText);
+  if (!patternWords.length || !sourceWords.length) {
+    return false;
+  }
+
+  let patternIndex = 0;
+  for (let sourceIndex = 0; sourceIndex < sourceWords.length && patternIndex < patternWords.length; sourceIndex += 1) {
+    if (sourceWords[sourceIndex] === patternWords[patternIndex]) {
+      patternIndex += 1;
+    }
+  }
+
+  return patternIndex === patternWords.length;
+}
+
+function songMotifsHighlightTextWithInsertedGaps(sourceText, matchText, color) {
+  const source = String(sourceText || '');
+  const pattern = String(matchText || '');
+  const escapedSource = songMotifsEscapeHtml(source);
+
+  if (!source || !pattern) {
+    return escapedSource;
+  }
+
+  const patternWords = songMotifsExtractWordSequence(pattern);
+  if (!patternWords.length) {
+    return escapedSource;
+  }
+
+  const sourceWords = songMotifsExtractWordSequence(source);
+  const highlightedWordIndexes = new Set();
+  let patternIndex = 0;
+
+  for (let sourceIndex = 0; sourceIndex < sourceWords.length && patternIndex < patternWords.length; sourceIndex += 1) {
+    if (sourceWords[sourceIndex] === patternWords[patternIndex]) {
+      highlightedWordIndexes.add(sourceIndex);
+      patternIndex += 1;
+    }
+  }
+
+  if (patternIndex !== patternWords.length) {
+    return escapedSource;
+  }
+
+  const wordMatches = [...source.matchAll(/[A-Za-z0-9'’]+/g)];
+  let output = '';
+  let lastIndex = 0;
+
+  wordMatches.forEach((match, wordIndex) => {
+    const text = match[0];
+    const startIndex = match.index || 0;
+    if (startIndex > lastIndex) {
+      output += songMotifsEscapeHtml(source.slice(lastIndex, startIndex));
+    }
+
+    if (highlightedWordIndexes.has(wordIndex)) {
+      output += '<span class="song-karaoke-lyric-ref" style="--lyric-ref-color: ' + color + ';">' + songMotifsEscapeHtml(text) + '</span>';
+    } else {
+      output += songMotifsEscapeHtml(text);
+    }
+
+    lastIndex = startIndex + text.length;
+  });
+
+  if (lastIndex < source.length) {
+    output += songMotifsEscapeHtml(source.slice(lastIndex));
+  }
+
+  return output;
+}
+
+function songMotifsStripInsertedLyricGaps(value) {
+  return String(value || '')
+    .replace(/<[^<>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function songMotifsNormalizeLyricLine(value) {
+  return songMotifsStripInsertedLyricGaps(String(value || ''))
     .replace(/\r\n/g, '\n')
     .replace(/\|/g, '\n')
     .split('\n')
@@ -384,7 +476,7 @@ function songMotifsNormalizeLyricLine(value) {
 }
 
 function songMotifsRenderLyricText(value) {
-  return songMotifsEscapeHtml(String(value || ''))
+  return songMotifsEscapeHtml(songMotifsStripInsertedLyricGaps(String(value || '')))
     .replace(/\r\n/g, '\n')
     .replace(/\|/g, '\n')
     .split('\n')
@@ -423,6 +515,9 @@ function songMotifsRefreshPrimarySingerContext() {
 
 function songMotifsResolveSingersForEntry(entry) {
   const state = getSongMotifsState();
+  if (entry && entry.explicitNone) {
+    return [];
+  }
   const entrySingerTags = Array.isArray((entry || {}).singerTags) ? (entry || {}).singerTags : [];
   const singerTags = entrySingerTags.length > 0
     ? entrySingerTags
@@ -626,7 +721,7 @@ function songMotifsGetKaraokeLyricHighlights(entry) {
     }
 
     const overlapsLine = refStart <= (entryEnd + 0.02) && refEnd >= (entryStart - 0.02);
-    const lyricPresent = normalizedRefLyricsLines.some((line) => normalizedEntryText.includes(line));
+    const lyricPresent = normalizedRefLyricsLines.some((line) => songMotifsReferenceWordsMatch(normalizedEntryText, line));
     return overlapsLine && lyricPresent;
   });
 }
@@ -672,16 +767,152 @@ function songMotifsBuildKaraokeLineHtml(entry) {
         || refLyricsLines[0]
         || ref.lyrics
         || '';
-      const escapedLyrics = songMotifsEscapeHtml(matchText);
-      const pattern = new RegExp(songMotifsEscapeRegExp(escapedLyrics), 'g');
-      rendered = rendered.replace(
-        pattern,
-        '<span class="song-karaoke-lyric-ref" style="--lyric-ref-color: ' + color + ';">$&</span>'
-      );
+      rendered = songMotifsHighlightTextWithInsertedGaps(entry.text, matchText, color);
     });
   }
 
   const singers = songMotifsResolveSingersForEntry(entry);
+  const singerSegments = Array.isArray((entry || {}).singerSegments) ? entry.singerSegments : [];
+
+  if (singerSegments.length > 0) {
+    const plainText = String((entry || {}).text || '').replace(/\s+/g, ' ').trim();
+    const escapedPlainText = songMotifsEscapeHtml(plainText);
+    let textCursor = 0;
+    const segmentStops = [];
+    const segmentHitboxes = [];
+    const uniqueSingerMap = new Map();
+    let defaultColor = '#ef8a85';
+
+    singerSegments.forEach((segment) => {
+      const segmentText = String((segment || {}).text || '').replace(/\s+/g, ' ').trim();
+      if (!segmentText) {
+        return;
+      }
+
+      const segmentSingers = songMotifsResolveSingersForEntry({
+        singerTag: segment.singerTag,
+        singerTags: Array.isArray(segment.singerTags) ? segment.singerTags : [],
+        explicitNone: !!(segment && segment.explicitNone)
+      });
+      const primarySinger = segmentSingers[0] || null;
+      const segmentColor = primarySinger
+        ? (String(primarySinger.color || '').trim() || '#ef8a85')
+        : 'transparent';
+      const isUnattributed = !!(segment && segment.explicitNone) || !primarySinger;
+
+      if (primarySinger && defaultColor === '#ef8a85') {
+        defaultColor = segmentColor;
+      }
+
+      if (primarySinger) {
+        const singerId = String(primarySinger.id || '').trim();
+        if (singerId && !uniqueSingerMap.has(singerId)) {
+          uniqueSingerMap.set(singerId, primarySinger);
+        }
+      }
+
+      const searchIndex = plainText.toLowerCase().indexOf(segmentText.toLowerCase(), textCursor);
+      const startIndex = searchIndex >= 0 ? searchIndex : textCursor;
+      const endIndex = Math.min(plainText.length, startIndex + segmentText.length);
+      const startPercent = plainText.length > 0 ? (startIndex / plainText.length) * 100 : 0;
+      const endPercent = plainText.length > 0 ? (endIndex / plainText.length) * 100 : 100;
+
+      if (endPercent > startPercent + 0.01) {
+        segmentStops.push({
+          start: startPercent,
+          end: endPercent,
+          color: segmentColor,
+          singer: primarySinger,
+          unattributed: isUnattributed
+        });
+      }
+
+      textCursor = Math.max(textCursor, endIndex);
+    });
+
+    if (!segmentStops.length) {
+      return '<span class="song-karaoke-line-fit-target">' + rendered + '</span>';
+    }
+
+    segmentStops.sort((left, right) => left.start - right.start);
+
+    // Build a full stop list with explicit transparent gaps so singer boundaries at spaces
+    // appear as visual breaks instead of color interpolation.
+    const fullSegmentStops = [];
+    let coverageCursor = 0;
+    segmentStops.forEach((stop) => {
+      const boundedStart = Math.max(0, Math.min(100, stop.start));
+      const boundedEnd = Math.max(boundedStart, Math.min(100, stop.end));
+
+      if (boundedStart > coverageCursor + 0.01) {
+        fullSegmentStops.push({
+          start: coverageCursor,
+          end: boundedStart,
+          color: 'transparent',
+          singer: null,
+          unattributed: true
+        });
+      }
+
+      if (boundedEnd > boundedStart + 0.01) {
+        fullSegmentStops.push({
+          start: boundedStart,
+          end: boundedEnd,
+          color: stop.color,
+          singer: stop.singer,
+          unattributed: stop.unattributed
+        });
+      }
+
+      coverageCursor = Math.max(coverageCursor, boundedEnd);
+    });
+
+    if (coverageCursor < 99.99) {
+      fullSegmentStops.push({
+        start: coverageCursor,
+        end: 100,
+        color: 'transparent',
+        singer: null,
+        unattributed: true
+      });
+    }
+
+    const gradientStops = [];
+    fullSegmentStops.forEach((stop) => {
+      const safeStart = Math.max(0, Math.min(100, stop.start));
+      const safeEnd = Math.max(safeStart, Math.min(100, stop.end));
+      const color = stop.unattributed ? 'transparent' : stop.color;
+      gradientStops.push(color + ' ' + safeStart.toFixed(4) + '%');
+      gradientStops.push(color + ' ' + safeEnd.toFixed(4) + '%');
+
+      if (!stop.singer || stop.unattributed) {
+        return;
+      }
+
+      const singer = stop.singer;
+      const singerColor = String((singer || {}).color || '#ef8a85').trim() || '#ef8a85';
+      const singerId = String((singer || {}).id || '').trim();
+      const singerName = String((singer || {}).name || singerId || 'Singer').trim() || 'Singer';
+      const singerHref = String((singer || {}).href || '').trim()
+        || (singer && singer.pageSlug
+          ? (typeof window.toSiteHref === 'function' ? window.toSiteHref('/artists/' + singer.pageSlug) : ('/artists/' + singer.pageSlug))
+          : '');
+      const previewAttr = singerId ? ' data-artist-preview-id="' + songMotifsEscapeHtml(singerId) + '"' : '';
+      const ariaLabel = 'View singer: ' + singerName;
+      const widthPercent = Math.max(0, safeEnd - safeStart);
+      segmentHitboxes.push(
+        '<a class="song-karaoke-singer-link song-karaoke-singer-hitbox" href="' + songMotifsEscapeHtml(singerHref || '#') + '" aria-label="' + songMotifsEscapeHtml(ariaLabel) + '" style="--karaoke-singer-color: ' + songMotifsEscapeHtml(singerColor) + '; flex-basis: ' + widthPercent.toFixed(4) + '%;"' + previewAttr + '></a>'
+      );
+    });
+
+    const singerCount = uniqueSingerMap.size || 1;
+    return '<span class="song-karaoke-singer-line song-karaoke-line-fit-target" style="--singer-gradient: linear-gradient(90deg, ' + gradientStops.join(', ') + '); --singer-count: ' + singerCount + '; --karaoke-singer-color: ' + songMotifsEscapeHtml(defaultColor) + ';">' +
+      '<span class="song-karaoke-singer-text">' + rendered + '</span>' +
+      '<span class="song-karaoke-singer-underline" aria-hidden="true"></span>' +
+      '<span class="song-karaoke-singer-hitboxes">' + segmentHitboxes.join('') + '</span>' +
+      '</span>';
+  }
+
   if (!singers.length) {
     return '<span class="song-karaoke-line-fit-target">' + rendered + '</span>';
   }
@@ -1343,6 +1574,7 @@ function songMotifsApplyKaraokeEntries(entries) {
       text: entry.text,
       singerTag: String(entry.singerTag || '').trim().toLowerCase(),
       singerTags,
+      explicitNone: !!entry.explicitNone,
       endTime
     };
   });
@@ -1381,12 +1613,39 @@ function songMotifsNormalizeKaraokeEntries(entries) {
     const singerTags = Array.isArray(entry.singerTags)
       ? entry.singerTags.map((tag) => String(tag || '').trim().toLowerCase()).filter(Boolean)
       : [];
+    const singerSegments = Array.isArray(entry.singerSegments)
+      ? entry.singerSegments
+        .map((segment) => {
+          if (!segment) {
+            return null;
+          }
+
+          const segmentText = String(segment.text || '').replace(/\s+/g, ' ').trim();
+          if (!segmentText) {
+            return null;
+          }
+
+          const segmentSingerTags = Array.isArray(segment.singerTags)
+            ? segment.singerTags.map((tag) => String(tag || '').trim().toLowerCase()).filter(Boolean)
+            : [];
+
+          return {
+            text: segmentText,
+            singerTag: String(segment.singerTag || '').trim().toLowerCase(),
+            singerTags: segmentSingerTags,
+            explicitNone: !!segment.explicitNone
+          };
+        })
+        .filter(Boolean)
+      : [];
 
     return {
       time: entry.time,
       text: entry.text,
       singerTag: String(entry.singerTag || '').trim().toLowerCase(),
       singerTags,
+      explicitNone: !!entry.explicitNone,
+      singerSegments,
       endTime
     };
   });
@@ -1534,28 +1793,69 @@ function songMotifsParseOffsetSeconds(text) {
 }
 
 function songMotifsParseLyricLineAndSingerTags(value) {
-  const source = String(value || '').trim();
-  if (!source) {
-    return { text: '', singerTag: '', singerTags: [] };
+  const source = String(value || '');
+  const trimmedSource = source.trim();
+  if (!trimmedSource) {
+    return { text: '', singerTag: '', singerTags: [], tokens: [] };
   }
 
-  let text = source;
-  const singerTags = [];
+  const tokens = [];
+  const tagPattern = /\{([^{}]*)\}/g;
+  let cursor = 0;
+  let match;
 
-  while (true) {
-    const match = text.match(/\s*\{([^{}]+)\}\s*$/);
-    if (!match) {
+  while ((match = tagPattern.exec(source)) !== null) {
+    if (match.index > cursor) {
+      tokens.push({
+        type: 'text',
+        value: source.slice(cursor, match.index)
+      });
+    }
+
+    tokens.push({
+      type: 'tag',
+      value: String(match[1] || '').trim().toLowerCase()
+    });
+
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < source.length) {
+    tokens.push({
+      type: 'text',
+      value: source.slice(cursor)
+    });
+  }
+
+  const text = tokens
+    .filter((token) => token.type === 'text')
+    .map((token) => String(token.value || ''))
+    .join('')
+    .trim();
+
+  const singerTags = [];
+  for (let index = tokens.length - 1; index >= 0; index -= 1) {
+    const token = tokens[index];
+    if (!token || token.type === 'text') {
+      if (token && String(token.value || '').trim()) {
+        break;
+      }
+      continue;
+    }
+
+    if (!String(token.value || '').trim()) {
+      singerTags.length = 0;
       break;
     }
 
-    singerTags.unshift(String(match[1] || '').trim().toLowerCase());
-    text = text.slice(0, match.index).trimEnd();
+    singerTags.unshift(String(token.value || '').trim().toLowerCase());
   }
 
   return {
-    text: text.trim(),
+    text,
     singerTag: singerTags[0] || '',
-    singerTags
+    singerTags,
+    tokens
   };
 }
 
@@ -1563,6 +1863,15 @@ function songMotifsParseLrcTimedEntries(text) {
   const lines = String(text || '').split(/\r?\n/);
   const entries = [];
   const offsetSeconds = songMotifsParseOffsetSeconds(text);
+  let currentSingerTags = [];
+  const singerTagsByLyricKey = Object.create(null);
+
+  function normalizeLyricKey(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  }
 
   lines.forEach((line) => {
     const timestamps = line.match(/\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]/g);
@@ -1571,17 +1880,148 @@ function songMotifsParseLrcTimedEntries(text) {
     }
 
     const lyricParts = songMotifsParseLyricLineAndSingerTags(line.replace(/\[[^\]]+\]/g, ''));
-    const lyric = lyricParts.text;
-    const singerTag = lyricParts.singerTag;
-    const singerTags = lyricParts.singerTags;
+    const tokens = Array.isArray(lyricParts.tokens) && lyricParts.tokens.length > 0
+      ? lyricParts.tokens
+      : [{ type: 'text', value: lyricParts.text }];
+    const hasTagToken = tokens.some((token) => token && token.type === 'tag');
+    const hasInnerTag = tokens.some((token, index) => {
+      if (!token || token.type !== 'tag') {
+        return false;
+      }
+
+      for (let nextIndex = index + 1; nextIndex < tokens.length; nextIndex += 1) {
+        const nextToken = tokens[nextIndex];
+        if (nextToken && nextToken.type === 'text' && String(nextToken.value || '').trim()) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+    const lineText = tokens
+      .filter((token) => token && token.type === 'text')
+      .map((token) => String(token.value || ''))
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const lineLyricKey = normalizeLyricKey(lineText);
+
+    let activeSingerTags = currentSingerTags.slice();
+    if (!hasTagToken && activeSingerTags.length === 0 && lineLyricKey && Array.isArray(singerTagsByLyricKey[lineLyricKey]) && singerTagsByLyricKey[lineLyricKey].length > 0) {
+      activeSingerTags = singerTagsByLyricKey[lineLyricKey].slice();
+    }
+
+    let pendingSingerTags = null;
+    const lineSegments = [];
+
+    function pushLineSegment(segmentText) {
+      const normalizedText = String(segmentText || '').replace(/\s+/g, ' ').trim();
+      if (!normalizedText) {
+        return;
+      }
+
+      const segmentSingerTags = activeSingerTags.slice();
+      const segmentSingerTag = segmentSingerTags[0] || '';
+      const lyricKey = normalizeLyricKey(normalizedText);
+      if (lyricKey && segmentSingerTags.length > 0) {
+        singerTagsByLyricKey[lyricKey] = segmentSingerTags.slice();
+      }
+
+      lineSegments.push({
+        text: normalizedText,
+        singerTag: segmentSingerTag,
+        singerTags: segmentSingerTags,
+        explicitNone: segmentSingerTags.length === 0
+      });
+    }
+
+    tokens.forEach((token) => {
+      if (!token) {
+        return;
+      }
+
+      if (token.type === 'tag') {
+        const normalizedTag = String(token.value || '').trim().toLowerCase();
+        pendingSingerTags = normalizedTag ? [normalizedTag] : [];
+        return;
+      }
+
+      if (token.type !== 'text') {
+        return;
+      }
+
+      if (pendingSingerTags !== null) {
+        activeSingerTags = pendingSingerTags.slice();
+        pendingSingerTags = null;
+      }
+
+      if (hasInnerTag) {
+        pushLineSegment(token.value);
+      }
+    });
+
+    if (!hasInnerTag) {
+      const explicitSingerTags = (Array.isArray(lyricParts.singerTags) ? lyricParts.singerTags : [])
+        .map((tag) => String(tag || '').trim().toLowerCase());
+      const hasExplicitEmptyTag = Array.isArray(lyricParts.tokens)
+        && lyricParts.tokens.some((token) => token && token.type === 'tag' && !String(token.value || '').trim());
+
+      if (hasExplicitEmptyTag) {
+        activeSingerTags = [];
+      } else if (explicitSingerTags.length > 0) {
+        activeSingerTags = explicitSingerTags.slice();
+      } else if (lineLyricKey && Array.isArray(singerTagsByLyricKey[lineLyricKey]) && singerTagsByLyricKey[lineLyricKey].length > 0) {
+        activeSingerTags = singerTagsByLyricKey[lineLyricKey].slice();
+      }
+
+      const segmentSingerTags = activeSingerTags.slice();
+      lineSegments.push({
+        text: lineText,
+        singerTag: segmentSingerTags[0] || '',
+        singerTags: segmentSingerTags,
+        explicitNone: hasExplicitEmptyTag
+      });
+
+      if (lineLyricKey && segmentSingerTags.length > 0) {
+        singerTagsByLyricKey[lineLyricKey] = segmentSingerTags.slice();
+      }
+    } else if (!lineSegments.length && lineText) {
+      pushLineSegment(lineText);
+    }
+
+    if (pendingSingerTags !== null) {
+      currentSingerTags = pendingSingerTags.slice();
+    } else if (hasTagToken) {
+      currentSingerTags = activeSingerTags.slice();
+    } else if (lineSegments.length > 0 && lineSegments[0].singerTags.length > 0) {
+      currentSingerTags = lineSegments[0].singerTags.slice();
+    }
+
+    const collapsedLineText = lineSegments.map((segment) => String(segment.text || '')).join(' ').replace(/\s+/g, ' ').trim();
+    const entrySingerTags = hasInnerTag
+      ? []
+      : ((lineSegments[0] && Array.isArray(lineSegments[0].singerTags)) ? lineSegments[0].singerTags.slice() : []);
+    const entryExplicitNone = hasInnerTag
+      ? false
+      : !!(lineSegments[0] && lineSegments[0].explicitNone);
+    const singerSegments = hasInnerTag
+      ? lineSegments.map((segment) => ({
+        text: String(segment.text || ''),
+        singerTag: String(segment.singerTag || ''),
+        singerTags: Array.isArray(segment.singerTags) ? segment.singerTags.slice() : [],
+        explicitNone: !!segment.explicitNone
+      }))
+      : [];
 
     timestamps.forEach((stamp) => {
       const cleanStamp = stamp.slice(1, -1);
       entries.push({
         time: songMotifsParseTimestamp(cleanStamp) + offsetSeconds,
-        text: lyric,
-        singerTag,
-        singerTags
+        text: collapsedLineText,
+        singerTag: entrySingerTags[0] || '',
+        singerTags: entrySingerTags,
+        explicitNone: entryExplicitNone,
+        singerSegments
       });
     });
   });
@@ -1593,7 +2033,13 @@ function songMotifsParseLrcTimedEntries(text) {
       const singerKey = Array.isArray(entry.singerTags) && entry.singerTags.length > 0
         ? entry.singerTags.join(',')
         : String(entry.singerTag || '');
-      const key = entry.time.toFixed(3) + '|' + entry.text + '|' + singerKey;
+      const segmentKey = Array.isArray(entry.singerSegments)
+        ? entry.singerSegments.map((segment) => {
+          const tags = Array.isArray(segment.singerTags) ? segment.singerTags.join(',') : String(segment.singerTag || '');
+          return String(segment.text || '') + ':' + tags + ':' + (segment.explicitNone ? '1' : '0');
+        }).join('|')
+        : '';
+      const key = entry.time.toFixed(3) + '|' + entry.text + '|' + singerKey + '|' + (entry.explicitNone ? '1' : '0') + '|' + segmentKey;
       if (seen.has(key)) {
         return false;
       }
@@ -1730,6 +2176,35 @@ function songMotifsLoadKaraokeEntries() {
   });
 }
 
+function ensureSongMotifsSidebarControls() {
+  const state = getSongMotifsState();
+  const scope = typeof getActiveSongSidebarScope === 'function' ? getActiveSongSidebarScope() : document;
+  const rightView = scope && scope.querySelector ? scope.querySelector('.song-rightview') : null;
+
+  if (!rightView) {
+    return;
+  }
+
+  const existing = rightView.querySelector('.song-motif-volume-wrap');
+  if (existing) {
+    existing.remove();
+  }
+
+  const wrap = buildSongMotifsVolumeControl();
+  const navButtons = rightView.querySelector('.song-nav-buttons');
+  const sidebar = rightView.querySelector('.song-info-sidebar');
+  const insertionTarget = navButtons || sidebar;
+
+  if (insertionTarget) {
+    rightView.insertBefore(wrap, insertionTarget);
+  } else {
+    rightView.appendChild(wrap);
+  }
+
+  state.volumeInput = wrap.querySelector('#songMotifVolumeSlider');
+  state.playButton = wrap.querySelector('.song-motif-play-button');
+}
+
 function buildSongMotifsVolumeControl() {
   const state = getSongMotifsState();
   const wrap = document.createElement('div');
@@ -1740,6 +2215,28 @@ function buildSongMotifsVolumeControl() {
   label.htmlFor = 'songMotifVolumeSlider';
   label.textContent = 'Volume';
   wrap.appendChild(label);
+
+  const row = document.createElement('div');
+  row.className = 'song-motif-control-row';
+  wrap.appendChild(row);
+
+  const playButton = document.createElement('button');
+  playButton.type = 'button';
+  playButton.className = 'song-motif-play-button';
+  playButton.textContent = '▶';
+  playButton.setAttribute('aria-label', 'Play or pause playback');
+  playButton.addEventListener('click', () => {
+    if (!state.player || typeof state.player.getPlayerState !== 'function') {
+      return;
+    }
+
+    if (state.player.getPlayerState() === 1) {
+      state.player.pauseVideo();
+    } else {
+      state.player.playVideo();
+    }
+  });
+  row.appendChild(playButton);
 
   const input = document.createElement('input');
   input.id = 'songMotifVolumeSlider';
@@ -1753,9 +2250,10 @@ function buildSongMotifsVolumeControl() {
   input.addEventListener('input', () => {
     setSongMotifsVolume(input.value);
   });
-  wrap.appendChild(input);
+  row.appendChild(input);
 
   state.volumeInput = input;
+  state.playButton = playButton;
   return wrap;
 }
 
@@ -2216,18 +2714,11 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   videoWrap.className = 'song-motif-video-wrap';
   shell.appendChild(videoWrap);
 
-  let overlayPlayButton = null;
   if (hasVideo) {
     const host = document.createElement('div');
     host.id = 'songMotifPlayerHost';
     host.className = 'song-motif-yt-host';
     videoWrap.appendChild(host);
-
-    overlayPlayButton = document.createElement('button');
-    overlayPlayButton.type = 'button';
-    overlayPlayButton.className = 'song-motif-overlay-play';
-    overlayPlayButton.textContent = '▶';
-    videoWrap.appendChild(overlayPlayButton);
   } else {
     videoWrap.innerHTML = '<div class="song-motif-empty">Playback is unavailable for this song.</div>';
   }
@@ -2242,8 +2733,7 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   shell.appendChild(karaokeWrap);
 
   if (hasVideo) {
-    const volumeWrap = buildSongMotifsVolumeControl();
-    shell.appendChild(volumeWrap);
+    ensureSongMotifsSidebarControls();
   } else {
     state.volumeInput = null;
   }
@@ -2436,7 +2926,6 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   state.currentLabel = currentLabel;
   state.durationLabel = durationLabel;
   state.mainTrack = mainTrack;
-  state.playButton = overlayPlayButton;
   state.karaokeWrap = karaokeWrap;
   state.karaokeViewport = karaokeViewport;
   state.karaokeLayerHost = karaokeLayerHost;
@@ -2453,20 +2942,6 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
     currentIndex: -2
   }));
   state.karaokeActiveLayer = null;
-
-  if (overlayPlayButton) {
-    overlayPlayButton.addEventListener('click', () => {
-      if (!state.player || typeof state.player.getPlayerState !== 'function') {
-        return;
-      }
-
-      if (state.player.getPlayerState() === 1) {
-        state.player.pauseVideo();
-      } else {
-        state.player.playVideo();
-      }
-    });
-  }
 
   mainTrack.addEventListener('click', (event) => {
     const rect = mainTrack.getBoundingClientRect();
@@ -2591,16 +3066,32 @@ function songMotifsAttachPlayer(song, youtubeId) {
   });
 }
 
-function renderSongMotifsSection() {
+function renderSongMotifsSection(options) {
+  const settings = options || {};
+  const forceReset = Boolean(settings.forceReset);
+  const state = getSongMotifsState();
   const mount = getSongMotifsMount();
   if (!mount || !window.MotifData || !window.SongData) {
     return;
   }
 
+  const song = songMotifsFindSong();
+  const nextRenderKey = song ? String(song.path || '') : '__empty__';
+  const isSameRenderedSong = !forceReset
+    && state.renderKey
+    && state.renderKey === nextRenderKey
+    && mount.getAttribute('data-song-motifs-key') === nextRenderKey
+    && mount.childElementCount > 0;
+
+  if (isSameRenderedSong) {
+    return;
+  }
+
   songMotifsDisposeRuntimeState();
 
-  const song = songMotifsFindSong();
   if (!song) {
+    state.renderKey = nextRenderKey;
+    mount.setAttribute('data-song-motifs-key', nextRenderKey);
     mount.innerHTML = '<div class="song-motif-empty">This song has no connections.</div>';
     return;
   }
@@ -2609,6 +3100,8 @@ function renderSongMotifsSection() {
   const groupedRefs = songMotifsGroupRefs(song);
   const groupedSampleRefs = songMotifsGroupSampleRefs(song);
   songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId);
+  state.renderKey = nextRenderKey;
+  mount.setAttribute('data-song-motifs-key', nextRenderKey);
 
   songMotifsLoadKaraokeEntries().then((karaokeBundle) => {
     songMotifsApplyKaraokeBundle(karaokeBundle);
@@ -2627,6 +3120,12 @@ function renderSongMotifsSection() {
       songMotifsAttachPlayer(song, youtubeId);
     }
   };
+}
+
+function resetSongMotifsPlaybackForVersionChange() {
+  const state = getSongMotifsState();
+  songMotifsDisposeRuntimeState();
+  state.renderKey = '';
 }
 
 function initializeSongMotifsFeature(attempt) {
@@ -2648,3 +3147,4 @@ if (document.readyState === 'loading') {
 }
 
 window.renderSongMotifsSection = renderSongMotifsSection;
+window.resetSongMotifsPlaybackForVersionChange = resetSongMotifsPlaybackForVersionChange;

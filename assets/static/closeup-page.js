@@ -797,6 +797,46 @@
     };
   }
 
+  function getCloseupAdjacentNavPaths() {
+    if (typeof window === 'undefined') {
+      return { prev: '', next: '' };
+    }
+
+    const currentPath = String(window.location.pathname || '').split('#')[0].trim();
+    const navList = Array.isArray(window.navOrder && window.navOrder.songs) && window.navOrder.songs.length
+      ? window.navOrder.songs
+      : ((typeof window.getNavListForSongPage === 'function') ? window.getNavListForSongPage() : []);
+
+    if (!navList.length || !currentPath) {
+      return { prev: '', next: '' };
+    }
+
+    const normalizedCurrent = typeof window.normalizePathForNav === 'function' ? window.normalizePathForNav(currentPath) : currentPath;
+    let currentIndex = navList.findIndex((item) => (typeof window.normalizePathForNav === 'function' ? window.normalizePathForNav(item) : item) === normalizedCurrent);
+
+    if (currentIndex === -1 && typeof window.getCurrentSongNavKey === 'function') {
+      const currentSongKey = String(window.getCurrentSongNavKey() || '').trim();
+      currentIndex = navList.findIndex((item) => (typeof window.normalizeSongSidebarPathKey === 'function' ? window.normalizeSongSidebarPathKey(item) : item) === currentSongKey);
+    }
+
+    if (currentIndex === -1) {
+      return { prev: '', next: '' };
+    }
+
+    const familyKey = typeof window.getSongNavFamilyKey === 'function' ? window.getSongNavFamilyKey(navList[currentIndex]) : '';
+    const prevPath = typeof window.findAdjacentNavPath === 'function'
+      ? window.findAdjacentNavPath(navList, currentIndex, -1, familyKey, window.getSongNavFamilyKey, null)
+      : null;
+    const nextPath = typeof window.findAdjacentNavPath === 'function'
+      ? window.findAdjacentNavPath(navList, currentIndex, 1, familyKey, window.getSongNavFamilyKey, null)
+      : null;
+
+    return {
+      prev: prevPath ? (typeof window.toSiteHref === 'function' ? window.toSiteHref(prevPath) : prevPath) : '',
+      next: nextPath ? (typeof window.toSiteHref === 'function' ? window.toSiteHref(nextPath) : nextPath) : ''
+    };
+  }
+
   function applyInlineStyles() {
     if (document.getElementById('jamiepedia-closeup-inline-styles')) {
       return;
@@ -831,10 +871,12 @@
       '.closeup-media-row-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }',
       '.closeup-content a { color: var(--theme-color-link_default); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }',
       '.closeup-content a:hover { color: var(--theme-color-accent_hover); }',
-      '.closeup-back-wrap { display: flex; justify-content: flex-start; margin-top: 2.2em; }',
-      '.closeup-back-link { display: inline-flex; align-items: center; justify-content: center; padding: 5px 12px; background-color: var(--theme-color-background_base); color: var(--theme-color-link_default); border: 3px solid var(--theme-color-brand_frame); border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none; transition: all 0.3s ease; box-sizing: border-box; min-width: 140px; }',
-      '.closeup-back-link:hover { color: var(--theme-color-accent_hover); }',
-      '@media (max-width: 760px) { .closeup-article { padding: 6px 6px 10px; } .closeup-header h1 { font-size: 1.78rem; } .closeup-heading-major { font-size: 1.55rem; } .closeup-heading-minor { font-size: 1.38rem; } .closeup-media-row { grid-template-columns: 1fr; } .closeup-back-wrap { justify-content: flex-start; } .closeup-back-link { width: auto; text-align: center; } }'
+      '.closeup-back-wrap, .closeup-nav-wrap { display: flex; gap: 12px; margin-top: 2.2em; }',
+      '.closeup-back-link, .closeup-nav-link { display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; background-color: var(--theme-color-background_base); color: var(--theme-color-link_default); border: 3px solid var(--theme-color-brand_frame); border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none; transition: all 0.3s ease; box-sizing: border-box; min-width: 140px; }',
+      '.closeup-nav-link { flex: 1; min-height: 44px; width: 100%; }',
+      '.closeup-nav-link[aria-disabled="true"] { opacity: 0.5; pointer-events: none; cursor: default; }',
+      '.closeup-back-link:hover, .closeup-nav-link:hover { color: var(--theme-color-accent_hover); }',
+      '@media (max-width: 760px) { .closeup-article { padding: 6px 6px 10px; } .closeup-header h1 { font-size: 1.78rem; } .closeup-heading-major { font-size: 1.55rem; } .closeup-heading-minor { font-size: 1.38rem; } .closeup-media-row { grid-template-columns: 1fr; } .closeup-back-wrap, .closeup-nav-wrap { flex-direction: column; } .closeup-back-link, .closeup-nav-link { width: 100%; text-align: center; } }'
     ].join('');
     document.head.appendChild(style);
   }
@@ -891,12 +933,23 @@
     const pageHref = String(settings.pageHref || withBasePath('/music/' + normalizedSlug));
     const includeBackLink = settings.includeBackLink !== false;
     const includeHeader = settings.includeHeader !== false;
+    const includeFooterNav = settings.includeFooterNav !== false;
+    const adjacent = getCloseupAdjacentNavPaths();
+    const prevHref = adjacent.prev || pageHref;
+    const nextHref = adjacent.next || pageHref;
+    const footerNav = includeFooterNav
+      ? '<div class="closeup-nav-wrap">' +
+          '<a class="closeup-nav-link closeup-nav-link-prev" href="' + prevHref.replace(/"/g, '%22') + '" aria-disabled="' + (adjacent.prev ? 'false' : 'true') + '">← Previous</a>' +
+          '<a class="closeup-nav-link closeup-nav-link-next" href="' + nextHref.replace(/"/g, '%22') + '" aria-disabled="' + (adjacent.next ? 'false' : 'true') + '">Next →</a>' +
+        '</div>'
+      : '';
 
     container.innerHTML =
       '<article class="closeup-article">' +
         (includeHeader && headingText ? '<div class="closeup-header"><h1>' + convertInlineFormatting(headingText) + '</h1></div>' : '') +
         '<div class="closeup-content">' + renderResult.html + '</div>' +
         (includeBackLink ? '<div class="closeup-back-wrap"><a class="closeup-back-link" href="' + pageHref.replace(/"/g, '%22') + '">Back to page</a></div>' : '') +
+        footerNav +
       '</article>';
 
     if (typeof window.normalizeInternalAnchorTargets === 'function') {
@@ -916,8 +969,9 @@
   async function initializeCloseupPage() {
     const routeSlug = getSongSlugFromRoute();
     if (routeSlug) {
-      const targetHref = withBasePath('/music/' + routeSlug) + '#close-up';
-      if (window.location.pathname !== withBasePath('/music/' + routeSlug) || String(window.location.hash || '').toLowerCase() !== '#close-up') {
+      const targetHref = withBasePath('/music/' + routeSlug + '/close-up');
+      const normalizedPath = String(window.location.pathname || '').replace(/\/+$/, '');
+      if (normalizedPath !== targetHref.replace(/\/+$/, '') || String(window.location.hash || '').trim()) {
         window.location.replace(targetHref);
         return;
       }
@@ -936,7 +990,7 @@
       includeHeader: true,
       includeBackLink: true,
       showNotFound: true,
-      pageHref: withBasePath('/music/' + slug)
+      pageHref: withBasePath('/music/' + slug + '/connections')
     });
   }
 

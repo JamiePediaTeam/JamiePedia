@@ -23,8 +23,20 @@
   }
 
   function getArtistSlugFromLocation() {
+    if (typeof getArtistRouteContext === 'function') {
+      return String(getArtistRouteContext(window.location.pathname || '').slug || '').trim().toLowerCase();
+    }
+
     const parts = String(window.location.pathname || '').split('/').filter(Boolean);
     return String(parts[parts.length - 1] || '').replace(/\.html$/i, '').trim().toLowerCase();
+  }
+
+  function getArtistSectionFromLocation() {
+    if (typeof getArtistRouteContext === 'function') {
+      return String(getArtistRouteContext(window.location.pathname || '').section || '').trim().toLowerCase();
+    }
+
+    return '';
   }
 
   function getArtistHashTokenFromLocation() {
@@ -99,7 +111,7 @@
     });
   }
 
-  function buildArtistDisplayProfile(directory, page) {
+  function buildArtistDisplayProfile(directory, page, activeHashToken) {
     const variants = getArtistVariantPagesForSlug(directory, page && page.slug);
     const hasMultipleVariants = variants.length > 1;
     const isFirstVariant = hasMultipleVariants && variants[0] === page;
@@ -119,11 +131,13 @@
       uniqueNames.push(name);
     });
 
-    const fallbackName = String(page && page.primaryName ? page.primaryName : '').trim() || 'Artist';
-    const promotedName = isFirstVariant && uniqueNames.length > 1 ? uniqueNames[1] : '';
-    const titleName = promotedName || uniqueNames[0] || fallbackName;
+    const normalizedHashToken = normalizeArtistVariantToken(activeHashToken || '');
+    const currentPageVariantToken = normalizeArtistVariantToken(page && page.pageHashToken || '');
+    const shouldUseVariantName = Boolean(normalizedHashToken && currentPageVariantToken && normalizedHashToken === currentPageVariantToken && uniqueNames.length > 1);
 
-    const aliasStartIndex = isFirstVariant && uniqueNames.length > 1 ? 2 : 1;
+    const fallbackName = String(page && page.primaryName ? page.primaryName : '').trim() || 'Artist';
+    const titleName = shouldUseVariantName ? (uniqueNames[1] || uniqueNames[0] || fallbackName) : (uniqueNames[0] || fallbackName);
+    const aliasStartIndex = shouldUseVariantName && uniqueNames.length > 1 ? 2 : 1;
     const aliasNames = uniqueNames.slice(aliasStartIndex);
 
     return {
@@ -153,14 +167,19 @@
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'version-tab artist-version-tab' + (entry.token === activeToken ? ' active' : '');
-      button.textContent = formatArtistVariantLabel(entry.token);
+      const explicitTabName = String(entry && entry.page && entry.page.tabName ? entry.page.tabName : '').trim();
+      button.textContent = explicitTabName || formatArtistVariantLabel(entry.token);
 
       button.addEventListener('click', function () {
         if (entry.token === activeToken) {
           return;
         }
 
-        const targetRoute = '/artists/' + page.slug + (entry.token ? ('#' + entry.token) : '');
+        const activeTab = (document.querySelector('.artist-tab.active') || {}).getAttribute
+          ? String(document.querySelector('.artist-tab.active').getAttribute('data-artist-tab') || '').trim().toLowerCase()
+          : '';
+        const sectionToken = activeTab === 'summary' ? 'summary' : 'credits';
+        const targetRoute = '/artists/' + page.slug + '/' + sectionToken + (entry.token ? ('#' + entry.token) : '');
         const targetHref = typeof window.toSiteHref === 'function'
           ? window.toSiteHref(targetRoute)
           : targetRoute;
@@ -335,25 +354,11 @@
     }
 
     const descriptionBlock = sidebar.querySelector('.artist-description-block');
-    const aliases = Array.isArray(displayProfile && displayProfile.aliasNames)
-      ? displayProfile.aliasNames.filter(Boolean)
-      : [];
-
     if (descriptionBlock) {
-      descriptionBlock.style.display = aliases.length ? '' : 'none';
-    }
-
-    const summaryBits = [];
-    if (aliases.length > 1) {
-      summaryBits.push('<p id="artistPageAliases" class="artist-page-aliases">Also credited as: ' + escapeHtml(aliases.join(' / ')) + '</p>');
-    } else if (aliases.length === 1) {
-      summaryBits.push('<p id="artistPageAliases" class="artist-page-aliases">Also credited as: ' + escapeHtml(aliases[0]) + '</p>');
-    }
-
-    if (descriptionBlock) {
+      descriptionBlock.style.display = 'none';
       const descriptionContent = descriptionBlock.querySelector('.song-info-content');
       if (descriptionContent) {
-        descriptionContent.innerHTML = summaryBits.join('');
+        descriptionContent.innerHTML = '';
       }
     }
 
@@ -441,7 +446,8 @@
       return;
     }
 
-    const setActiveTab = (tabName) => {
+    const setActiveTab = (tabName, options) => {
+      const settings = options || {};
       const safeTabName = tabName === 'summary' || tabName === 'credits' ? tabName : 'credits';
       tabs.forEach((tab) => {
         tab.classList.toggle('active', tab.getAttribute('data-artist-tab') === safeTabName);
@@ -452,6 +458,19 @@
       if (page) {
         setStoredArtistTab(page, safeTabName);
       }
+
+      if (!settings.skipUrlUpdate) {
+        const action = settings.urlMode === 'replace' ? 'replaceState' : 'pushState';
+        if (window.history && typeof window.history[action] === 'function') {
+          const hashToken = getArtistHashTokenFromLocation();
+          const targetPath = '/artists/' + (page && page.slug ? page.slug : getArtistSlugFromLocation()) + '/' + safeTabName;
+          const targetHref = (typeof window.toSiteHref === 'function' ? window.toSiteHref(targetPath) : targetPath) + (hashToken ? ('#' + hashToken) : '');
+          const currentHref = window.location.pathname + window.location.search + window.location.hash;
+          if (targetHref !== currentHref) {
+            window.history[action]({}, '', targetHref);
+          }
+        }
+      }
     };
 
     tabs.forEach((tab) => {
@@ -461,16 +480,20 @@
       tab.dataset.artistTabBound = 'true';
       tab.addEventListener('click', function () {
         const nextTab = tab.getAttribute('data-artist-tab') || 'credits';
-        setActiveTab(nextTab);
+        setActiveTab(nextTab, { skipUrlUpdate: false, urlMode: 'push' });
       });
     });
 
+    const sectionTab = getArtistSectionFromLocation();
     const storedTab = page ? getStoredArtistTab(page) : null;
-    const preferredTab = storedTab || (tabs[0] && tabs[0].getAttribute('data-artist-tab')) || 'credits';
+    const preferredTab = (sectionTab === 'summary' || sectionTab === 'credits' ? sectionTab : null)
+      || storedTab
+      || (tabs[0] && tabs[0].getAttribute('data-artist-tab'))
+      || 'credits';
     const usableTab = tabs.some((tab) => tab.getAttribute('data-artist-tab') === preferredTab)
       ? preferredTab
       : (tabs[0] && tabs[0].getAttribute('data-artist-tab')) || 'credits';
-    setActiveTab(usableTab);
+    setActiveTab(usableTab, { skipUrlUpdate: true, urlMode: 'replace' });
   }
 
   function buildArtistImageOptions(page, primaryAlias) {
@@ -848,7 +871,7 @@
         return;
       }
 
-      const displayProfile = buildArtistDisplayProfile(directory, page);
+      const displayProfile = buildArtistDisplayProfile(directory, page, hashToken);
 
       renderArtistVariantTabs(directory, page, hashToken);
 
@@ -935,4 +958,5 @@
   }
 
   window.addEventListener('hashchange', renderArtistPage);
+  window.addEventListener('popstate', renderArtistPage);
 }());

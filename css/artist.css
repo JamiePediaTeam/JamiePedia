@@ -57,6 +57,8 @@
 
 .artist-page-name {
   margin: 0 0 5px 0;
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .artist-page-aliases,

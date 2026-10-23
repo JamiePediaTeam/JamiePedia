@@ -81,6 +81,42 @@ function toExtensionlessPath(path) {
   return normalized || '/';
 }
 
+function getRouteParts(path) {
+  return toExtensionlessPath(path)
+    .split('/')
+    .filter(Boolean);
+}
+
+function getMusicRouteContext(path) {
+  const parts = getRouteParts(path);
+  if (parts[0] !== 'music') {
+    return { slug: '', section: '', basePath: '' };
+  }
+
+  const slug = String(parts[1] || '').trim().toLowerCase();
+  const section = String(parts[2] || '').trim().toLowerCase();
+  return {
+    slug,
+    section,
+    basePath: slug ? ('/music/' + slug) : ''
+  };
+}
+
+function getArtistRouteContext(path) {
+  const parts = getRouteParts(path);
+  if (parts[0] !== 'artists') {
+    return { slug: '', section: '', basePath: '' };
+  }
+
+  const slug = String(parts[1] || '').trim().toLowerCase();
+  const section = String(parts[2] || '').trim().toLowerCase();
+  return {
+    slug,
+    section,
+    basePath: slug ? ('/artists/' + slug) : ''
+  };
+}
+
 function withBasePath(path) {
   const normalized = String(path || '/').startsWith('/') ? String(path || '/') : '/' + String(path || '/');
   if (!basePath) {
@@ -110,7 +146,7 @@ function mapCloseupPathToSongSection(pathname) {
     return '';
   }
 
-  return withBasePath('/music/' + slug) + '#close-up';
+  return withBasePath('/music/' + slug + '/close-up');
 }
 
 function toSiteHref(rawHref) {
@@ -905,13 +941,9 @@ function normalizePathForNav(path) {
 }
 
 function getCurrentSongNavKey() {
-  const currentPath = toExtensionlessPath(window.location.pathname);
-  const currentPointer = currentPath.split('/').filter(Boolean).pop() || '';
-  const normalizedSongPath = currentPointer ? ('/music/' + currentPointer) : currentPath;
+  const route = getMusicRouteContext(window.location.pathname);
+  const normalizedSongPath = route.basePath || toExtensionlessPath(window.location.pathname);
   const hashToken = normalizeSongSidebarHashToken(window.location.hash);
-  if (hashToken === 'close-up' || hashToken === 'closeup') {
-    return normalizedSongPath;
-  }
   return hashToken ? (normalizedSongPath + '#' + hashToken) : normalizedSongPath;
 }
 
@@ -936,9 +968,8 @@ function normalizeArtistNavPathKey(value) {
 }
 
 function getCurrentArtistNavKey() {
-  const currentPath = toExtensionlessPath(window.location.pathname);
-  const currentPointer = currentPath.split('/').filter(Boolean).pop() || '';
-  const normalizedArtistPath = currentPointer ? ('/artists/' + currentPointer) : currentPath;
+  const route = getArtistRouteContext(window.location.pathname);
+  const normalizedArtistPath = route.basePath || toExtensionlessPath(window.location.pathname);
   const hashToken = normalizeArtistPageHashToken(window.location.hash);
   return hashToken ? (normalizedArtistPath + '#' + hashToken) : normalizedArtistPath;
 }
@@ -1320,6 +1351,7 @@ function initializeDataNavButtons() {
 
     setNavLinkTarget(prevElement, prevPath);
     setNavLinkTarget(nextElement, nextPath);
+    initializeArtistCreditPreviews(container);
   });
 }
 
@@ -1679,7 +1711,21 @@ function getCoverArtist(filename) {
     return null;
   }
 
-  return loadCoverArtistsByFilename[key] || null;
+  const exact = loadCoverArtistsByFilename[key] || null;
+  if (exact) {
+    return exact;
+  }
+
+  const stem = key.replace(/\.[^.]+$/u, '');
+  if (!stem) {
+    return null;
+  }
+
+  const fallbackKey = Object.keys(loadCoverArtistsByFilename).find((candidate) => {
+    return String(candidate || '').toLowerCase().replace(/\.[^.]+$/u, '') === stem;
+  });
+
+  return fallbackKey ? (loadCoverArtistsByFilename[fallbackKey] || null) : null;
 }
 
 window.getCoverArtist = getCoverArtist;
@@ -1839,6 +1885,8 @@ function buildArtistDirectoryFromCsv(text) {
   const themeIndex = headers.indexOf('theme');
   const linkTextIndex = headers.indexOf('link text');
   const artistLinksIndex = headers.indexOf('artist links');
+  const tabNameIndex = headers.indexOf('tab name');
+  const artistCategoryIndex = headers.indexOf('artist name group');
   const descriptionIndex = headers.indexOf('description');
   const hasPageIndex = headers.indexOf('has page?') !== -1 ? headers.indexOf('has page?') : headers.indexOf('has page');
 
@@ -1885,6 +1933,9 @@ function buildArtistDirectoryFromCsv(text) {
       pageId: primaryPageId.pageId || ids[0],
       pageHashToken: normalizeArtistPageHashToken(primaryPageId.hashToken),
       primaryName: String(names[0] || ids[0]).trim(),
+      tabName: String(values[tabNameIndex] || '').trim(),
+      artistCategory: String(values[artistCategoryIndex] || '').trim(),
+      category: String(values[artistCategoryIndex] || '').trim(),
       theme: String(values[themeIndex] || '').trim(),
       type: primaryArtistType,
       types: artistTypeValues.map((value) => normalizeArtistType(value)).filter(Boolean),
@@ -1914,6 +1965,8 @@ function buildArtistDirectoryFromCsv(text) {
           : (aliasRouteKey || ('/artists/' + aliasSlug)))
         : String(linkHrefs[0] || linkHrefs[aliasIndex] || '').trim();
 
+      const preferredAliasName = String(names[0] || id).trim();
+
       const alias = {
         id,
         pageSlug: aliasSlug,
@@ -1921,13 +1974,13 @@ function buildArtistDirectoryFromCsv(text) {
         href: aliasHref,
         hasPage: aliasHasPage,
         name: String(
-          aliasIndex === 0 && names.length > 1
-            ? (names[1] || names[0] || id)
+          aliasIndex === 0
+            ? preferredAliasName
             : (names[aliasIndex] || names[0] || id)
         ).trim(),
         previewName: String(
-          aliasIndex === 0 && names.length > 1
-            ? (names[1] || names[0] || id)
+          aliasIndex === 0
+            ? preferredAliasName
             : (names[aliasIndex] || names[0] || id)
         ).trim(),
         image: page.imagePaths[aliasIndex] || page.imagePaths[0] || resolveArtistImagePath(images[aliasIndex] || images[0] || ''),
@@ -2043,6 +2096,82 @@ function getArtistPreviewEntry(value) {
   return artistDirectory.byId[key]
     || artistDirectory.byName[key]
     || artistDirectory.byLyricTag[key]
+    || null;
+}
+
+function getArtistPreviewEntryFromHref(rawHref) {
+  const source = String(rawHref || '').trim();
+  if (!source) {
+    return null;
+  }
+
+  const normalizedHref = typeof window !== 'undefined' && typeof window.toSiteHref === 'function'
+    ? window.toSiteHref(source)
+    : source;
+  const pathOnly = String(normalizedHref || '').split('#')[0].trim();
+  const normalizedPath = typeof toExtensionlessPath === 'function' ? toExtensionlessPath(pathOnly) : pathOnly;
+  if (!normalizedPath || !normalizedPath.startsWith('/artists/')) {
+    return null;
+  }
+
+  const slug = normalizedPath.split('/').filter(Boolean).pop() || '';
+  if (!slug) {
+    return null;
+  }
+
+  const pageEntry = getArtistPageEntryBySlugWithHash(slug, normalizedHref.includes('#') ? normalizedHref.split('#')[1] : '');
+  if (pageEntry && pageEntry.aliases && pageEntry.aliases.length) {
+    return pageEntry.aliases[0];
+  }
+
+  return getArtistPreviewEntry(slug) || null;
+}
+
+function getGenericPagePreviewEntryFromHref(rawHref) {
+  const source = String(rawHref || '').trim();
+  if (!source) {
+    return null;
+  }
+
+  const normalizedHref = typeof window !== 'undefined' && typeof window.toSiteHref === 'function'
+    ? window.toSiteHref(source)
+    : source;
+  const pathOnly = String(normalizedHref || '').split('#')[0].trim();
+  const normalizedPath = typeof toExtensionlessPath === 'function' ? toExtensionlessPath(pathOnly) : pathOnly;
+  const parts = normalizedPath.split('/').filter(Boolean);
+  const pageType = String(parts[0] || '').trim().toLowerCase();
+  const slug = String(parts[1] || '').trim();
+  if (!slug || !['music', 'motifs', 'artists'].includes(pageType)) {
+    return null;
+  }
+
+  const previewName = slug
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const fallbackEntry = {
+    id: slug,
+    pageSlug: slug,
+    pageRouteKey: normalizedPath,
+    href: normalizedPath,
+    hasPage: true,
+    name: previewName,
+    previewName: previewName || slug,
+    image: '',
+    color: '#F05E55',
+    type: pageType,
+    description: '',
+    summary: '',
+    pageType
+  };
+
+  return resolvePreviewEntryMetadata(fallbackEntry);
+}
+
+function getPagePreviewEntryFromHref(rawHref) {
+  return getArtistPreviewEntryFromHref(rawHref)
+    || getGenericPagePreviewEntryFromHref(rawHref)
     || null;
 }
 
@@ -2199,18 +2328,20 @@ function ensureArtistPreviewStyles() {
   const style = document.createElement('style');
   style.id = 'artistPreviewStyles';
   style.textContent = [
-    '.artist-preview-popover{position:fixed;z-index:1100;min-width:300px;max-width:calc(100vw - 24px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}',
+    '.artist-preview-popover{position:fixed;z-index:1100;width:min(320px,calc(100vw - 24px));max-width:calc(100vw - 24px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;box-sizing:border-box;}',
     '.artist-preview-popover.visible{opacity:1;visibility:visible;}',
     '.artist-preview-popover::before{content:"";position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;bottom:-5px;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--theme-color-border_pill);}',
     '.artist-preview-popover.below::before{top:-5px;bottom:auto;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid var(--theme-color-border_pill);border-top:none;}',
-    '.artist-preview-card{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;padding:14px 16px;border-radius:0;border:1px solid var(--theme-color-border_pill);background:#ffffff;color:#111111;box-shadow:0 2px 8px var(--theme-color-shadow_soft);}',
+    '.artist-preview-card{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;padding:14px 16px;border-radius:0;border:1px solid var(--theme-color-border_pill);background:#ffffff;color:#111111;box-shadow:0 2px 8px var(--theme-color-shadow_soft);width:min(320px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:164px;overflow:hidden;box-sizing:border-box;}',
+    '.artist-preview-copy{min-width:0;max-width:100%;}',
     '.artist-preview-media img{display:block;width:72px;height:72px;object-fit:cover;border-radius:6px;}',
     '.artist-preview-title{font-size:10.944px;font-weight:700;line-height:16.416px;color:#111111;margin:0 0 2px;}',
-    '.artist-preview-description{font-size:10.944px;line-height:16.416px;color:#111111;overflow-wrap:break-word;}',
-    '@media (max-width:760px){.artist-preview-popover{min-width:min(300px,calc(100vw - 24px));}.artist-preview-card{grid-template-columns:64px minmax(0,1fr);} .artist-preview-media img{width:64px;height:64px;}}'
+    '.artist-preview-description{font-size:10.944px;line-height:16.416px;color:#111111;white-space:pre-line;overflow-wrap:break-word;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;max-height:calc(4 * 16.416px);overflow:hidden;position:relative;mask-image:linear-gradient(180deg,#000 0%,#000 62%,rgba(0,0,0,0.3) 82%,rgba(0,0,0,0) 100%);-webkit-mask-image:linear-gradient(180deg,#000 0%,#000 62%,rgba(0,0,0,0.3) 82%,rgba(0,0,0,0) 100%);}',
+    '@media (max-width:760px){.artist-preview-popover{width:min(300px,calc(100vw - 24px));max-width:calc(100vw - 24px);}.artist-preview-card{grid-template-columns:64px minmax(0,1fr);width:min(300px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:158px;} .artist-preview-media img{width:64px;height:64px;}}'
   ].join('');
   document.head.appendChild(style);
 }
+
 
 function ensureArtistPreviewPopover() {
   ensureArtistPreviewStyles();
@@ -2258,12 +2389,126 @@ function positionArtistPreviewPopover(popover, target) {
   popover.classList.toggle('below', placeBelow);
 }
 
+function formatPreviewSummaryText(value) {
+  const rawText = String(value || '').replace(/\s*\|\s*/g, ' ');
+  if (!rawText.trim()) {
+    return '';
+  }
+
+  return rawText.replace(/\s+/g, ' ').trim();
+}
+
+function getArtistPreviewSummaryText(artist) {
+  if (!artist) {
+    return '';
+  }
+
+  const routePath = String((artist.pageRouteKey || artist.href || artist.pageSlug) || '').trim();
+  const lookupPath = routePath && routePath.startsWith('/artists/')
+    ? routePath
+    : (artist.pageSlug ? ('/artists/' + artist.pageSlug) : '');
+
+  if (typeof window !== 'undefined' && typeof window.getSearchArtistSummaryText === 'function') {
+    const summaryText = formatPreviewSummaryText(window.getSearchArtistSummaryText(lookupPath || artist.pageSlug || ''));
+    if (summaryText) {
+      return summaryText;
+    }
+  }
+
+  const fallbackText = formatPreviewSummaryText((artist.summary || artist.description));
+  return fallbackText;
+}
+
+function getGenericPreviewSummaryText(previewEntry) {
+  if (!previewEntry) {
+    return '';
+  }
+
+  const routePath = String((previewEntry.pageRouteKey || previewEntry.href || '') || '').trim();
+  if (typeof window !== 'undefined' && typeof window.getSearchPageSummaryText === 'function') {
+    const summaryText = formatPreviewSummaryText(window.getSearchPageSummaryText(routePath));
+    if (summaryText) {
+      return summaryText;
+    }
+  }
+
+  return formatPreviewSummaryText((previewEntry.summary || previewEntry.description));
+}
+
+function resolvePreviewEntryMetadata(previewEntry) {
+  if (!previewEntry || !previewEntry.pageType) {
+    return previewEntry;
+  }
+
+  const routePath = String((previewEntry.pageRouteKey || previewEntry.href || '') || '').trim();
+  if (!routePath || typeof window === 'undefined') {
+    return previewEntry;
+  }
+
+  const pageTitle = typeof window.getSearchPageTitle === 'function' ? String(window.getSearchPageTitle(routePath) || '').trim() : '';
+  const pageImage = typeof window.getSearchPageImage === 'function' ? String(window.getSearchPageImage(routePath) || '').trim() : '';
+
+  if (pageTitle) {
+    previewEntry.name = pageTitle;
+    previewEntry.previewName = pageTitle;
+  }
+  if (pageImage) {
+    previewEntry.image = pageImage;
+  }
+
+  return previewEntry;
+}
+
+function shouldSuppressArtistPreviewForCurrentPage() {
+  if (typeof window === 'undefined' || !window.location) {
+    return false;
+  }
+
+  const currentPath = String(window.location.pathname || '').trim();
+  const normalized = typeof toExtensionlessPath === 'function' ? toExtensionlessPath(currentPath) : currentPath;
+  const withoutTrailingSlash = normalized.replace(/\/+$/u, '');
+
+  return ['/', '/music', '/artists', '/motifs'].includes(withoutTrailingSlash)
+    || ['/music/', '/artists/', '/motifs/'].includes(withoutTrailingSlash);
+}
+
 function showArtistPreviewPopover(target) {
-  const artistId = target ? target.getAttribute('data-artist-preview-id') : '';
-  const artist = getArtistPreviewEntryById(artistId);
-  if (!target || !artist) {
+  if (shouldSuppressArtistPreviewForCurrentPage()) {
     hideArtistPreviewPopover();
     return;
+  }
+
+  const artistId = target ? target.getAttribute('data-artist-preview-id') : '';
+  let previewEntry = getArtistPreviewEntryById(artistId)
+    || (target ? getPagePreviewEntryFromHref(target.getAttribute('href') || '') : null);
+  if (!target || !previewEntry) {
+    hideArtistPreviewPopover();
+    return;
+  }
+
+  const previewToken = (typeof window !== 'undefined' ? ((window.__jamiePreviewSequence || 0) + 1) : 1);
+  if (typeof window !== 'undefined') {
+    window.__jamiePreviewSequence = previewToken;
+    window.__activeArtistPreviewTarget = target;
+  }
+
+  if (typeof window !== 'undefined' && typeof window.ensureSearchImageCsvLoaded === 'function' && previewEntry.pageType && !previewEntry.image) {
+    const currentHref = target.getAttribute('href') || '';
+    const imageLoadToken = previewToken;
+    window.ensureSearchImageCsvLoaded(basePath).then(function () {
+      const refreshedEntry = getPagePreviewEntryFromHref(currentHref);
+      if (!refreshedEntry || window.__jamiePreviewSequence !== imageLoadToken || window.__activeArtistPreviewTarget !== target) {
+        return;
+      }
+      previewEntry = refreshedEntry;
+      const popover = document.getElementById('artistPreviewPopover');
+      if (!popover || !popover.classList.contains('visible')) {
+        return;
+      }
+      showArtistPreviewPopover(target);
+    }).catch(function () {
+      return null;
+    });
   }
 
   const popover = ensureArtistPreviewPopover();
@@ -2274,21 +2519,21 @@ function showArtistPreviewPopover(target) {
   const description = popover.querySelector('.artist-preview-description');
 
   if (card) {
-    card.style.setProperty('--artist-preview-color', artist.color || '#F05E55');
+    card.style.setProperty('--artist-preview-color', previewEntry.color || '#F05E55');
   }
   if (image) {
-    if (artist.image) {
-      image.src = artist.image;
-      image.alt = artist.previewName || artist.name;
+    if (previewEntry.image) {
+      image.src = previewEntry.image;
+      image.alt = previewEntry.previewName || previewEntry.name;
       media.style.display = '';
       image.onload = function () {
-        if (window.__activeArtistPreviewTarget) {
+        if (window.__jamiePreviewSequence === previewToken && window.__activeArtistPreviewTarget) {
           positionArtistPreviewPopover(popover, window.__activeArtistPreviewTarget);
         }
       };
       image.onerror = function () {
         media.style.display = 'none';
-        if (window.__activeArtistPreviewTarget) {
+        if (window.__jamiePreviewSequence === previewToken && window.__activeArtistPreviewTarget) {
           positionArtistPreviewPopover(popover, window.__activeArtistPreviewTarget);
         }
       };
@@ -2299,13 +2544,44 @@ function showArtistPreviewPopover(target) {
     }
   }
   if (title) {
-    title.textContent = artist.previewName || artist.name;
+    title.textContent = previewEntry.previewName || previewEntry.name;
   }
   if (description) {
-    description.textContent = artist.description || '';
+    description.textContent = '';
+    const setSummaryText = (summaryText) => {
+      if (window.__jamiePreviewSequence !== previewToken || window.__activeArtistPreviewTarget !== target) {
+        return;
+      }
+      const cleanedSummary = formatPreviewSummaryText(summaryText || '');
+      description.textContent = cleanedSummary || 'This page has no summary.';
+    };
+
+    const immediateSummary = getArtistPreviewSummaryText(previewEntry) || getGenericPreviewSummaryText(previewEntry);
+    if (immediateSummary) {
+      setSummaryText(immediateSummary);
+    }
+
+    if (typeof window !== 'undefined' && typeof window.ensureSearchContentIndexLoaded === 'function' && !immediateSummary) {
+      const lookupPath = (previewEntry.pageRouteKey || previewEntry.pageSlug)
+        ? (previewEntry.pageRouteKey || ('/' + (previewEntry.pageType || 'artists') + '/' + previewEntry.pageSlug))
+        : '';
+      const fetchToken = previewToken;
+      window.ensureSearchContentIndexLoaded(basePath).then(function () {
+        if (window.__jamiePreviewSequence !== fetchToken || window.__activeArtistPreviewTarget !== target) {
+          return;
+        }
+        setSummaryText(getArtistPreviewSummaryText(previewEntry) || getGenericPreviewSummaryText(previewEntry) || (previewEntry.description || ''));
+      }).catch(function () {
+        if (window.__jamiePreviewSequence !== fetchToken || window.__activeArtistPreviewTarget !== target) {
+          return;
+        }
+        setSummaryText(previewEntry.description || '');
+      });
+    } else if (!immediateSummary) {
+      setSummaryText(previewEntry.description || '');
+    }
   }
 
-  window.__activeArtistPreviewTarget = target;
   popover.classList.add('visible');
   popover.setAttribute('aria-hidden', 'false');
   positionArtistPreviewPopover(popover, target);
@@ -2335,8 +2611,32 @@ window.addEventListener('resize', function () {
 });
 
 function initializeArtistCreditPreviews(scope) {
+  if (shouldSuppressArtistPreviewForCurrentPage()) {
+    return;
+  }
+
   const root = scope && scope.querySelectorAll ? scope : document;
-  root.querySelectorAll('[data-artist-preview-id]').forEach((link) => {
+
+  const candidateLinks = Array.from(root.querySelectorAll ? root.querySelectorAll('a[href]') : (root.tagName === 'A' ? [root] : []));
+  candidateLinks.forEach((link) => {
+    const explicitId = String(link.getAttribute('data-artist-preview-id') || '').trim();
+    let previewEntry = explicitId ? getArtistPreviewEntryById(explicitId) : null;
+    if (!previewEntry) {
+      previewEntry = getPagePreviewEntryFromHref(link.getAttribute('href') || '');
+    }
+    if (!previewEntry) {
+      return;
+    }
+
+    const previewId = String((previewEntry && (previewEntry.id || previewEntry.pageId || previewEntry.pageSlug)) || '').trim();
+    if (!previewId) {
+      return;
+    }
+
+    if (!explicitId) {
+      link.setAttribute('data-artist-preview-id', previewId);
+    }
+
     if (link.dataset.artistPreviewInitialized === 'true') {
       return;
     }
@@ -2353,6 +2653,47 @@ function initializeArtistCreditPreviews(scope) {
   });
 }
 
+function watchArtistPreviewDom() {
+  if (window.__jamieArtistPreviewObserverInstalled) {
+    return;
+  }
+
+  window.__jamieArtistPreviewObserverInstalled = true;
+  const observer = new MutationObserver(function (mutations) {
+    mutations.forEach(function (mutation) {
+      if (mutation.type !== 'childList') {
+        return;
+      }
+
+      mutation.addedNodes.forEach(function (node) {
+        if (!node || node.nodeType !== 1) {
+          return;
+        }
+        initializeArtistCreditPreviews(node);
+      });
+    });
+  });
+
+  observer.observe(document.body || document.documentElement || document, {
+    childList: true,
+    subtree: true
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function () {
+    ensureArtistDirectoryLoaded().finally(function () {
+      initializeArtistCreditPreviews(document);
+      watchArtistPreviewDom();
+    });
+  }, { once: true });
+} else {
+  ensureArtistDirectoryLoaded().finally(function () {
+    initializeArtistCreditPreviews(document);
+    watchArtistPreviewDom();
+  });
+}
+
 window.ensureArtistDirectoryLoaded = ensureArtistDirectoryLoaded;
 window.getArtistPreviewEntryById = getArtistPreviewEntryById;
 window.getArtistPreviewEntry = getArtistPreviewEntry;
@@ -2361,7 +2702,7 @@ window.initializeArtistCreditPreviews = initializeArtistCreditPreviews;
 window.buildArtistCreditHtml = buildArtistCreditHtml;
 
 function populateAlbumPageCoverCredits() {
-  ensureCoverArtistsLoaded().finally(function () {
+  Promise.all([ensureCoverArtistsLoaded(), ensureArtistDirectoryLoaded()]).finally(function () {
     document.querySelectorAll('.album-cover-credit').forEach(function (creditEl) {
       const container = creditEl.closest('.album-cover-container');
       if (!container) {
@@ -2373,13 +2714,58 @@ function populateAlbumPageCoverCredits() {
         return;
       }
 
-      const filename = String(img.getAttribute('src') || '').split('/').pop();
+      const rawSrc = String(img.getAttribute('src') || '');
+      const normalizedSrc = rawSrc.split('#')[0].split('?')[0];
+      const filename = decodeURIComponent(normalizedSrc.split('/').pop() || '');
       const artist = getCoverArtist(filename);
-      if (artist) {
-        creditEl.textContent = 'Artwork by ' + artist;
-      }
+      renderAlbumCoverCredit(creditEl, artist);
     });
   });
+}
+
+function renderAlbumCoverCredit(creditEl, artistName) {
+  if (!creditEl) {
+    return;
+  }
+
+  const artistText = String(artistName || '').trim();
+  creditEl.textContent = '';
+  creditEl.appendChild(document.createTextNode('Cover art by: '));
+
+  if (!artistText) {
+    return;
+  }
+
+  const artistEntry = typeof getArtistPreviewEntry === 'function' ? getArtistPreviewEntry(artistText) : null;
+  if (!artistEntry) {
+    creditEl.appendChild(document.createTextNode(artistText));
+    return;
+  }
+
+  const href = String((artistEntry && artistEntry.href) || '').trim()
+    || ((artistEntry && artistEntry.pageSlug)
+      ? (typeof window.toSiteHref === 'function'
+        ? window.toSiteHref('/artists/' + artistEntry.pageSlug)
+        : ('/artists/' + artistEntry.pageSlug))
+      : '');
+
+  if (!href) {
+    creditEl.appendChild(document.createTextNode(artistText));
+    return;
+  }
+
+  const link = document.createElement('a');
+  link.href = href;
+  link.className = 'artist-credit-link';
+  link.textContent = artistText;
+
+  const previewId = String((artistEntry && (artistEntry.id || artistEntry.pageId || artistEntry.pageSlug || artistEntry.name)) || '').trim();
+  if (previewId) {
+    link.setAttribute('data-artist-preview-id', previewId);
+  }
+
+  creditEl.appendChild(link);
+  initializeArtistCreditPreviews(creditEl);
 }
 
 let albumsCsvRowsCache = null;
@@ -2670,6 +3056,55 @@ function switchAlbumTab(tabName) {
     const target = String(content.getAttribute('data-album-tab-content') || '').trim().toLowerCase();
     content.classList.toggle('active', target === normalizedTab);
   });
+
+  if (!switchAlbumTab._skipUrlSync) {
+    updateAlbumSectionUrl(normalizedTab, switchAlbumTab._urlMode === 'replace' ? 'replace' : 'push');
+  }
+}
+
+function getAlbumSectionTokenForTab(tabName) {
+  const normalized = String(tabName || '').trim().toLowerCase();
+  if (normalized === 'summary' || normalized === 'extended' || normalized === 'tracklist') {
+    return normalized;
+  }
+  return 'tracklist';
+}
+
+function getAlbumTabForSectionToken(sectionToken) {
+  const normalized = String(sectionToken || '').trim().toLowerCase();
+  if (normalized === 'summary' || normalized === 'extended' || normalized === 'tracklist') {
+    return normalized;
+  }
+  return 'tracklist';
+}
+
+function getCurrentAlbumSectionToken() {
+  const route = getMusicRouteContext(window.location.pathname);
+  return String(route.section || '').trim().toLowerCase();
+}
+
+function updateAlbumSectionUrl(tabName, mode) {
+  if (!window.history) {
+    return;
+  }
+
+  const action = mode === 'replace' ? 'replaceState' : 'pushState';
+  if (typeof window.history[action] !== 'function') {
+    return;
+  }
+
+  const route = getMusicRouteContext(window.location.pathname);
+  if (!route.basePath) {
+    return;
+  }
+
+  const section = getAlbumSectionTokenForTab(tabName);
+  const targetPath = route.basePath + '/' + section;
+  const href = withBasePath(targetPath);
+  const currentHref = window.location.pathname + window.location.search + window.location.hash;
+  if (href !== currentHref) {
+    window.history[action](null, '', href);
+  }
 }
 
 function initializeAlbumTabs() {
@@ -2681,11 +3116,30 @@ function initializeAlbumTabs() {
   buttons.forEach((button) => {
     button.addEventListener('click', function () {
       const tabName = String(button.getAttribute('data-album-tab') || '').trim().toLowerCase();
+      switchAlbumTab._skipUrlSync = false;
+      switchAlbumTab._urlMode = 'push';
       switchAlbumTab(tabName || 'tracklist');
     });
   });
 
-  switchAlbumTab('tracklist');
+  const initialTab = getAlbumTabForSectionToken(getCurrentAlbumSectionToken());
+  switchAlbumTab._skipUrlSync = true;
+  switchAlbumTab._urlMode = 'replace';
+  switchAlbumTab(initialTab || 'tracklist');
+
+  if (!initializeAlbumTabs._boundPopState) {
+    window.addEventListener('popstate', function () {
+      if (!document.querySelector('.album-page-tabs .song-tab[data-album-tab]')) {
+        return;
+      }
+
+      const nextTab = getAlbumTabForSectionToken(getCurrentAlbumSectionToken());
+      switchAlbumTab._skipUrlSync = true;
+      switchAlbumTab._urlMode = 'replace';
+      switchAlbumTab(nextTab || 'tracklist');
+    });
+    initializeAlbumTabs._boundPopState = true;
+  }
 }
 
 function splitAlbumDisplayTitleLines(value) {
@@ -2848,7 +3302,7 @@ function buildAlbumPageFromRow(row) {
 
   const coverCredit = document.createElement('div');
   coverCredit.className = 'album-cover-credit';
-  coverCredit.textContent = 'Artwork by';
+  coverCredit.textContent = 'Cover art by:';
   coverContainer.appendChild(coverCredit);
 
   const info = document.createElement('div');
@@ -3206,10 +3660,11 @@ function parseLegacySongSidebarPairs(value) {
 }
 
 function normalizeSongSidebarHashToken(value) {
-  return String(value || '')
+  const source = String(value || '').trim().replace(/^#/, '');
+  const versionPart = source.split('/')[0] || '';
+  return String(versionPart || '')
     .trim()
     .toLowerCase()
-    .replace(/^#/, '')
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
 }
@@ -3391,6 +3846,8 @@ function getActiveSongSidebarScope() {
 
 function getSongSidebarRowForCurrentPage() {
   const currentPath = toExtensionlessPath(window.location.pathname);
+  const musicRoute = getMusicRouteContext(window.location.pathname);
+  const normalizedBasePath = musicRoute.basePath || currentPath;
   if (!document.querySelector('.song-page-wrapper')) {
     return null;
   }
@@ -3401,7 +3858,7 @@ function getSongSidebarRowForCurrentPage() {
   }
 
   const hashToken = normalizeSongSidebarHashToken(window.location.hash);
-  const currentCandidate = currentPath.replace(/\/$/, '');
+  const currentCandidate = normalizedBasePath.replace(/\/$/, '');
   const currentPathId = currentCandidate.split('/').filter(Boolean).pop() || '';
   const rows = window.__songSidebarCsvRows;
 
@@ -3481,10 +3938,9 @@ function getCurrentSongSidebarSlug(row) {
     return String(fromRow).toLowerCase();
   }
 
-  const currentPath = toExtensionlessPath(window.location.pathname);
-  const parts = currentPath.split('/').filter(Boolean);
-  if (parts.length >= 2 && parts[0] === 'music') {
-    return String(parts[1] || '').toLowerCase();
+  const route = getMusicRouteContext(window.location.pathname);
+  if (route.slug) {
+    return String(route.slug).toLowerCase();
   }
 
   return '';
@@ -3504,7 +3960,7 @@ function getAutomaticSongCloseupHref(row) {
     return '';
   }
 
-  return '/music/' + slug + '#close-up';
+  return '/music/' + slug + '/close-up';
 }
 
 function createSongSidebarLinks(labelsValue, linksValue) {
@@ -3824,11 +4280,11 @@ function initializeSongSidebarData() {
 window.initializeSongSidebarData = initializeSongSidebarData;
 
 function getAlbumIdFromCurrentPage() {
-  const currentPath = toExtensionlessPath(window.location.pathname);
-  if (!/^\/music\/[^/]+$/.test(currentPath) || currentPath === '/music') {
+  const route = getMusicRouteContext(window.location.pathname);
+  if (!route.slug) {
     return '';
   }
-  return String(currentPath.split('/').pop() || '').toLowerCase();
+  return String(route.slug).toLowerCase();
 }
 
 function rowToAlbumSongHref(row) {
@@ -4144,8 +4600,8 @@ function buildTracklistEntriesForAlbum(rows, albumId) {
 }
 
 function initializeTracklistSidebar() {
-  var currentPath = toExtensionlessPath(window.location.pathname);
-  if (!/^\/music\/[^/]+$/.test(currentPath) && !/^\/music\/[^/]+\/[^/]+$/.test(currentPath)) {
+  var route = getMusicRouteContext(window.location.pathname);
+  if (!route.slug) {
     return;
   }
 
@@ -4375,14 +4831,9 @@ function initializeAlbumSummary() {
 
   setAlbumTabEmptyState(summaryContent, 'This page has no summary.');
 
-  // Derive slug from URL: /music/cc -> 'cc', /JamiePedia/music/cc -> 'cc'
-  const pathParts = window.location.pathname
-    .replace(/\/?index\.html$/i, '')
-    .replace(/\.html$/i, '')
-    .split('/')
-    .filter(Boolean);
-  const slug = pathParts[pathParts.length - 1];
-  if (!slug || slug === 'music') {
+  const route = getMusicRouteContext(window.location.pathname);
+  const slug = route.slug;
+  if (!slug) {
     return;
   }
 
@@ -4418,13 +4869,9 @@ function initializeAlbumExtendedInfo() {
 
   setAlbumTabEmptyState(extendedContent, 'This page has no extended info.');
 
-  const pathParts = window.location.pathname
-    .replace(/\/?index\.html$/i, '')
-    .replace(/\.html$/i, '')
-    .split('/')
-    .filter(Boolean);
-  const slug = pathParts[pathParts.length - 1];
-  if (!slug || slug === 'music') {
+  const route = getMusicRouteContext(window.location.pathname);
+  const slug = route.slug;
+  if (!slug) {
     return;
   }
 
