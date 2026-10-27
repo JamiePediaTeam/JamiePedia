@@ -310,6 +310,34 @@ function getCloseupHostForVersion(versionName) {
   return document.getElementById('content-closeup' + suffix);
 }
 
+function teardownSongCloseupHosts() {
+  const hosts = Array.from(document.querySelectorAll('.song-closeup-content'));
+  hosts.forEach((host) => {
+    if (!host) {
+      return;
+    }
+
+    host.querySelectorAll('iframe').forEach((frame) => {
+      frame.setAttribute('src', 'about:blank');
+    });
+
+    host.querySelectorAll('audio, video').forEach((media) => {
+      try {
+        media.pause();
+      } catch (_error) {
+        // Ignore media teardown errors.
+      }
+
+      media.removeAttribute('src');
+      if (typeof media.load === 'function') {
+        media.load();
+      }
+    });
+
+    host.innerHTML = '';
+  });
+}
+
 function setSongCloseupModeEnabled(enabled) {
   const activeVersionName = getActiveVersionName();
   const activeScope = getVersionScope(activeVersionName);
@@ -1472,6 +1500,7 @@ function switchTab(tabName, options) {
   const settings = options || {};
   const normalizedTabName = String(tabName || '').trim().toLowerCase();
   const isCloseupTab = normalizedTabName === CLOSEUP_TAB_NAME;
+  const previousTabName = getActiveMainTabName();
   const activeVersionName = getActiveVersionName();
 
   if (isCloseupTab && !getVersionCloseupAvailability(activeVersionName)) {
@@ -1536,6 +1565,12 @@ function switchTab(tabName, options) {
   const lyricsSubtabsContainer = document.getElementById(lyricsSubtabsContainerId);
   const songLength = activeVersion ? activeVersion.querySelector('.song-length') : null;
 
+  // Ensure the Connections player/runtime does not keep running in hidden tabs.
+  const leavingMotifsTab = previousTabName === 'motifs' && normalizedTabName !== 'motifs';
+  if (leavingMotifsTab && typeof window.resetSongMotifsPlaybackForVersionChange === 'function') {
+    window.resetSongMotifsPlaybackForVersionChange();
+  }
+
   setSongCloseupModeEnabled(isCloseupTab);
 
   if (isCloseupTab) {
@@ -1543,6 +1578,9 @@ function switchTab(tabName, options) {
       updateSongSectionUrl(CLOSEUP_TAB_NAME, settings.urlMode === 'replace' ? 'replace' : 'push');
     }
     renderCloseupForSongVersion(activeVersionName);
+    if (typeof window.initializeDataNavButtons === 'function') {
+      window.initializeDataNavButtons();
+    }
     if (lyricsSubtabsContainer) {
       lyricsSubtabsContainer.classList.remove('active');
     }
@@ -1551,6 +1589,8 @@ function switchTab(tabName, options) {
     }
     return;
   }
+
+  teardownSongCloseupHosts();
   
   if (lyricsSubtabsContainer) {
     if (tabName === 'lyrics') {
@@ -1568,6 +1608,10 @@ function switchTab(tabName, options) {
 
   if (!settings.skipUrlUpdate) {
     updateSongSectionUrl(normalizedTabName || 'motifs', settings.urlMode === 'replace' ? 'replace' : 'push');
+  }
+
+  if (typeof window.initializeDataNavButtons === 'function') {
+    window.initializeDataNavButtons();
   }
 }
 
@@ -2439,7 +2483,7 @@ function initializeSongConnectionsFeature() {
   window.__songConnectionsInitPromise = loadScriptOnce('https://www.youtube.com/iframe_api')
     .then(() => loadScriptOnce(prefix + 'assets/static/csv-data.js'))
     .then(() => loadScriptOnce(prefix + 'assets/static/song-lyrics.js'))
-    .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js?v=20260917a'));
+    .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js?v=20261027e'));
 
   return window.__songConnectionsInitPromise;
 }
@@ -2570,7 +2614,7 @@ function getCoverArtist(filename) {
 window.getCoverArtist = getCoverArtist;
 
 function initializeSongPage() {
-  Promise.all([ensureCoverArtistsLoaded(), ensureSongSidebarRowsLoaded(), loadScriptOnce('../../assets/static/closeup-page.js?v=20260917c')]).finally(async () => {
+  Promise.all([ensureCoverArtistsLoaded(), ensureSongSidebarRowsLoaded(), loadScriptOnce('../../assets/static/closeup-page.js?v=20261024a')]).finally(async () => {
     const songRows = getSongRowsForCurrentPage();
     buildSongMainColShell(songRows);
     loadVersionConfig(songRows);

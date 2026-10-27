@@ -1154,6 +1154,12 @@ function setNavLinkTarget(element, targetPath) {
 
     if (isAnchor) {
       element.setAttribute('href', href);
+      element.onclick = function (event) {
+        if (event) {
+          event.preventDefault();
+        }
+        window.location.href = href;
+      };
     } else {
       element.onclick = function () {
         window.location.href = href;
@@ -1168,6 +1174,11 @@ function setNavLinkTarget(element, targetPath) {
 
   if (isAnchor) {
     element.setAttribute('href', 'javascript:void(0);');
+    element.onclick = function (event) {
+      if (event) {
+        event.preventDefault();
+      }
+    };
   } else {
     element.onclick = function (event) {
       event.preventDefault();
@@ -1316,6 +1327,55 @@ function initializeDataNavButtons() {
   const prevPath = findAdjacentNavPath(activeList, currentIndex, -1, currentFamilyKey, familyResolver, preferredPathResolver);
   const nextPath = findAdjacentNavPath(activeList, currentIndex, 1, currentFamilyKey, familyResolver, preferredPathResolver);
 
+  function toSongSlugFromNavPath(navPath) {
+    const normalized = normalizeSongSidebarPathKey(navPath);
+    if (!normalized) {
+      return '';
+    }
+    const pathPart = normalized.split('#')[0];
+    return String(pathPart.split('/').filter(Boolean).pop() || '').trim().toLowerCase();
+  }
+
+  function isCloseupTabActiveOnSongPage() {
+    if (!isSong) {
+      return false;
+    }
+
+    const closeupTabButton = document.querySelector('.song-tab.active[data-song-tab="closeup"]');
+    if (closeupTabButton) {
+      return true;
+    }
+
+    return /^\/music\/[^/]+\/close-up$/i.test(String(window.location.pathname || ''));
+  }
+
+  function resolveSongAdjacentNavTarget(navPath) {
+    if (!isCloseupTabActiveOnSongPage()) {
+      return navPath;
+    }
+
+    const slug = toSongSlugFromNavPath(navPath);
+    if (!slug) {
+      return navPath;
+    }
+
+    const hasAvailability = Object.prototype.hasOwnProperty.call(closeupAvailabilityBySlug, slug);
+    if (hasAvailability && closeupAvailabilityBySlug[slug]) {
+      return '/music/' + slug + '/close-up';
+    }
+
+    if (!hasAvailability) {
+      ensureSongCloseupAvailabilityForSlug(slug, function () {
+        initializeDataNavButtons();
+      });
+    }
+
+    return '/music/' + slug + '/connections';
+  }
+
+  const resolvedPrevPath = resolveSongAdjacentNavTarget(prevPath);
+  const resolvedNextPath = resolveSongAdjacentNavTarget(nextPath);
+
   let containers = Array.from(document.querySelectorAll('.song-nav-buttons, .album-nav-buttons'));
 
   // Auto-create a container so prev/next is centrally data-driven even when
@@ -1349,8 +1409,8 @@ function initializeDataNavButtons() {
     const prevElement = links.find((el) => /previous|←/i.test(el.textContent || '')) || links[0];
     const nextElement = links.find((el) => /next|→/i.test(el.textContent || '')) || links[1];
 
-    setNavLinkTarget(prevElement, prevPath);
-    setNavLinkTarget(nextElement, nextPath);
+    setNavLinkTarget(prevElement, resolvedPrevPath);
+    setNavLinkTarget(nextElement, resolvedNextPath);
     initializeArtistCreditPreviews(container);
   });
 }
@@ -2619,6 +2679,10 @@ function initializeArtistCreditPreviews(scope) {
 
   const candidateLinks = Array.from(root.querySelectorAll ? root.querySelectorAll('a[href]') : (root.tagName === 'A' ? [root] : []));
   candidateLinks.forEach((link) => {
+    if (link.classList && link.classList.contains('closeup-nav-link')) {
+      return;
+    }
+
     const explicitId = String(link.getAttribute('data-artist-preview-id') || '').trim();
     let previewEntry = explicitId ? getArtistPreviewEntryById(explicitId) : null;
     if (!previewEntry) {
@@ -3565,6 +3629,11 @@ function ensureSongSidebarCsvLoaded(onReady) {
 
 function ensureSongCloseupAvailabilityLoaded(row, onReady) {
   const slug = getCurrentSongSidebarSlug(row);
+  ensureSongCloseupAvailabilityForSlug(slug, onReady);
+}
+
+function ensureSongCloseupAvailabilityForSlug(slugValue, onReady) {
+  const slug = String(slugValue || '').trim().toLowerCase();
   if (!slug) {
     if (typeof onReady === 'function') {
       onReady();

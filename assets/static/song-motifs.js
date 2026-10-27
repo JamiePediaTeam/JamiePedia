@@ -277,6 +277,8 @@ function getSongMotifsState() {
       refsByMotif: [],
       legendNodes: new Map(),
       progressNode: null,
+      motifProgressNodes: [],
+      motifRenderCallbacks: [],
       currentLabel: null,
       durationLabel: null,
       mainTrack: null,
@@ -308,6 +310,12 @@ function getSongMotifsState() {
   }
   if (typeof window.__songMotifsState.renderKey !== 'string') {
     window.__songMotifsState.renderKey = '';
+  }
+  if (!Array.isArray(window.__songMotifsState.motifProgressNodes)) {
+    window.__songMotifsState.motifProgressNodes = [];
+  }
+  if (!Array.isArray(window.__songMotifsState.motifRenderCallbacks)) {
+    window.__songMotifsState.motifRenderCallbacks = [];
   }
   return window.__songMotifsState;
 }
@@ -2582,6 +2590,17 @@ function songMotifsUpdateLegend(currentTime) {
   });
 }
 
+function songMotifsRefreshTimelineGeometry() {
+  const state = getSongMotifsState();
+  document.querySelectorAll('.song-motif-segment').forEach((segment) => {
+    const start = Number(segment.getAttribute('data-segment-start')) || 0;
+    const end = Number(segment.getAttribute('data-segment-end')) || start;
+    segment.style.left = ((start / (state.duration || 1)) * 100) + '%';
+    segment.style.width = Math.max(0.7, ((end - start) / (state.duration || 1)) * 100) + '%';
+  });
+  state.motifRenderCallbacks.forEach((render) => render());
+}
+
 function songMotifsUpdateProgress() {
   const state = getSongMotifsState();
   if (!state.player || typeof state.player.getCurrentTime !== 'function') {
@@ -2595,6 +2614,7 @@ function songMotifsUpdateProgress() {
     && (!Number.isInteger(liveDuration) || currentRaw > 0 || playerState === 1)
     && songMotifsHasMeasuredPlaybackDuration();
 
+  const previousDuration = state.duration;
   if (Number.isFinite(liveDuration) && liveDuration > 0) {
     const hasPreciseStoredDuration = Number.isFinite(Number(state.youtubeDuration))
       && Number(state.youtubeDuration) > 0
@@ -2607,6 +2627,10 @@ function songMotifsUpdateProgress() {
       state.youtubeDuration = liveDuration;
       state.duration = liveDuration;
     }
+  }
+
+  if (Math.abs(state.duration - previousDuration) > 0.05) {
+    songMotifsRefreshTimelineGeometry();
   }
 
   if (state.durationLabel) {
@@ -2623,10 +2647,17 @@ function songMotifsUpdateProgress() {
   if (currentRaw <= 0 && playerState !== 1) {
     state.currentLabel.textContent = '';
     state.progressNode.style.width = '0%';
+    state.motifProgressNodes.forEach((node) => {
+      node.style.width = '0%';
+    });
     return;
   }
 
-  state.progressNode.style.width = ((current / duration) * 100) + '%';
+  const progressWidth = ((current / duration) * 100) + '%';
+  state.progressNode.style.width = progressWidth;
+  state.motifProgressNodes.forEach((node) => {
+    node.style.width = progressWidth;
+  });
   state.currentLabel.textContent = songMotifFormatTime(current);
   songMotifsUpdateLegend(current);
   songMotifsUpdateKaraoke(current);
@@ -2672,7 +2703,11 @@ function songMotifsSeekTo(seconds) {
   state.player.seekTo(target, true);
   state.player.playVideo();
   state.currentLabel.textContent = songMotifFormatTime(target);
-  state.progressNode.style.width = ((target / (state.duration || 1)) * 100) + '%';
+  const progressWidth = ((target / (state.duration || 1)) * 100) + '%';
+  state.progressNode.style.width = progressWidth;
+  state.motifProgressNodes.forEach((node) => {
+    node.style.width = progressWidth;
+  });
   songMotifsUpdateLegend(target);
   songMotifsUpdateKaraoke(target);
 }
@@ -2695,6 +2730,8 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   const allLyricalEntries = groupedLyricalMotifRefs.concat(groupedLyricalRefs);
   state.refsByMotif = groupedMotifRefs.concat(allSampleEntries, allLyricalEntries);
   state.lyricalRefs = song.lyricalRefs || [];
+  state.motifProgressNodes = [];
+  state.motifRenderCallbacks = [];
 
   const refsDuration = state.refsByMotif.reduce((max, entry) => {
     return Math.max(max, entry.ranges[entry.ranges.length - 1].end);
@@ -2785,54 +2822,291 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   const rows = document.createElement('div');
   rows.className = 'song-motif-rows';
 
-  function appendReferenceRows(targetRows, entries) {
+  function appendTypeRow(targetRows, label, entries, fallbackColor, legendEntries) {
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return;
+    }
+
+    const segments = [];
     entries.forEach((entry) => {
+      entry.ranges.forEach((range) => {
+        segments.push({
+          start: range.start,
+          end: range.end,
+          isDefinition: !!range.isDefinition,
+          motifName: entry.displayName,
+          color: entry.displayColor || fallbackColor
+        });
+      });
+    });
+
+    segments.sort((a, b) => a.start - b.start);
+
+    if (!segments.length) {
+      return;
+    }
+
       const row = document.createElement('article');
       row.className = 'song-motif-row';
 
-      const motifName = entry.displayName;
-      const motifColor = entry.displayColor;
-
       const track = document.createElement('div');
       track.className = 'song-motif-track';
-
-      entry.ranges.forEach((range) => {
-        const segment = document.createElement('button');
-        segment.type = 'button';
-        segment.className = 'song-motif-segment' + (range.isDefinition ? ' definition' : '');
-        segment.title = songMotifFormatTime(range.start) + ' - ' + songMotifFormatTime(range.end);
-        segment.style.left = ((range.start / state.duration) * 100) + '%';
-        segment.style.width = Math.max(0.7, ((range.end - range.start) / state.duration) * 100) + '%';
-        segment.style.background = motifColor;
-
-        if (motifColor.toUpperCase() === '#FFFFFF') {
-          segment.classList.add('white-segment');
-        }
-
-        if (range.isDefinition) {
-          segment.title += ' (definition)';
-        }
-
-        segment.addEventListener('click', () => {
-          songMotifsSeekTo(range.start);
-        });
-
-        track.appendChild(segment);
-      });
-
       row.appendChild(track);
 
-      const label = document.createElement('div');
-      label.className = 'song-motif-label-link';
-      label.classList.add('song-motif-label-text');
-      label.textContent = motifName;
-      row.appendChild(label);
+      const trackProgress = document.createElement('div');
+      trackProgress.className = 'song-motif-track-progress';
+      trackProgress.style.background = songColor;
+      trackProgress.setAttribute('aria-hidden', 'true');
+      track.appendChild(trackProgress);
+      state.motifProgressNodes.push(trackProgress);
+
+      const labelNode = document.createElement('div');
+      labelNode.className = 'song-motif-label-link';
+      labelNode.classList.add('song-motif-label-text');
+      labelNode.textContent = label;
+      row.appendChild(labelNode);
+
+      const legend = document.createElement('ul');
+      legend.className = 'song-motif-legend';
+      row.appendChild(legend);
+      appendLegendEntries(legend, legendEntries || entries);
 
       targetRows.appendChild(row);
-    });
+
+      const boundaries = Array.from(new Set(segments.flatMap((range) => [range.start, range.end])))
+        .filter((time) => Number.isFinite(time) && time >= 0 && time <= state.duration)
+        .sort((a, b) => a - b);
+      const stripeWidth = 3;
+      const canvas = document.createElement('canvas');
+      canvas.className = 'song-motif-canvas';
+      canvas.setAttribute('aria-hidden', 'true');
+      track.appendChild(canvas);
+
+      for (let boundaryIndex = 0; boundaryIndex < boundaries.length - 1; boundaryIndex += 1) {
+        const pieceStart = boundaries[boundaryIndex];
+        const pieceEnd = boundaries[boundaryIndex + 1];
+        if (pieceEnd - pieceStart < 0.001) {
+          continue;
+        }
+
+        const midpoint = (pieceStart + pieceEnd) / 2;
+        const activeRanges = segments
+          .map((range, rangeIndex) => ({ range, rangeIndex }))
+          .filter(({ range }) => range.start <= midpoint && range.end > midpoint);
+
+        activeRanges.forEach(({ range, rangeIndex }, layerIndex) => {
+          const depth = activeRanges.length;
+          const isPieceStartOfMotif = Math.abs(pieceStart - range.start) < 0.001;
+          const isPieceEndOfMotif = Math.abs(pieceEnd - range.end) < 0.001;
+          const segment = document.createElement('button');
+          segment.type = 'button';
+          segment.className = 'song-motif-segment';
+          if (range.isDefinition) {
+            segment.classList.add('definition');
+          }
+          if (isPieceStartOfMotif) {
+            segment.classList.add('motif-start');
+          }
+          if (isPieceEndOfMotif) {
+            segment.classList.add('motif-end');
+          }
+          if (state.duration > 0 && pieceStart <= state.duration * 0.005) {
+            segment.classList.add('edge-start');
+          }
+          if (state.duration > 0 && pieceEnd >= state.duration * 0.995) {
+            segment.classList.add('edge-end');
+          }
+
+          const isWhite = String(range.color || fallbackColor).toUpperCase() === '#FFFFFF';
+          if (isWhite) {
+            segment.classList.add('white-segment');
+          }
+
+          segment.title = (range.motifName || label) + ' (' + songMotifFormatTime(range.start) + ' - ' + songMotifFormatTime(range.end) + ')';
+          if (range.isDefinition) {
+            segment.title += ' (definition)';
+          }
+          segment.style.left = ((pieceStart / state.duration) * 100) + '%';
+          segment.style.width = Math.max(0.1, ((pieceEnd - pieceStart) / state.duration) * 100) + '%';
+          segment.style.zIndex = String(layerIndex + 2);
+          segment.setAttribute('data-segment-start', String(pieceStart));
+          segment.setAttribute('data-segment-end', String(pieceEnd));
+          segment.setAttribute('data-motif-start', String(range.start));
+          segment.setAttribute('data-motif-end', String(range.end));
+
+          track.appendChild(segment);
+        });
+      }
+
+      const renderTrack = () => {
+        const trackWidth = track.clientWidth;
+        if (!trackWidth) {
+          return;
+        }
+        const trackHeight = track.clientHeight;
+        const pixelRatio = Math.max(1, Number(window.devicePixelRatio) || 1);
+        const pixelWidth = Math.max(1, Math.round(trackWidth * pixelRatio));
+        const pixelHeight = Math.max(1, Math.round(trackHeight * pixelRatio));
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+        canvas.style.width = trackWidth + 'px';
+        canvas.style.height = trackHeight + 'px';
+
+        const context = canvas.getContext('2d');
+        if (!context) {
+          return;
+        }
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.clearRect(0, 0, trackWidth, trackHeight);
+
+        const darkColorCache = new Map();
+        const darken = (color) => {
+          if (darkColorCache.has(color)) {
+            return darkColorCache.get(color);
+          }
+          context.save();
+          context.fillStyle = color;
+          const normalized = context.fillStyle;
+          context.restore();
+          const hex = normalized.match(/^#([0-9a-f]{6})$/i);
+          const rgb = normalized.match(/^rgba?\((\d+)\D+(\d+)\D+(\d+)/i);
+          let darker = '#333333';
+          if (hex) {
+            const value = hex[1];
+            const channels = [0, 2, 4].map((offset) => parseInt(value.slice(offset, offset + 2), 16));
+            darker = '#' + channels.map((channel) => Math.round(channel * 0.58).toString(16).padStart(2, '0')).join('');
+          } else if (rgb) {
+            darker = 'rgb(' + [rgb[1], rgb[2], rgb[3]].map((channel) => Math.round(Number(channel) * 0.58)).join(', ') + ')';
+          }
+          darkColorCache.set(color, darker);
+          return darker;
+        };
+
+        const getActiveRanges = (time) => segments.filter((range) => range.start <= time && range.end > time);
+        const rangePaths = new Map();
+        segments.forEach((range) => {
+          const startX = (range.start / state.duration) * trackWidth;
+          const endX = (range.end / state.duration) * trackWidth;
+          const width = endX - startX;
+          if (width <= 0) {
+            return;
+          }
+          const path = new Path2D();
+          path.roundRect(startX, 0, width, trackHeight, Math.min(trackHeight / 2, width / 2));
+          rangePaths.set(range, path);
+        });
+        const stripeSlotAt = (x, y, depth) => {
+          const diagonalIndex = Math.floor((x + y) / stripeWidth);
+          return ((diagonalIndex % depth) + depth) % depth;
+        };
+        const isInsideRoundedRange = (range, x, y) => {
+          const path = rangePaths.get(range);
+          return Boolean(path && context.isPointInPath(path, x * pixelRatio, y * pixelRatio));
+        };
+        const getVisibleLayerIndex = (activeRanges, x, y) => {
+          if (!activeRanges.length) {
+            return -1;
+          }
+          return activeRanges.length > 1 ? stripeSlotAt(x, y, activeRanges.length) : 0;
+        };
+
+        for (let pixelX = 0; pixelX < pixelWidth; pixelX += 1) {
+          const x = (pixelX + 0.5) / pixelRatio;
+          const columnLeft = pixelX / pixelRatio;
+          const time = (x / trackWidth) * state.duration;
+          const activeRanges = getActiveRanges(time);
+          if (!activeRanges.length) {
+            continue;
+          }
+
+          let runStart = 0;
+          let previousColor = '';
+          for (let pixelY = 0; pixelY < pixelHeight; pixelY += 1) {
+            const y = (pixelY + 0.5) / pixelRatio;
+            const roundedActiveRanges = activeRanges.filter((range) => isInsideRoundedRange(range, x, y));
+            const layerIndex = getVisibleLayerIndex(roundedActiveRanges, x, y);
+            const color = layerIndex < 0 ? '' : roundedActiveRanges[layerIndex].color || fallbackColor;
+            if (pixelY === 0) {
+              previousColor = color;
+              runStart = pixelY;
+            } else if (color !== previousColor) {
+              if (previousColor) {
+                context.fillStyle = previousColor;
+                context.fillRect(columnLeft, runStart / pixelRatio, 1 / pixelRatio, (pixelY - runStart) / pixelRatio);
+              }
+              previousColor = color;
+              runStart = pixelY;
+            }
+          }
+          if (previousColor) {
+            context.fillStyle = previousColor;
+            context.fillRect(columnLeft, runStart / pixelRatio, 1 / pixelRatio, (pixelHeight - runStart) / pixelRatio);
+          }
+        }
+
+        segments.forEach((range) => {
+          const startX = (range.start / state.duration) * trackWidth;
+          const endX = (range.end / state.duration) * trackWidth;
+          const width = endX - startX;
+          if (width <= 0) {
+            return;
+          }
+          const radius = Math.min(trackHeight / 2, width / 2);
+          const inset = 0.5 / pixelRatio;
+          context.beginPath();
+          context.roundRect(
+            startX + inset,
+            inset,
+            Math.max(0, width - 2 * inset),
+            Math.max(0, trackHeight - 2 * inset),
+            radius
+          );
+          context.lineWidth = 1 / pixelRatio;
+          context.strokeStyle = darken(range.color || fallbackColor);
+          context.stroke();
+        });
+      };
+      state.motifRenderCallbacks.push(renderTrack);
+      renderTrack();
+      if (typeof ResizeObserver === 'function') {
+        const observer = new ResizeObserver(renderTrack);
+        observer.observe(track);
+      }
+
+      track.addEventListener('click', (event) => {
+        const rect = track.getBoundingClientRect();
+        if (!rect.width || !state.duration) {
+          return;
+        }
+
+        const localX = Math.min(rect.width, Math.max(0, event.clientX - rect.left));
+        const localY = Math.min(rect.height, Math.max(0, event.clientY - rect.top));
+        const clickTime = (localX / rect.width) * state.duration;
+        const activeRanges = segments.filter((range) => range.start <= clickTime && range.end > clickTime)
+          .filter((range) => {
+            const startX = (range.start / state.duration) * rect.width;
+            const endX = (range.end / state.duration) * rect.width;
+            const radius = Math.min(rect.height / 2, (endX - startX) / 2);
+            const dx = Math.max(startX + radius - localX, 0, localX - (endX - radius));
+            const dy = Math.max(radius - localY, 0, localY - (rect.height - radius));
+            return dx * dx + dy * dy <= radius * radius;
+          });
+
+        if (!activeRanges.length) {
+          songMotifsSeekTo(clickTime);
+          return;
+        }
+
+        const stripeIndex = Math.floor((localX + localY) / stripeWidth);
+        const visibleRange = activeRanges[((stripeIndex % activeRanges.length) + activeRanges.length) % activeRanges.length];
+        const midpoint = visibleRange.start + (visibleRange.end - visibleRange.start) / 2;
+        songMotifsSeekTo(clickTime >= midpoint ? visibleRange.end : visibleRange.start);
+      });
   }
 
-  if (groupedMotifRefs.length === 0 && allSampleEntries.length === 0 && allLyricalEntries.length === 0) {
+  const allTimelineEntries = groupedMotifRefs.concat(allSampleEntries, allLyricalEntries);
+
+  if (allTimelineEntries.length === 0) {
     shell.appendChild(rows);
     const empty = document.createElement('div');
     empty.className = 'song-motif-empty';
@@ -2873,53 +3147,16 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
     });
   }
 
-  if (groupedMotifRefs.length > 0) {
+  if (allTimelineEntries.length > 0) {
     const listTitle = document.createElement('p');
     listTitle.className = 'song-motif-list-title';
-    listTitle.textContent = 'Motifs in this song';
+    listTitle.textContent = 'Motif types in this song';
     shell.appendChild(listTitle);
 
     shell.appendChild(rows);
-    appendReferenceRows(rows, groupedMotifRefs);
-
-    const legend = document.createElement('ul');
-    legend.className = 'song-motif-legend';
-    shell.appendChild(legend);
-    appendLegendEntries(legend, groupedMotifRefs);
-  }
-
-  if (allSampleEntries.length > 0) {
-    const sampleTitle = document.createElement('p');
-    sampleTitle.className = 'song-motif-list-title';
-    sampleTitle.textContent = 'Samples';
-    shell.appendChild(sampleTitle);
-
-    const sampleRows = document.createElement('div');
-    sampleRows.className = 'song-motif-rows';
-    shell.appendChild(sampleRows);
-    appendReferenceRows(sampleRows, allSampleEntries);
-
-    const sampleLegend = document.createElement('ul');
-    sampleLegend.className = 'song-motif-legend';
-    shell.appendChild(sampleLegend);
-    appendLegendEntries(sampleLegend, allSampleEntries);
-  }
-
-  if (allLyricalEntries.length > 0) {
-    const lyricalTitle = document.createElement('p');
-    lyricalTitle.className = 'song-motif-list-title';
-    lyricalTitle.textContent = 'Lyrical References';
-    shell.appendChild(lyricalTitle);
-
-    const lyricalRows = document.createElement('div');
-    lyricalRows.className = 'song-motif-rows';
-    shell.appendChild(lyricalRows);
-    appendReferenceRows(lyricalRows, allLyricalEntries);
-
-    const lyricalLegend = document.createElement('ul');
-    lyricalLegend.className = 'song-motif-legend';
-    shell.appendChild(lyricalLegend);
-    appendLegendEntries(lyricalLegend, allLyricalEntries);
+    appendTypeRow(rows, 'Rhythmic Motifs', groupedMotifRefs, '#ef8a85');
+    appendTypeRow(rows, 'Lyrical Motifs', allLyricalEntries, '#777777');
+    appendTypeRow(rows, 'Samples', allSampleEntries, '#6d63b5');
   }
 
   state.progressNode = progress;
@@ -2949,6 +3186,7 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
     const percent = (event.clientX - rect.left) / rect.width;
     songMotifsSeekTo(state.duration * Math.min(1, Math.max(0, percent)));
   });
+
 }
 
 function songMotifsAttachPlayer(song, youtubeId) {
@@ -3029,18 +3267,7 @@ function songMotifsAttachPlayer(song, youtubeId) {
           window.updateSongLengthFromYoutube(state.youtubeDuration);
         }
 
-        const rows = document.querySelectorAll('.song-motif-track');
-        state.refsByMotif.forEach((entry, index) => {
-          const row = rows[index];
-          if (!row) return;
-          const segments = row.querySelectorAll('.song-motif-segment');
-          entry.ranges.forEach((range, segIndex) => {
-            const segment = segments[segIndex];
-            if (!segment) return;
-            segment.style.left = ((range.start / state.duration) * 100) + '%';
-            segment.style.width = Math.max(0.7, ((range.end - range.start) / state.duration) * 100) + '%';
-          });
-        });
+        songMotifsRefreshTimelineGeometry();
       },
       onStateChange: (event) => {
         syncPlayerDuration(event.target);

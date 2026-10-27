@@ -1155,26 +1155,59 @@ html {
 }
 
 .song-motif-track {
+  --song-motif-lane-height: 12px;
   position: relative;
   width: 100%;
-  height: 10px;
+  height: var(--song-motif-lane-height);
   border-radius: 999px;
   background: var(--theme-color-surface_track);
+  overflow: hidden;
+}
+
+.song-motif-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.song-motif-track-progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 0;
+  background: var(--theme-color-link_default);
+  opacity: 0.38;
+  pointer-events: none;
 }
 
 .song-motif-segment {
   position: absolute;
   top: 0;
-  height: 10px;
-  border: none;
-  border-radius: 999px;
+  height: var(--song-motif-lane-height);
+  border: 0 solid transparent;
+  box-sizing: border-box;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
   padding: 0;
   cursor: pointer;
+  z-index: 1;
+}
+
+.song-motif-segment.edge-start {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.song-motif-segment.edge-end {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
 }
 
 .song-motif-segment.white-segment {
-  border: 1px solid var(--theme-color-border_segment);
-  box-sizing: border-box;
+  color: #fff;
 }
 
 .song-motif-segment.definition {
@@ -1194,6 +1227,10 @@ html {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.song-motif-row .song-motif-legend {
+  margin-top: 8px;
 }
 
 .song-motif-legend-entry {
