@@ -3148,7 +3148,7 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   }
 
   if (allTimelineEntries.length > 0) {
-    const listTitle = document.createElement('p');
+    const listTitle = document.createElement('h2');
     listTitle.className = 'song-motif-list-title';
     listTitle.textContent = 'Motif types in this song';
     shell.appendChild(listTitle);

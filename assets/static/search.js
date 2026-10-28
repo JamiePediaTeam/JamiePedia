@@ -8,6 +8,12 @@ let searchMotifTitleByPath = Object.create(null);
 let searchPageTitleByPath = Object.create(null);
 let searchSongRowsPromise = null;
 let searchContentIndexPromise = null;
+let searchMotifIndexPromise = null;
+let searchMotifNamesBySongId = Object.create(null);
+let searchMotifIdsByCategory = Object.create(null);
+let searchSongIdsByMotifId = Object.create(null);
+let searchReferencedSongIdsBySongId = Object.create(null);
+let searchArtistCsvSummariesBySlug = Object.create(null);
 let searchContentIndex = {
   songs: Object.create(null),
   albums: Object.create(null),
@@ -18,6 +24,7 @@ let searchContentIndex = {
 const searchSongCsvHeaderAliases = {
   page_path: ['page_path', 'path_id', 'path', 'page path', 'path id'],
   title: ['page_title', 'page title', 'title', 'song title'],
+  song_id: ['song_id', 'song id'],
   album_id: ['album_id', 'album id'],
   album_title: ['album_title', 'album title'],
   artists: ['artists', 'artist'],
@@ -25,10 +32,7 @@ const searchSongCsvHeaderAliases = {
   mixing: ['mixing'],
   mastering: ['mastering'],
   instrumentals: ['instrumentals'],
-  listen_text: ['listen_text', 'listen text'],
-  listen_links: ['listen_links', 'listen links'],
   close_up: ['close_up', 'close up'],
-  release_date: ['release_date', 'release date'],
   alt_tab: ['alt_tab', 'alt tab status?'],
   tab_name: ['tab_name', 'alt tab name'],
   theme: ['theme', 'version_theme']
@@ -226,23 +230,25 @@ function ensureSearchSongRowsLoaded(basePath) {
 }
 
 function getSearchSongRowsForRoute(routePath, songRows) {
-  const normalizedRoute = normalizeSearchRoutePath(routePath);
-  const currentPointer = normalizedRoute.split('/').filter(Boolean).pop() || '';
+  const currentPointer = getSearchSongVariantPointer(routePath);
+  if (!currentPointer) {
+    return [];
+  }
   const rows = Array.isArray(songRows) ? songRows : [];
 
-  return rows.filter((row) => {
-    const normalizedRowPath = normalizeSearchRoutePath(getSearchSongRowPathValue(row));
-    if (!normalizedRowPath) {
-      return false;
-    }
+  return rows.filter((row) => getSearchSongVariantPointer(getSearchSongRowPathValue(row)) === currentPointer);
+}
 
-    if (normalizedRowPath === normalizedRoute) {
-      return true;
-    }
+function getSearchSongVariantPointer(routePath) {
+  let rawPath = String(routePath || '').trim().split('?')[0];
+  if (!rawPath) {
+    return '';
+  }
 
-    const rowPointer = normalizedRowPath.split('/').filter(Boolean).pop() || '';
-    return !!rowPointer && !!currentPointer && rowPointer === currentPointer;
-  });
+  rawPath = rawPath.replace(/\.html$/i, '').replace(/\/+$/, '');
+  const parts = rawPath.split('/').filter(Boolean);
+  const pointer = String(parts[parts.length - 1] || '').trim();
+  return pointer.toLowerCase();
 }
 
 function getSearchSongRowsForAlbum(albumId, songRows) {
@@ -258,38 +264,8 @@ function getSearchSongRowsForAlbum(albumId, songRows) {
 }
 
 function getSearchSongVariantSlugsFromRows(routePath, songRows) {
-  const normalizedRoute = normalizeSearchRoutePath(routePath);
-  const baseSlug = normalizedRoute.split('/').filter(Boolean).pop() || '';
-  if (!baseSlug) {
-    return [];
-  }
-
-  const rows = getSearchSongRowsForRoute(routePath, songRows);
-  const slugs = new Set([baseSlug]);
-
-  rows.forEach((row) => {
-    const rowPath = getSearchSongRowPathValue(row);
-    const cleanedRowPath = String(rowPath || '').split('?')[0].replace(/\.html$/i, '').trim();
-    const rowFileWithHash = cleanedRowPath.split('/').filter(Boolean).pop() || '';
-    const hashIndex = String(rowPath || '').indexOf('#');
-    const hashToken = hashIndex === -1 ? '' : String(rowPath.slice(hashIndex + 1) || '').trim();
-    const tabName = normalizeSearchSongRowValue(row, 'tab_name');
-
-    if (rowFileWithHash) {
-      slugs.add(rowFileWithHash.toLowerCase());
-      slugs.add(rowFileWithHash.replace(/[^a-z0-9]+/gi, '').toLowerCase());
-    }
-
-    if (hashToken) {
-      slugs.add(baseSlug + hashToken.replace(/[^a-z0-9]+/gi, '').toLowerCase());
-    }
-
-    if (tabName) {
-      slugs.add(baseSlug + tabName.replace(/[^a-z0-9]+/gi, '').toLowerCase());
-    }
-  });
-
-  return Array.from(slugs);
+  const pointer = getSearchSongVariantPointer(routePath);
+  return pointer ? [pointer] : [];
 }
 
 function resolveSearchImageSrc(basePath, pagePath, rawSrc) {
@@ -354,9 +330,10 @@ function ensureSearchContentIndexLoaded(basePath) {
       const motifs = payload && payload.motifs && typeof payload.motifs === 'object'
         ? payload.motifs
         : Object.create(null);
-      const artists = payload && payload.artists && typeof payload.artists === 'object'
+      const indexedArtists = payload && payload.artists && typeof payload.artists === 'object'
         ? payload.artists
         : Object.create(null);
+      const artists = Object.assign(Object.create(null), searchArtistCsvSummariesBySlug, indexedArtists);
 
       searchContentIndex = {
         songs,
@@ -377,6 +354,210 @@ function ensureSearchContentIndexLoaded(basePath) {
     });
 
   return searchContentIndexPromise;
+}
+
+function ensureSearchMotifIndexLoaded(basePath) {
+  if (searchMotifIndexPromise) {
+    return searchMotifIndexPromise;
+  }
+
+  const motifCsvUrl = (basePath || '') + '/public/csv/JamiePedia Data - Motifs.csv';
+  const referencesCsvUrl = (basePath || '') + '/public/csv/JamiePedia Data - References.csv';
+  searchMotifIndexPromise = Promise.all([
+    fetch(motifCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : ''),
+    fetch(referencesCsvUrl, { cache: 'no-store' }).then((response) => response.ok ? response.text() : '')
+  ]).then(([motifCsvText, referencesCsvText]) => {
+    const motifLines = String(motifCsvText || '').split(/\r?\n/).filter(Boolean);
+    const referenceLines = String(referencesCsvText || '').split(/\r?\n/).filter(Boolean);
+    const motifNames = Object.create(null);
+    const motifIdsByCategory = Object.create(null);
+    const motifHeaders = motifLines.length ? splitSearchCsvLine(motifLines[0]).map((header) => header.toLowerCase()) : [];
+    const motifIdIndex = motifHeaders.indexOf('motif id');
+    const motifNameIndex = motifHeaders.indexOf('motif name');
+    const motifCategoryIndex = motifHeaders.indexOf('category id');
+
+    motifLines.slice(1).forEach((line) => {
+      const values = splitSearchCsvLine(line);
+      const id = String(values[motifIdIndex] || '').trim().toLowerCase();
+      const categoryId = String(values[motifCategoryIndex] || '').trim().toLowerCase();
+      const name = String(values[motifNameIndex] || '').trim();
+      if (id && name) {
+        motifNames[id] = name;
+      }
+      if (id && categoryId) {
+        if (!motifIdsByCategory[categoryId]) {
+          motifIdsByCategory[categoryId] = [];
+        }
+        if (!motifIdsByCategory[categoryId].includes(id)) {
+          motifIdsByCategory[categoryId].push(id);
+        }
+      }
+    });
+
+    const namesBySongId = Object.create(null);
+    const songsByMotifId = Object.create(null);
+    const referencedSongsBySongId = Object.create(null);
+    const referenceHeaders = referenceLines.length ? splitSearchCsvLine(referenceLines[0]).map((header) => header.toLowerCase()) : [];
+    const songIdIndex = referenceHeaders.indexOf('song id');
+    const referenceMotifIdIndex = referenceHeaders.indexOf('motif id');
+    referenceLines.slice(1).forEach((line) => {
+      const values = splitSearchCsvLine(line);
+      const songId = String(values[songIdIndex] || '').trim().toLowerCase();
+      const motifId = String(values[referenceMotifIdIndex] || '').trim().toLowerCase();
+      const motifName = motifNames[motifId];
+      if (!songId || !motifId) {
+        return;
+      }
+
+      if (motifName) {
+        if (!namesBySongId[songId]) {
+          namesBySongId[songId] = [];
+        }
+        if (!namesBySongId[songId].includes(motifName)) {
+          namesBySongId[songId].push(motifName);
+        }
+      }
+
+      if (!songsByMotifId[motifId]) {
+        songsByMotifId[motifId] = [];
+      }
+      if (!songsByMotifId[motifId].includes(songId)) {
+        songsByMotifId[motifId].push(songId);
+      }
+
+      if (!motifName) {
+        if (!referencedSongsBySongId[songId]) {
+          referencedSongsBySongId[songId] = [];
+        }
+        if (!referencedSongsBySongId[songId].includes(motifId)) {
+          referencedSongsBySongId[songId].push(motifId);
+        }
+      }
+    });
+
+    searchMotifNamesBySongId = namesBySongId;
+    searchMotifIdsByCategory = motifIdsByCategory;
+    searchSongIdsByMotifId = songsByMotifId;
+    searchReferencedSongIdsBySongId = referencedSongsBySongId;
+    return namesBySongId;
+  }).catch(() => {
+    searchMotifNamesBySongId = Object.create(null);
+    searchMotifIdsByCategory = Object.create(null);
+    searchSongIdsByMotifId = Object.create(null);
+    searchReferencedSongIdsBySongId = Object.create(null);
+    return searchMotifNamesBySongId;
+  });
+
+  return searchMotifIndexPromise;
+}
+
+function getSearchMotifNamesForSongRows(rows) {
+  const names = [];
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const songId = normalizeSearchSongRowValue(row, 'song_id').toLowerCase();
+    (searchMotifNamesBySongId[songId] || []).forEach((name) => {
+      if (!names.includes(name)) {
+        names.push(name);
+      }
+    });
+  });
+  return names;
+}
+
+function getSearchSongTitlesForIds(songIds, songRows) {
+  const wantedIds = new Set((Array.isArray(songIds) ? songIds : []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean));
+  const titles = [];
+  (Array.isArray(songRows) ? songRows : []).forEach((row) => {
+    if (!wantedIds.has(normalizeSearchSongRowValue(row, 'song_id').toLowerCase())) {
+      return;
+    }
+    const title = getSearchSongRowTitle(row);
+    if (title && !titles.includes(title)) {
+      titles.push(title);
+    }
+  });
+  return titles;
+}
+
+function getSearchSongsForMotifKeys(motifKeys, songRows) {
+  const motifIds = new Set();
+  (Array.isArray(motifKeys) ? motifKeys : [motifKeys]).forEach((key) => {
+    const normalized = String(key || '').trim().toLowerCase();
+    if (!normalized) {
+      return;
+    }
+    motifIds.add(normalized);
+    (searchMotifIdsByCategory[normalized] || []).forEach((id) => motifIds.add(id));
+  });
+
+  const songIds = new Set();
+  motifIds.forEach((motifId) => {
+    (searchSongIdsByMotifId[motifId] || []).forEach((songId) => songIds.add(songId));
+  });
+  return getSearchSongTitlesForIds(Array.from(songIds), songRows);
+}
+
+function getSearchReferencedSongsForSongRows(rows, songRows) {
+  const songIds = new Set();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const sourceSongId = normalizeSearchSongRowValue(row, 'song_id').toLowerCase();
+    (searchReferencedSongIdsBySongId[sourceSongId] || []).forEach((songId) => songIds.add(songId));
+  });
+  return getSearchSongTitlesForIds(Array.from(songIds), songRows);
+}
+
+function buildSearchMetadataText(rows, fallbackAlbum) {
+  const fields = [
+    ['Album', 'album_title'],
+    ['Artists', 'artists'],
+    ['Vocalists', 'vocalists'],
+    ['Mixing', 'mixing'],
+    ['Mastering', 'mastering'],
+    ['Instrumentals', 'instrumentals']
+  ];
+  const sections = [];
+  const searchableValues = [];
+
+  fields.forEach(([label, key]) => {
+    const values = [];
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const value = normalizeSearchSongRowValue(row, key);
+      if (key === 'album_title' && value.toLowerCase() === 'album') {
+        return;
+      }
+      if (value && !values.includes(value)) {
+        values.push(value);
+      }
+    });
+
+    if (key === 'album_title' && values.length === 0 && fallbackAlbum && String(fallbackAlbum).trim().toLowerCase() !== 'album') {
+      values.push(String(fallbackAlbum).trim());
+    }
+    if (key === 'album_title' && values.length === 0) {
+      (Array.isArray(rows) ? rows : []).forEach((row) => {
+        splitSearchRouteValues(normalizeSearchSongRowValue(row, 'album_id')).forEach((albumId) => {
+          const title = searchAlbumTitleByPath['/music/' + albumId.toLowerCase()] || albumId;
+          if (title && !values.includes(title)) {
+            values.push(title);
+          }
+        });
+      });
+    }
+
+    if (values.length) {
+      sections.push(label + ': ' + values.join(' | ') + ',');
+      searchableValues.push(...values);
+    }
+  });
+
+  if (sections.length) {
+    sections[sections.length - 1] = sections[sections.length - 1].replace(/,$/u, '');
+  }
+
+  return {
+    displayText: sections.join(' '),
+    searchableText: searchableValues.join(' ')
+  };
 }
 
 function splitSearchCsvLine(line) {
@@ -745,7 +926,8 @@ function ensureSearchImageCsvLoaded(basePath) {
     searchMotifTitleByPath = motifMaps.titleByPath;
     searchPageTitleByPath = Object.assign(Object.create(null), songMaps.titleByPath, albumMaps.titleByPath, motifMaps.titleByPath);
     searchImageByPath = Object.assign(Object.create(null), artistMaps.imageByPath, motifMaps.map, albumMaps.imageByPath, songMaps.imageByPath);
-    const mergedArtistSummaries = Object.assign(Object.create(null), searchContentIndex.artists || {}, artistMaps.summaryBySlug || {});
+    searchArtistCsvSummariesBySlug = artistMaps.summaryBySlug || Object.create(null);
+    const mergedArtistSummaries = Object.assign(Object.create(null), searchArtistCsvSummariesBySlug, searchContentIndex.artists || {});
     searchContentIndex.artists = mergedArtistSummaries;
     return searchImageByPath;
   }).catch(() => {
@@ -772,8 +954,108 @@ function getSearchMotifSummaryText(motifKeys) {
 
 function getSearchArtistSummaryText(routePath) {
   const artistIndex = (searchContentIndex && searchContentIndex.artists) || Object.create(null);
-  const slug = String((routePath || '').split('/').filter(Boolean).pop() || '').trim().toLowerCase();
+  const slug = String((routePath || '').split(/[?#]/u)[0].split('/').filter(Boolean).pop() || '').trim().toLowerCase();
   return String(artistIndex[slug] || '').trim();
+}
+
+function getSearchArtistPageEntry(routePath) {
+  if (typeof window.getArtistPageEntryBySlug !== 'function') {
+    return null;
+  }
+
+  const rawRoute = String(routePath || '').split('?')[0];
+  const pathAndHash = rawRoute.split('#');
+  const slug = pathAndHash[0].split('/').filter(Boolean).pop() || '';
+  return slug ? window.getArtistPageEntryBySlug(slug, pathAndHash[1] || '') : null;
+}
+
+function getSearchArtistCreditsText(routePath, songRows) {
+  const artist = getSearchArtistPageEntry(routePath);
+  if (!artist) {
+    return '';
+  }
+
+  const acceptedTokens = new Set();
+  [artist.ids, artist.names, artist.aliases && artist.aliases.flatMap((alias) => [alias && alias.id, alias && alias.name]), [artist.primaryName]]
+    .flat()
+    .forEach((value) => {
+      const token = String(value || '').trim().toLowerCase();
+      if (token) {
+        acceptedTokens.add(token);
+      }
+    });
+
+  const roleFields = [
+    ['artists', 'Artist'],
+    ['vocalists', 'Vocalist'],
+    ['mixing', 'Mixing'],
+    ['mastering', 'Mastering'],
+    ['instrumentals', 'Instrumentals']
+  ];
+  const songsByPath = new Map();
+  const albumsById = new Map();
+
+  const hasArtistMention = (value) => {
+    const source = String(value || '').toLowerCase();
+    return Array.from(acceptedTokens).some((token) => {
+      let index = source.indexOf(token);
+      while (index !== -1) {
+        const before = source[index - 1] || '';
+        const after = source[index + token.length] || '';
+        if (!/[a-z0-9]/i.test(before) && !/[a-z0-9]/i.test(after)) {
+          return true;
+        }
+        index = source.indexOf(token, index + 1);
+      }
+      return false;
+    });
+  };
+
+  (Array.isArray(songRows) ? songRows : []).forEach((row) => {
+    const roles = roleFields
+      .filter(([key]) => splitSearchRouteValues(normalizeSearchSongRowValue(row, key)).some(hasArtistMention))
+      .map(([, label]) => label);
+    if (!roles.length) {
+      return;
+    }
+
+    const rawPath = getSearchSongRowPathValue(row).split('?')[0];
+    const pathParts = rawPath.split('#');
+    const songSlug = pathParts[0].split('/').filter(Boolean).pop() || '';
+    const songTitle = getSearchSongRowTitle(row);
+    if (songSlug && songTitle) {
+      const href = '/music/' + songSlug.replace(/\.html$/i, '') + (pathParts[1] ? '#' + pathParts[1] : '');
+      if (!songsByPath.has(href)) {
+        songsByPath.set(href, { title: songTitle, roles: new Set() });
+      }
+      roles.forEach((role) => songsByPath.get(href).roles.add(role));
+    }
+
+    splitSearchRouteValues(normalizeSearchSongRowValue(row, 'album_id')).forEach((albumId) => {
+      const id = albumId.toLowerCase();
+      const albumTitle = normalizeSearchSongRowValue(row, 'album_title');
+      if (!id || !albumTitle) {
+        return;
+      }
+      if (!albumsById.has(id)) {
+        albumsById.set(id, { title: albumTitle, roles: new Set() });
+      }
+      roles.forEach((role) => albumsById.get(id).roles.add(role));
+    });
+  });
+
+  const formatCredits = (items) => Array.from(items.values())
+    .map((item) => item.title + ' (' + Array.from(item.roles).join(', ') + ')');
+  const songCredits = formatCredits(songsByPath);
+  const albumCredits = formatCredits(albumsById);
+  const sections = [];
+  if (songCredits.length) {
+    sections.push('Songs: ' + songCredits.join('; '));
+  }
+  if (albumCredits.length) {
+    sections.push('Albums: ' + albumCredits.join('; '));
+  }
+  return sections.length ? 'Credits: ' + sections.join(' ') : '';
 }
 
 function getSearchPageTitle(routePath) {
@@ -888,26 +1170,271 @@ function buildSearchSnippet(text, query) {
 
   const lowerSource = sourceText.toLowerCase();
   const index = lowerSource.indexOf(normalizedQuery);
-  if (index < 0) {
+  if (index >= 0) {
+    const start = Math.max(0, index - 180);
+    const end = Math.min(sourceText.length, index + normalizedQuery.length + 180);
     return {
-      snippet: sourceText.slice(0, 120).trim(),
-      hasContentBefore: false,
-      hasContentAfter: sourceText.length > 120
+      snippet: sourceText.substring(start, end).trim(),
+      hasContentBefore: start > 0,
+      hasContentAfter: end < sourceText.length
     };
   }
 
-  const start = Math.max(0, index - 60);
-  const end = Math.min(sourceText.length, index + normalizedQuery.length + 60);
+  const queryTerms = Array.from(new Set(tokenizeSearchText(query)));
+  const ranges = queryTerms.map((term) => {
+    let termIndex = lowerSource.indexOf(term);
+    if (termIndex < 0 && term.length >= 4) {
+      const sourceWords = sourceText.matchAll(/[\p{L}\p{N}]+/gu);
+      let bestMatch = null;
+      for (const match of sourceWords) {
+        const similarity = getSearchEditSimilarity(term, match[0].toLowerCase());
+        if (similarity >= 0.68 && (!bestMatch || similarity > bestMatch.similarity)) {
+          bestMatch = { index: match.index, similarity };
+        }
+      }
+      termIndex = bestMatch ? bestMatch.index : -1;
+    }
+    return termIndex < 0 ? null : {
+      start: Math.max(0, termIndex - 100),
+      end: Math.min(sourceText.length, termIndex + term.length + 100)
+    };
+  }).filter(Boolean).sort((left, right) => left.start - right.start);
+
+  if (!ranges.length) {
+    const snippet = sourceText.slice(0, 360).trim();
+    return {
+      snippet,
+      hasContentBefore: false,
+      hasContentAfter: sourceText.length > snippet.length
+    };
+  }
+
+  const mergedRanges = [];
+  ranges.forEach((range) => {
+    const previousRange = mergedRanges[mergedRanges.length - 1];
+    if (previousRange && range.start <= previousRange.end) {
+      previousRange.end = Math.max(previousRange.end, range.end);
+    } else {
+      mergedRanges.push({ ...range });
+    }
+  });
+
+  const snippet = mergedRanges
+    .map((range) => sourceText.slice(range.start, range.end).trim())
+    .join(' ... ');
+  const start = mergedRanges[0].start;
+  const end = mergedRanges[mergedRanges.length - 1].end;
   return {
-    snippet: sourceText.substring(start, end).trim(),
+    snippet,
     hasContentBefore: start > 0,
     hasContentAfter: end < sourceText.length
   };
 }
 
+const searchFieldWeights = {
+  title: 9,
+  lyrics: 6,
+  summary: 3.5,
+  tracklist: 3,
+  connections: 2.5,
+  credits: 2,
+  metadata: 1.5,
+  extended: 1.5
+};
+
+function tokenizeSearchText(value) {
+  const normalized = String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+  return normalized.match(/[\p{L}\p{N}]+/gu) || [];
+}
+
+function buildSearchTermFrequencies(value) {
+  const frequencies = new Map();
+  const tokens = tokenizeSearchText(value);
+  tokens.forEach((token) => frequencies.set(token, (frequencies.get(token) || 0) + 1));
+  return { frequencies, length: tokens.length };
+}
+
+function getSearchEditSimilarity(left, right) {
+  if (left === right) {
+    return 1;
+  }
+  if (!left || !right) {
+    return 0;
+  }
+
+  let previous = Array.from({ length: right.length + 1 }, (_value, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const substitutionCost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1] + 1,
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + substitutionCost
+      );
+    }
+    previous = current;
+  }
+
+  return 1 - previous[right.length] / Math.max(left.length, right.length);
+}
+
+function rankSearchResults(results, query) {
+  const terms = Array.from(new Set(tokenizeSearchText(query)));
+  const documents = (Array.isArray(results) ? results : []).map((result, index) => {
+    const fields = result.searchFields || {};
+    const tokenizedFields = Object.create(null);
+    Object.keys(searchFieldWeights).forEach((field) => {
+      tokenizedFields[field] = buildSearchTermFrequencies(fields[field] || '');
+    });
+    return { result, index, fields, tokenizedFields };
+  });
+
+  if (!terms.length || !documents.length) {
+    return [];
+  }
+
+  const fieldStats = Object.create(null);
+  const vocabulary = new Set();
+  Object.keys(searchFieldWeights).forEach((field) => {
+    const totalLength = documents.reduce((sum, document) => {
+      const tokenData = document.tokenizedFields[field];
+      tokenData.frequencies.forEach((_frequency, token) => vocabulary.add(token));
+      return sum + tokenData.length;
+    }, 0);
+    fieldStats[field] = {
+      averageLength: totalLength / Math.max(1, documents.length),
+      documentFrequency: new Map()
+    };
+
+    terms.forEach((term) => {
+      const frequency = documents.reduce((count, document) => (
+        count + (document.tokenizedFields[field].frequencies.has(term) ? 1 : 0)
+      ), 0);
+      fieldStats[field].documentFrequency.set(term, frequency);
+    });
+  });
+
+  const fuzzyTermsByQueryTerm = new Map();
+  terms.forEach((term) => {
+    if (vocabulary.has(term) || term.length < 4) {
+      fuzzyTermsByQueryTerm.set(term, []);
+      return;
+    }
+
+    const matches = [];
+    vocabulary.forEach((candidate) => {
+      if (Math.abs(candidate.length - term.length) > 2) {
+        return;
+      }
+      const similarity = getSearchEditSimilarity(term, candidate);
+      if (similarity >= 0.68) {
+        matches.push({ token: candidate, similarity });
+      }
+    });
+    fuzzyTermsByQueryTerm.set(term, matches);
+  });
+
+  const queryPhrase = String(query || '').trim().toLowerCase();
+  documents.forEach((document) => {
+    let score = 0;
+    let matchedTerms = 0;
+    let titleMatchedTerms = 0;
+    let fuzzyTitleMatches = 0;
+    terms.forEach((term) => {
+      let termMatched = false;
+      const titleFrequencies = document.tokenizedFields.title.frequencies;
+      if (titleFrequencies.has(term)) {
+        titleMatchedTerms += 1;
+      } else {
+        const titleFuzzyMatch = (fuzzyTermsByQueryTerm.get(term) || [])
+          .find((match) => titleFrequencies.has(match.token));
+        if (titleFuzzyMatch) {
+          titleMatchedTerms += 1;
+          fuzzyTitleMatches += 1;
+        }
+      }
+
+      Object.keys(searchFieldWeights).forEach((field) => {
+        const tokenData = document.tokenizedFields[field];
+        let termFrequency = tokenData.frequencies.get(term) || 0;
+        let fuzzyFactor = 1;
+
+        if (!termFrequency) {
+          const fuzzyMatches = fuzzyTermsByQueryTerm.get(term) || [];
+          let bestMatch = null;
+          fuzzyMatches.forEach((match) => {
+            const frequency = tokenData.frequencies.get(match.token) || 0;
+            if (frequency && (!bestMatch || match.similarity > bestMatch.similarity)) {
+              bestMatch = Object.assign({ frequency }, match);
+            }
+          });
+          if (bestMatch) {
+            termFrequency = bestMatch.frequency;
+            fuzzyFactor = 0.25 * bestMatch.similarity;
+          }
+        }
+
+        if (!termFrequency) {
+          return;
+        }
+        termMatched = true;
+
+        let documentFrequency = fieldStats[field].documentFrequency.get(term) || 0;
+        if (documentFrequency === 0 && fuzzyFactor < 1) {
+          documentFrequency = documents.reduce((count, candidateDocument) => {
+            const frequencies = candidateDocument.tokenizedFields[field].frequencies;
+            return count + ((fuzzyTermsByQueryTerm.get(term) || []).some((match) => frequencies.has(match.token)) ? 1 : 0);
+          }, 0);
+        }
+
+        const totalDocuments = documents.length;
+        const inverseDocumentFrequency = Math.log(1 + ((totalDocuments - documentFrequency + 0.5) / (documentFrequency + 0.5)));
+        const averageLength = fieldStats[field].averageLength || 1;
+        const lengthNormalization = 1.2 * (1 - 0.75 + 0.75 * tokenData.length / averageLength);
+        const bm25TermScore = inverseDocumentFrequency * ((termFrequency * 2.2) / (termFrequency + lengthNormalization));
+        score += searchFieldWeights[field] * bm25TermScore * fuzzyFactor;
+      });
+      if (termMatched) {
+        matchedTerms += 1;
+      }
+    });
+
+    const lowerTitle = String(document.fields.title || '').toLowerCase();
+    const phraseMatch = queryPhrase && Object.values(document.fields).some((value) => String(value || '').toLowerCase().includes(queryPhrase));
+    if (lowerTitle === queryPhrase) {
+      score += 40;
+    } else if (lowerTitle.startsWith(queryPhrase)) {
+      score += 24;
+    } else if (lowerTitle.includes(queryPhrase)) {
+      score += 16;
+    } else if (phraseMatch) {
+      score += 4;
+    }
+    if (terms.length > 1 && titleMatchedTerms === terms.length) {
+      score += fuzzyTitleMatches ? 24 : 12;
+    }
+
+    document.matchedTerms = matchedTerms;
+    document.result.relevanceScore = score * (1 + matchedTerms / terms.length);
+  });
+
+  return documents
+    .filter((document) => document.result.relevanceScore > 0 && document.matchedTerms === terms.length)
+    .sort((left, right) => right.result.relevanceScore - left.result.relevanceScore || left.index - right.index)
+    .map((document) => document.result);
+}
+
 function getSearchSongExternalContent(routePath, songRows) {
   const slugs = getSearchSongVariantSlugsFromRows(routePath, songRows);
   const songIndex = (searchContentIndex && searchContentIndex.songs) || Object.create(null);
+  const variantSlug = slugs[0] || '';
+  const isAltPage = variantSlug.includes('#');
+  const mainSlug = isAltPage ? variantSlug.split('#')[0] : variantSlug;
+  const mainEntry = songIndex[mainSlug] || null;
   const content = {
     summary: '',
     lyrics: '',
@@ -927,14 +1454,12 @@ function getSearchSongExternalContent(routePath, songRows) {
 
     const summaryText = String(entry.summary || '').trim();
     const annotationsText = String(entry.annotations || '').trim();
-    const lyricsText = String(entry.lyrics || '').trim();
+    const lyricsText = annotationsText || String(entry.lyrics || '').trim();
     const extendedText = String(entry.extended || '').trim();
+    const mainSummaryText = String((mainEntry || {}).summary || '').trim();
 
-    if (summaryText) {
+    if (summaryText && !(isAltPage && summaryText === mainSummaryText)) {
       content.summary += ' ' + summaryText;
-    }
-    if (annotationsText) {
-      content.lyrics += ' ' + annotationsText;
     }
     if (lyricsText) {
       content.lyrics += ' ' + lyricsText;
@@ -963,6 +1488,28 @@ function getSearchAlbumExternalContent(routePath) {
   };
 }
 
+function getSearchAlbumTracklistText(rows) {
+  const tracksByTitle = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const title = getSearchSongRowTitle(row).replace(/\s*\|\s*/gu, ' ').trim();
+    const trackNumbers = splitSearchRouteValues(normalizeSearchSongRowValue(row, 'album_track'));
+    const key = title.toLowerCase();
+    if (!title || tracksByTitle.has(key)) {
+      return;
+    }
+
+    const trackNumber = Number.parseFloat(trackNumbers[0] || '');
+    tracksByTitle.set(key, {
+      title,
+      trackNumber: Number.isFinite(trackNumber) ? trackNumber : Number.POSITIVE_INFINITY
+    });
+  });
+
+  const tracks = Array.from(tracksByTitle.values())
+    .sort((left, right) => left.trackNumber - right.trackNumber || left.title.localeCompare(right.title));
+  return tracks.length ? 'Tracklist: ' + tracks.map((track) => track.title).join(' | ') : '';
+}
+
 // Fetch and search a single file
 function searchFile(fileEntry, query, searchContext) {
   try {
@@ -983,7 +1530,7 @@ function searchFile(fileEntry, query, searchContext) {
     ].filter(Boolean)));
 
     const songRows = Array.isArray(context.songRows) ? context.songRows : [];
-    const matchingSongRows = isMusicPage ? getSearchSongRowsForRoute(routePath, songRows) : [];
+    const matchingSongRows = isMusicPage ? getSearchSongRowsForRoute(fileEntry.path, songRows) : [];
     const isSongPage = isMusicPage && matchingSongRows.length > 0;
     const isAlbumPage = isMusicPage && pathParts.length === 2 && matchingSongRows.length === 0;
     const albumRows = isAlbumPage ? getSearchSongRowsForAlbum(pathParts[1] || '', songRows) : [];
@@ -1029,54 +1576,74 @@ function searchFile(fileEntry, query, searchContext) {
       return fileName.replace(/-/g, ' ');
     })();
 
-    const songMetadataText = rowsForMetadata.map((row) => [
-      getSearchSongRowTitle(row),
-      normalizeSearchSongRowValue(row, 'album_title'),
-      normalizeSearchSongRowValue(row, 'artists'),
-      normalizeSearchSongRowValue(row, 'vocalists'),
-      normalizeSearchSongRowValue(row, 'mixing'),
-      normalizeSearchSongRowValue(row, 'mastering'),
-      normalizeSearchSongRowValue(row, 'instrumentals'),
-      normalizeSearchSongRowValue(row, 'release_date'),
-      normalizeSearchSongRowValue(row, 'listen_text'),
-      normalizeSearchSongRowValue(row, 'listen_links'),
-      normalizeSearchSongRowValue(row, 'close_up'),
-      normalizeSearchSongRowValue(row, 'tab_name')
-    ].filter(Boolean).join(' ')).filter(Boolean).join(' ').trim();
+    const songMetadata = isMusicPage
+      ? buildSearchMetadataText(rowsForMetadata, fileEntry.album)
+      : { displayText: '', searchableText: '' };
+    const songMetadataText = songMetadata.searchableText;
 
     const externalContent = isSongPage
-      ? getSearchSongExternalContent(routePath, songRows)
+      ? getSearchSongExternalContent(fileEntry.path, songRows)
       : isAlbumPage
-        ? getSearchAlbumExternalContent(routePath)
+        ? Object.assign(getSearchAlbumExternalContent(routePath), {
+          tracklist: getSearchAlbumTracklistText(albumRows)
+        })
         : isMotifPage
           ? { summary: getSearchMotifSummaryText(motifSummaryKeys), lyrics: '', extended: '' }
           : isArtistPage
-            ? { summary: getSearchArtistSummaryText(routePath), lyrics: '', extended: '' }
-          : { summary: '', lyrics: '', extended: '' };
+            ? {
+              summary: getSearchArtistSummaryText(routePath),
+              credits: getSearchArtistCreditsText(fileEntry.path, songRows),
+              lyrics: '',
+              extended: ''
+            }
+            : { summary: '', credits: '', lyrics: '', extended: '' };
 
-    const motifRelatedText = isMotifPage && typeof window.SongData !== 'undefined' && window.SongData && typeof window.SongData.getSongsWithMotifId === 'function'
-      ? motifSummaryKeys
-        .flatMap((motifKey) => window.SongData.getSongsWithMotifId(motifKey) || [])
-        .map((song) => String((song || {}).title || '').trim())
-        .filter(Boolean)
-        .filter((value, index, array) => array.indexOf(value) === index)
-        .join(' ')
-      : '';
-
-    const combinedSearchText = [
+    const motifRelatedSongs = isMotifPage ? getSearchSongsForMotifKeys(motifSummaryKeys, songRows) : [];
+    const motifRelatedText = motifRelatedSongs.length ? 'Songs with this motif: ' + motifRelatedSongs.join(' | ') : '';
+    const motifNames = isSongPage ? getSearchMotifNamesForSongRows(matchingSongRows) : [];
+    const referencedSongs = isSongPage ? getSearchReferencedSongsForSongRows(matchingSongRows, songRows) : [];
+    const motifsText = motifNames.length ? 'Motifs: ' + motifNames.join(' | ') : '';
+    const songReferencesText = referencedSongs.length ? 'Referenced songs: ' + referencedSongs.join(' | ') : '';
+    const connectionsText = [motifRelatedText, motifsText, songReferencesText].filter(Boolean).join(' ');
+    const searchFields = {
       title,
-      fileEntry.album,
-      songMetadataText,
+      summary: externalContent.summary || '',
+      lyrics: externalContent.lyrics || '',
+      extended: externalContent.extended || '',
+      credits: externalContent.credits || '',
+      tracklist: externalContent.tracklist || '',
+      connections: connectionsText,
+      metadata: songMetadata.displayText || ''
+    };
+    const orderedDisplayText = [
+      title,
+      externalContent.lyrics ? 'Lyrics: ' + externalContent.lyrics : '',
       externalContent.summary,
-      externalContent.lyrics,
+      externalContent.credits,
       externalContent.extended,
-      motifRelatedText
+      externalContent.tracklist,
+      connectionsText,
+      songMetadata.displayText
+    ].filter(Boolean);
+    const combinedSearchText = orderedDisplayText.join(' ').replace(/\s+/g, ' ').trim();
+    const searchableText = [
+      title,
+      externalContent.summary,
+      externalContent.credits,
+      externalContent.extended,
+      externalContent.tracklist,
+      externalContent.lyrics,
+      connectionsText,
+      songMetadataText
     ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
 
-    const lowerTextWithBr = combinedSearchText.toLowerCase();
+    const lowerTextWithBr = searchableText.toLowerCase();
     const lowerQuery = query.toLowerCase();
+    const matchesSearch = lowerQuery === 'lyrics'
+      ? Boolean(externalContent.lyrics)
+      : true;
     
-    if (lowerTextWithBr.includes(lowerQuery)) {
+    if (matchesSearch) {
       // Extract cover art image
       let coverSrc = basePath + '/public/images/cover-art/as.png'; // default fallback
       const csvCoverPath = searchImageByPath[fileEntry.path] || '';
@@ -1124,11 +1691,7 @@ function searchFile(fileEntry, query, searchContext) {
         if (lyricsText.toLowerCase().includes(lowerQuery)) {
           contentTypes.push('lyrics');
         }
-        const motifsText = rowsForMetadata.map((row) => [
-          normalizeSearchSongRowValue(row, 'listen_text'),
-          normalizeSearchSongRowValue(row, 'close_up')
-        ].filter(Boolean).join(' ')).join(' ');
-        if (motifsText.toLowerCase().includes(lowerQuery)) {
+        if (connectionsText.toLowerCase().includes(lowerQuery)) {
           contentTypes.push('connections');
         }
         const extendedText = externalContent.extended || '';
@@ -1160,30 +1723,18 @@ function searchFile(fileEntry, query, searchContext) {
         contentTypes.push('other');
       }
 
-      const snippetCandidates = [
-        externalContent.summary,
-        externalContent.lyrics,
-        externalContent.extended
-      ].filter(Boolean);
-
-      let snippetSource = combinedSearchText;
-      for (const candidate of snippetCandidates) {
-        if (String(candidate).toLowerCase().includes(lowerQuery)) {
-          snippetSource = candidate;
-          break;
-        }
-      }
-
-      const snippetData = buildSearchSnippet(snippetSource, query);
+      const snippetData = buildSearchSnippet(combinedSearchText, query);
       
       return {
         album: fileEntry.album,
         title: title,
+        fullContent: combinedSearchText,
+        searchFields,
         url: fileEntry.path,
         content: snippetData.snippet,
+        contentHasContentBefore: snippetData.hasContentBefore,
+        contentHasContentAfter: snippetData.hasContentAfter,
         coverSrc: coverSrc,
-        hasContentBefore: snippetData.hasContentBefore,
-        hasContentAfter: snippetData.hasContentAfter,
         pageType: isAlbumPage ? 'album' : (isMotifPage ? 'motif' : 'song'),
         contentTypes: contentTypes
       };
@@ -1216,6 +1767,8 @@ async function performSearch(query) {
     ensureSearchSongRowsLoaded(basePath),
     ensureSearchImageCsvLoaded(basePath),
     ensureSearchContentIndexLoaded(basePath),
+    ensureSearchMotifIndexLoaded(basePath),
+    typeof window.ensureArtistDirectoryLoaded === 'function' ? window.ensureArtistDirectoryLoaded() : Promise.resolve(null),
     pathsReadyPromise
   ]);
 
@@ -1234,12 +1787,16 @@ async function performSearch(query) {
       results.push(result);
     }
   });
-  
-  displaySearchResults(results, query);
+
+  const rankedResults = trimmedQuery.toLowerCase() === 'lyrics'
+    ? results.filter((result) => Boolean(result.searchFields && result.searchFields.lyrics))
+    : rankSearchResults(results, trimmedQuery);
+
+  displaySearchResults(rankedResults, query);
+  currentSearchQuery = query;
   
   // Store results and query for filtering
-  fullSearchResults = results;
-  currentSearchQuery = query;
+  fullSearchResults = rankedResults;
 }
 
 // Display search results in modal
@@ -1247,11 +1804,6 @@ function displaySearchResults(results, originalQuery) {
   const resultsContainer = document.getElementById('searchResults');
   const searchTitle = document.getElementById('searchTitle');
   const basePath = window.location.pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
-  
-  // Escape special regex characters
-  const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const escapedQuery = escapeRegex(originalQuery);
-  const queryRegex = new RegExp(`(${escapedQuery})`, 'gi');
   
   resultsContainer.innerHTML = '';
   
@@ -1280,21 +1832,59 @@ function displaySearchResults(results, originalQuery) {
       
       const contentDiv = document.createElement('div');
       contentDiv.style.cssText = 'flex: 1;';
-      const highlightedContent = item.content.replace(queryRegex, '<strong style="background-color: var(--theme-color-surface_highlight); color: var(--theme-color-text_base_black); font-weight: bold;">$1</strong>');
-      const beforeEllipsis = item.hasContentBefore ? '...' : '';
-      const afterEllipsis = item.hasContentAfter ? '...' : '';
       const resultHref = typeof window.toSiteHref === 'function'
         ? window.toSiteHref(basePath + item.url)
         : basePath + item.url;
-      contentDiv.innerHTML = '<div style="font-size: 12px; color: var(--theme-color-text_muted); font-weight: bold;">' + item.album + '</div>' +
-        '<a href="' + resultHref + '" style="color: var(--theme-color-link_default); text-decoration: none; font-size: 16px; font-weight: bold;">' + 
-        item.title + '</a>' +
-        '<p style="margin: 5px 0 0 0; color: var(--theme-page-text); font-size: 13px;">' + beforeEllipsis + highlightedContent + afterEllipsis + '</p>';
+      const albumLabel = document.createElement('div');
+      albumLabel.style.cssText = 'font-size: 12px; color: var(--theme-color-text_muted); font-weight: bold;';
+      albumLabel.textContent = item.album || '';
+      contentDiv.appendChild(albumLabel);
+
+      const titleLink = document.createElement('a');
+      titleLink.href = resultHref;
+      titleLink.style.cssText = 'color: var(--theme-color-link_default); text-decoration: none; font-size: 16px; font-weight: bold;';
+      titleLink.textContent = item.title || '';
+      contentDiv.appendChild(titleLink);
+
+      const excerpt = document.createElement('p');
+      excerpt.style.cssText = 'margin: 5px 0 0 0; color: var(--theme-page-text); font-size: 13px;';
+      const beforeEllipsis = item.contentHasContentBefore ? '...' : '';
+      const afterEllipsis = item.contentHasContentAfter ? '...' : '';
+      appendSearchHighlightedText(excerpt, beforeEllipsis + item.content + afterEllipsis, originalQuery);
+      contentDiv.appendChild(excerpt);
       
       resultDiv.appendChild(coverImg);
       resultDiv.appendChild(contentDiv);
       resultsContainer.appendChild(resultDiv);
     });
+  }
+}
+
+function appendSearchHighlightedText(container, text, query) {
+  const source = String(text || '');
+  const normalizedQuery = String(query || '');
+  if (!normalizedQuery) {
+    container.appendChild(document.createTextNode(source));
+    return;
+  }
+
+  const lowerSource = source.toLowerCase();
+  const lowerQuery = normalizedQuery.toLowerCase();
+  let cursor = 0;
+  let matchIndex = lowerSource.indexOf(lowerQuery, cursor);
+  while (matchIndex !== -1) {
+    if (matchIndex > cursor) {
+      container.appendChild(document.createTextNode(source.slice(cursor, matchIndex)));
+    }
+    const highlight = document.createElement('strong');
+    highlight.textContent = source.slice(matchIndex, matchIndex + normalizedQuery.length);
+    highlight.style.cssText = 'background-color: var(--theme-color-surface_highlight); color: var(--theme-color-text_base_black); font-weight: bold;';
+    container.appendChild(highlight);
+    cursor = matchIndex + normalizedQuery.length;
+    matchIndex = lowerSource.indexOf(lowerQuery, cursor);
+  }
+  if (cursor < source.length) {
+    container.appendChild(document.createTextNode(source.slice(cursor)));
   }
 }
 
@@ -1462,7 +2052,7 @@ function initializeSearch() {
       filterBox.style.display = filterBox.style.display === 'none' ? 'block' : 'none';
     });
   }
-  
+
   // Add event listeners for all filter checkboxes
   const checkboxes = [
     'excludeAlbums',

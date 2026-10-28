@@ -12,6 +12,22 @@
     <link href="/css/song.css" rel="stylesheet" type="text/css" media="all">
     <link href="/css/artist.css" rel="stylesheet" type="text/css" media="all">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
+    <script>
+      (function () {
+        var route = new URLSearchParams(window.location.search).get('__jp_route');
+        if (!route || !window.history || typeof window.history.replaceState !== 'function') {
+          return;
+        }
+        try {
+          var target = new URL(route, window.location.origin);
+          if (target.origin === window.location.origin && /^\/artists\//i.test(target.pathname)) {
+            window.history.replaceState(null, document.title, target.pathname + target.search + target.hash);
+          }
+        } catch (_error) {
+          return;
+        }
+      })();
+    </script>
     <script src="/assets/static/load.js?v=20261010c"></script>
     <script src="/assets/static/artist-page.js?v=20261010c"></script>
   </head>

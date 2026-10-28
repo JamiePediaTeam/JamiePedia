@@ -2483,7 +2483,7 @@ function initializeSongConnectionsFeature() {
   window.__songConnectionsInitPromise = loadScriptOnce('https://www.youtube.com/iframe_api')
     .then(() => loadScriptOnce(prefix + 'assets/static/csv-data.js'))
     .then(() => loadScriptOnce(prefix + 'assets/static/song-lyrics.js'))
-    .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js?v=20261027e'));
+    .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js?v=20261027f'));
 
   return window.__songConnectionsInitPromise;
 }

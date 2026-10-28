@@ -10,112 +10,9 @@
     <link rel="icon" type="image/x-icon" href="/public/images/favicon.ico">
     <link href="/styles.css" rel="stylesheet" type="text/css" media="all">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="/assets/static/load.js"></script>
     <style>
-      body.not-found-booting #notFoundBody {
-        visibility: hidden;
-      }
-
-      body {
-        background: transparent;
-      }
-
-      html:not([data-theme-ready]) {
-        background-color: #f7f4ef;
-      }
-
-      html:not([data-theme-ready]) body {
-        width: 900px;
-        position: relative;
-        margin-left: auto;
-        margin-right: auto;
-        padding-left: 150px;
-        padding-right: 0;
-        overflow-x: visible;
-        color: #1f1f1f;
-      }
-
-      html:not([data-theme-ready]) .table {
-        margin-left: auto;
-        margin-right: auto;
-        display: block;
-        border-spacing: 0;
-        border-collapse: collapse;
-        width: 800px;
-      }
-
-      html:not([data-theme-ready]) .table td {
-        vertical-align: top;
-        border: none;
-        padding: 0;
-        position: relative;
-      }
-
-      html:not([data-theme-ready]) .head {
-        margin-top: 30px;
-        margin-left: auto;
-        margin-right: auto;
-        border: 3px solid #351854;
-        border-radius: 5px;
-        height: 150px;
-        width: 800px;
-        position: relative;
-        padding: 10px;
-        background-color: #ffffff;
-      }
-
-      html:not([data-theme-ready]) .navi {
-        margin-top: 20px;
-        margin-left: auto;
-        margin-right: auto;
-        border: 3px solid #351854;
-        border-radius: 5px;
-        height: 20px;
-        width: 400px;
-        position: relative;
-        padding: 10px;
-        background-color: #ffffff;
-      }
-
-      html:not([data-theme-ready]) .bodybar {
-        border: 3px solid #351854;
-        border-radius: 5px;
-        padding: 10px;
-        width: 800px;
-        min-height: 222px;
-        margin-left: -13px;
-        margin-top: 20px;
-        margin-bottom: 20px;
-        position: relative;
-        background-color: #ffffff;
-      }
-
-      html:not([data-theme-ready]) .sidebar1 {
-        border: 3px solid #351854;
-        border-radius: 5px;
-        padding: 10px;
-        width: 120px;
-        height: auto;
-        position: absolute;
-        left: -180px;
-        top: 20px;
-        z-index: 9;
-        background-color: #ffffff;
-      }
-
-      html:not([data-theme-ready]) .footer {
-        margin-top: 20px;
-        margin-bottom: 30px;
-        margin-left: auto;
-        margin-right: auto;
-        border: 3px solid #351854;
-        border-radius: 5px;
-        height: 20px;
-        width: 400px;
-        position: relative;
-        padding: 10px;
-        background-color: #ffffff;
-      }
-
       .not-found-layout {
         display: flex;
         align-items: center;
@@ -146,21 +43,8 @@
         width: 220px;
         max-width: 100%;
         height: auto;
-        border: 3px solid #351854;
+        border: 3px solid var(--theme-color-brand_frame);
         border-radius: 6px;
-        background: #ffffff;
-      }
-
-      .not-found-copy a {
-        color: #ff7e73;
-      }
-
-      .not-found-copy a:hover {
-        color: #f05e55;
-      }
-
-      #notFoundBody {
-        box-sizing: border-box;
       }
 
       @media (max-width: 760px) {
@@ -266,6 +150,19 @@
           }
 
           return source || '/';
+        }
+
+        function getRouteParts(pathname) {
+          return toExtensionlessPath(pathname).split('/').filter(Boolean);
+        }
+
+        function hasKnownSectionRoute(normalizedPath, knownRoutes, sectionTokens, prefix) {
+          var parts = getRouteParts(normalizedPath);
+          if (parts.length !== 3 || parts[0] !== prefix || !sectionTokens.has(String(parts[2] || '').toLowerCase())) {
+            return false;
+          }
+
+          return knownRoutes.has('/' + parts[0] + '/' + parts[1]);
         }
 
         function splitCsvLine(line) {
@@ -530,16 +427,6 @@
           document.body.appendChild(pre);
         }
 
-        function renderShellHtml(html) {
-          if (!html) {
-            return false;
-          }
-          document.open();
-          document.write(html);
-          document.close();
-          return true;
-        }
-
         async function fetchText(pathname) {
           try {
             var response = await fetch(pathname, { cache: 'no-store' });
@@ -552,9 +439,11 @@
           }
         }
 
-        async function tryRenderShell(shellPath, siteBase) {
-          var html = await fetchText(withSiteBase(shellPath, siteBase));
-          return renderShellHtml(html);
+        function redirectToShell(shellPath, pathWithoutBase, siteBase) {
+          var requestedRoute = pathWithoutBase + window.location.search + window.location.hash;
+          var shellHref = withSiteBase(shellPath, siteBase) + '?__jp_route=' + encodeURIComponent(requestedRoute);
+          window.location.replace(shellHref);
+          return true;
         }
 
         async function tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase) {
@@ -797,28 +686,18 @@
 
           var normalized = toExtensionlessPath(pathWithoutBase);
           if (normalized.indexOf('/music/') === 0) {
-            if (normalizeCloseupRoutePath(normalized)) {
-              if (await hasKnownCloseupRoute(normalized, siteBase)) {
-                var songSectionHref = getSongSectionHrefFromCloseupRoute(normalized);
-                if (songSectionHref) {
-                  window.location.replace(withSiteBase(songSectionHref, siteBase));
-                  return;
-                }
-              }
-            }
-
             var albumRoutes = await getKnownAlbumRoutes(siteBase);
-            if (albumRoutes.has(normalized)) {
-              if (await tryRenderShell('/music/album-shell.html', siteBase)) {
-                return;
-              }
+            var albumSections = new Set(['tracklist', 'summary', 'extended']);
+            if (albumRoutes.has(normalized) || hasKnownSectionRoute(normalized, albumRoutes, albumSections, 'music')) {
+              redirectToShell('/music/album-shell.html', pathWithoutBase, siteBase);
+              return;
             }
 
             var songRoutes = await getKnownSongRoutes(siteBase);
-            if (songRoutes.has(normalized)) {
-              if (await tryRenderShell('/music/song-shell.html', siteBase)) {
-                return;
-              }
+            var songSections = new Set(['connections', 'motifs', 'summary', 'lyrics', 'extended', 'close-up', 'closeup']);
+            if (songRoutes.has(normalized) || hasKnownSectionRoute(normalized, songRoutes, songSections, 'music')) {
+              redirectToShell('/music/song-shell.html', pathWithoutBase, siteBase);
+              return;
             }
 
             if (await tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase)) {
@@ -832,9 +711,8 @@
           if (normalized.indexOf('/motifs/') === 0) {
             var motifRoutes = await getKnownMotifRoutes(siteBase);
             if (motifRoutes.has(normalized)) {
-              if (await tryRenderShell('/motifs/motif-shell.html', siteBase)) {
-                return;
-              }
+              redirectToShell('/motifs/motif-shell.html', pathWithoutBase, siteBase);
+              return;
             }
 
             if (await tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase)) {
@@ -847,10 +725,10 @@
 
           if (normalized.indexOf('/artists/') === 0) {
             var artistRoutes = await getKnownArtistRoutes(siteBase);
-            if (artistRoutes.has(normalized)) {
-              if (await tryRenderShell('/artists/artist-shell.html', siteBase)) {
-                return;
-              }
+            var artistSections = new Set(['credits', 'summary']);
+            if (artistRoutes.has(normalized) || hasKnownSectionRoute(normalized, artistRoutes, artistSections, 'artists')) {
+              redirectToShell('/artists/artist-shell.html', pathWithoutBase, siteBase);
+              return;
             }
 
             if (await tryRenderStaticExtensionlessRoute(pathWithoutBase, siteBase)) {

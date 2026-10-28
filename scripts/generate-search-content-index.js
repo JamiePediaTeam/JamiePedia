@@ -12,8 +12,18 @@ function normalizeKeyFromFileName(fileName) {
 }
 
 function normalizeSearchContentLineBreaks(source) {
-  const lines = String(source || '')
-    .split(/\r?\n/u)
+  const sourceLines = String(source || '').split(/\r?\n/u);
+  const referencesStart = sourceLines.findIndex((line) => /^\s*#{0,6}\s*references\b\s*:?(?:\s|$)/iu.test(line));
+  const searchableLines = referencesStart >= 0 ? sourceLines.slice(0, referencesStart) : sourceLines;
+  const lines = searchableLines
+    .map((line) => line.replace(/\[([^\]]+)\]\([^)]+\)/gu, '$1'))
+    .map((line) => line.replace(/\[(?:verse|pre-chorus|chorus|bridge|outro)(?:\s+[^\]]*)?\]/giu, ''))
+    .map((line) => line.replace(/\[\d+\]/gu, ''))
+    .map((line) => line.replace(/\[([^\]]+)\]/gu, '$1'))
+    .map((line) => line.replace(/[\[\]]/gu, ''))
+    .map((line) => line.replace(/<a\b[^>]*>(.*?)<\/a>/giu, '$1'))
+    .map((line) => line.replace(/<[^>]*>/gu, ''))
+    .map((line) => line.replace(/https?:\/\/\S+/giu, ''))
     .map((line) => String(line || '').trim())
     .filter((line) => line && !/^#{1,6}\s*/u.test(line));
 
@@ -41,7 +51,7 @@ function parseLrcToSearchText(source) {
       continue;
     }
 
-    const lyric = line.replace(/\[[^\]]+\]/gu, '').trim();
+    const lyric = line.replace(/\[[^\]]+\]/gu, '').replace(/\s+/gu, ' ').trim();
     if (lyric) {
       collected.push(lyric);
     }
