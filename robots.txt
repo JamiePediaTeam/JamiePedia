@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://jamiepedia.page/sitemap.xml

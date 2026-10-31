@@ -1,7 +1,20 @@
 function getCurrentMotifId() {
   const pathname = window.location.pathname;
-  const filename = pathname.split('/').pop() || '';
+  const filename = pathname.split('/').filter(Boolean).pop() || '';
   return filename.replace('.html', '').toLowerCase();
+}
+
+function motifPageResolveAssetPath(value) {
+  const source = String(value || '').trim();
+  if (!source) {
+    return '';
+  }
+  if (/^(https?:|data:|blob:)/i.test(source)) {
+    return source;
+  }
+
+  const rootPath = '/' + source.replace(/^(\.\.\/)+/u, '').replace(/^\/+/, '');
+  return typeof window.toSiteHref === 'function' ? window.toSiteHref(rootPath) : rootPath;
 }
 
 function timeToSeconds(value) {
@@ -130,7 +143,7 @@ function createMeowSampler() {
       C4: 'meow.mp3'
     },
     release: 0.9,
-    baseUrl: '../public/samples/'
+    baseUrl: motifPageResolveAssetPath('/public/samples/')
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -140,7 +153,7 @@ function createWscPluckSampler() {
       E5: 'WSC_E5.wav'
     },
     release: 0.8,
-    baseUrl: '../public/samples/'
+    baseUrl: motifPageResolveAssetPath('/public/samples/')
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -150,7 +163,7 @@ function createWoofSampler() {
       C5: 'woof.wav'
     },
     release: 0.9,
-    baseUrl: '../public/samples/'
+    baseUrl: motifPageResolveAssetPath('/public/samples/')
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -161,7 +174,7 @@ function createPaisleyHornsSampler() {
       E5: 'paisley-pudge-a_a5.wav'
     },
     release: 0.9,
-    baseUrl: '../public/samples/'
+    baseUrl: motifPageResolveAssetPath('/public/samples/')
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -171,7 +184,7 @@ function createWHTSampler() {
       C4: 'where-hearts-thaw_c4.wav'
     },
     release: 0.9,
-    baseUrl: '../public/samples/'
+    baseUrl: motifPageResolveAssetPath('/public/samples/')
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -181,7 +194,7 @@ function createMpPianoSampler() {
       C5: 'mppiano.wav'
     },
     release: 0.9,
-    baseUrl: '../public/samples/'
+    baseUrl: motifPageResolveAssetPath('/public/samples/')
   }).connect(getMotifTranscriptMasterGain());
 }
 function createPPPPluckSampler() {
@@ -190,7 +203,7 @@ function createPPPPluckSampler() {
       'G#5': 'ppppluck.wav'
     },
     release: 0.9,
-    baseUrl: '../public/samples/'
+    baseUrl: motifPageResolveAssetPath('/public/samples/')
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -379,10 +392,10 @@ function makeMotifEmptyBoxHtml(label) {
 
 async function loadMotifSummaryText(motifId) {
   const candidates = [
-    '../public/motifs/summaries/' + motifId + '.txt',
-    '../public/motifs/motif-summaries/' + motifId + '.txt',
-    '../public/motif-summaries/' + motifId + '.txt',
-    '../public/summaries/' + motifId + '.txt'
+    motifPageResolveAssetPath('/public/motifs/summaries/' + motifId + '.txt'),
+    motifPageResolveAssetPath('/public/motifs/motif-summaries/' + motifId + '.txt'),
+    motifPageResolveAssetPath('/public/motif-summaries/' + motifId + '.txt'),
+    motifPageResolveAssetPath('/public/summaries/' + motifId + '.txt')
   ];
 
   for (const path of candidates) {
@@ -2074,8 +2087,8 @@ function motifTranscriptResetPlaybackEngine() {
 async function loadMotifTranscriptPlaybackData(slugCandidates) {
   for (const slug of slugCandidates) {
     const candidates = [
-      '../public/motifs/transcriptions/' + slug + '.playback.json',
-      '../public/motifs/' + slug + '.playback.json'
+      motifPageResolveAssetPath('/public/motifs/transcriptions/' + slug + '.playback.json'),
+      motifPageResolveAssetPath('/public/motifs/' + slug + '.playback.json')
     ];
     try {
       for (const path of candidates) {
@@ -2463,8 +2476,8 @@ async function renderMotifTranscriptFallback(xmlText, mount) {
 async function loadMotifTranscriptXmlText(slugCandidates) {
   for (const slug of slugCandidates) {
     const candidates = [
-      '../public/motifs/transcriptions/' + slug + '.xml',
-      '../public/motifs/' + slug + '.xml'
+      motifPageResolveAssetPath('/public/motifs/transcriptions/' + slug + '.xml'),
+      motifPageResolveAssetPath('/public/motifs/' + slug + '.xml')
     ];
     try {
       for (const path of candidates) {
@@ -2507,7 +2520,7 @@ async function renderMotifTranscript(motif, motifPageId, songsHeading, variation
   mount.innerHTML = '';
 
   const playbackResult = await loadMotifTranscriptPlaybackData(slugCandidates);
-  await initializeMotifTranscriptPlayback(playbackResult);
+  initializeMotifTranscriptPlayback(playbackResult).catch(() => null);
 
   const libraryLoaded = await loadMotifTranscriptLibrary();
   if (!libraryLoaded) {
@@ -2602,7 +2615,7 @@ function buildVariationImagePanel(motif, extraClass = '', options = {}) {
 
   const art = document.createElement('img');
   art.className = 'motif-variation-art';
-  art.src = motif.image || '../public/images/cover-art/bs.png';
+  art.src = motifPageResolveAssetPath(motif.image) || motifPageResolveAssetPath('/public/images/cover-art/bs.png');
   art.alt = motif.name + ' motif image';
   artWrap.appendChild(art);
 
@@ -2870,12 +2883,11 @@ function buildTimelineRow(song, motif, index, refs, options = {}) {
   left.style.borderColor = song.color || '#351854';
   left.innerHTML = formatMotifSongTitleHtml(song.title);
   if (song.path) {
-    left.href = song.path;
+    left.href = typeof window.toSiteHref === 'function' ? window.toSiteHref(song.path) : song.path;
   }
   row.appendChild(left);
 
   const right = document.createElement('div');
-  right.className = 'motif-player-main';
   row.appendChild(right);
 
   const controls = document.createElement('div');
@@ -3141,7 +3153,7 @@ window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
   createYouTubePlayers();
 };
 
-function renderMotifPage() {
+async function renderMotifPage() {
   if (!window.MotifData || !window.SongData) {
     return;
   }
@@ -3161,7 +3173,7 @@ function renderMotifPage() {
     return;
   }
 
-  renderMotifSummary(motifId);
+  const summaryTask = renderMotifSummary(motifId);
 
   document.title = 'JamiePedia! - Motif - ' + motif.name;
   motifName.textContent = motif.name;
@@ -3224,13 +3236,13 @@ function renderMotifPage() {
 
   const applyVariationView = (variation) => {
     if (!variation) {
-      return;
+      return Promise.resolve();
     }
 
     activeVariation = variation;
     updateVariationBadgeState(variation);
     updateVariationSections(variation);
-    renderMotifTranscript(motif, motifId, songsHeading, variation.id || variation.label || '');
+    return renderMotifTranscript(motif, motifId, songsHeading, variation.id || variation.label || '');
   };
 
   if (hasVariations && motifImageWrap) {
@@ -3250,7 +3262,7 @@ function renderMotifPage() {
       motifImageWrap.appendChild(panel);
     } else if (motif.image) {
       motifImage.style.display = '';
-      motifImage.src = motif.image;
+      motifImage.src = motifPageResolveAssetPath(motif.image);
       motifImage.alt = motif.name + ' motif image';
     } else {
       motifImage.style.display = 'none';
@@ -3260,7 +3272,7 @@ function renderMotifPage() {
     }
   } else {
     motifImage.style.display = '';
-    motifImage.src = motif.image || '../public/images/cover-art/bs.png';
+    motifImage.src = motifPageResolveAssetPath(motif.image) || motifPageResolveAssetPath('/public/images/cover-art/bs.png');
     motifImage.alt = motif.name + ' motif image';
   }
 
@@ -3285,9 +3297,9 @@ function renderMotifPage() {
     songsHeading.textContent = 'Songs with ' + motif.name;
   }
 
-  if (!hasVariations) {
-    renderMotifTranscript(motif, motifId, songsHeading);
-  }
+  let transcriptTask = hasVariations
+    ? Promise.resolve()
+    : renderMotifTranscript(motif, motifId, songsHeading);
 
   const songs = window.SongData.allSongs.filter((song) => getSongRefsForMotif(song, motif).length > 0);
 
@@ -3310,7 +3322,7 @@ function renderMotifPage() {
     if (firstSong) {
       if (firstSong.path) {
         const link = document.createElement('a');
-        link.href = firstSong.path;
+        link.href = typeof window.toSiteHref === 'function' ? window.toSiteHref(firstSong.path) : firstSong.path;
         link.innerHTML = formatMotifSongTitleHtml(firstSong.title);
         firstAppearsNode.appendChild(link);
       } else {
@@ -3326,7 +3338,7 @@ function renderMotifPage() {
 
   if (songs.length === 0) {
     if (hasVariations && activeVariation) {
-      applyVariationView(activeVariation);
+      transcriptTask = applyVariationView(activeVariation);
     }
 
     const emptyState = document.createElement('div');
@@ -3335,6 +3347,10 @@ function renderMotifPage() {
     songList.appendChild(emptyState);
     if (typeof window.releaseThemeGate === 'function') {
       window.releaseThemeGate();
+    }
+    await Promise.all([summaryTask, transcriptTask]);
+    if (typeof window.__jamiepediaMarkPageReady === 'function') {
+      window.__jamiepediaMarkPageReady('motif');
     }
     return;
   }
@@ -3379,7 +3395,7 @@ function renderMotifPage() {
       }
     });
 
-    applyVariationView(activeVariation);
+    transcriptTask = applyVariationView(activeVariation);
   } else {
     songs.forEach((song) => {
       const refs = getSongRefsForMotif(song, motif);
@@ -3405,6 +3421,10 @@ function renderMotifPage() {
 
   if (typeof window.releaseThemeGate === 'function') {
     window.releaseThemeGate();
+  }
+  await Promise.all([summaryTask, transcriptTask]);
+  if (typeof window.__jamiepediaMarkPageReady === 'function') {
+    window.__jamiepediaMarkPageReady('motif');
   }
 }
 

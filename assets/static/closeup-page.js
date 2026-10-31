@@ -978,43 +978,11 @@
       return;
     }
 
-    const style = document.createElement('style');
-    style.id = 'jamiepedia-closeup-inline-styles';
-    style.textContent = [
-      '#closeupContent { max-width: none; margin-left: -13px; margin-top: 20px; margin-bottom: 20px; }',
-      '.closeup-article { max-width: none; margin: 0; padding: 6px 8px 8px; }',
-      '.closeup-header { margin-bottom: 14px; }',
-      '.closeup-header h1 { margin: 0; font-size: 1.95rem; line-height: 1.12; letter-spacing: 0.005em; font-weight: 800; }',
-      '.closeup-content { font-size: 1.03rem; line-height: 1.6; color: var(--theme-page-text); }',
-      '.closeup-heading { margin: 0; }',
-      '.closeup-heading-major { margin: 1.1em 0 0.45em; font-size: 1.95rem; line-height: 1.18; }',
-      '.closeup-heading-minor { margin: 1.0em 0 0.45em; font-size: 1.8rem; line-height: 1.18; font-weight: 700; }',
-      '.closeup-paragraph { margin: 0 0 1.05em 0; }',
-      '.closeup-subtext { margin: 0 0 0.75em 0; font-size: 0.88em; line-height: 1.45; color: #4a4a4a; font-style: normal; }',
-      '.closeup-divider { border: 0; border-top: 1px solid var(--theme-color-border_segment); margin: 1.6em 0 1.25em; opacity: 0.8; }',
-      '.closeup-media { margin: 0.95em 0 1.1em; }',
-      '.closeup-bandcamp { width: min(560px, 100%); }',
-      '.closeup-media img, .closeup-media video { width: min(680px, 100%); max-width: 100%; border-radius: 0; border: 1px solid var(--theme-color-border_pill); display: block; background: var(--theme-color-background_base); }',
-      '.closeup-video video { width: auto; height: 315px; max-width: 100%; max-height: 315px; }',
-      '.closeup-audio audio { width: min(560px, 100%); display: block; }',
-      '.closeup-youtube-frame-wrap { width: min(560px, 100%); aspect-ratio: 16 / 9; border-radius: 0; overflow: hidden; border: 1px solid var(--theme-color-border_pill); background: var(--theme-color-background_base); }',
-      '.closeup-youtube-frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }',
-      '.closeup-bandcamp-frame-wrap { width: min(560px, 100%); height: 148px; border-radius: 0; overflow: hidden; border: 0; background: transparent; display: block; padding: 0; box-sizing: border-box; line-height: 0; }',
-      '.closeup-bandcamp-frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }',
-      '.closeup-media-row { width: min(680px, 100%); display: grid; gap: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }',
-      '.closeup-media-row-cell img { width: 100%; border-radius: 0; }',
-      '.closeup-media-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }',
-      '.closeup-media-row-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }',
-      '.closeup-content a { color: var(--theme-color-link_default); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }',
-      '.closeup-content a:hover { color: var(--theme-color-accent_hover); }',
-      '.closeup-back-wrap, .closeup-nav-wrap { display: flex; gap: 12px; margin-top: 2.2em; }',
-      '.closeup-back-link, .closeup-nav-link { display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; background-color: var(--theme-color-background_base); color: var(--theme-color-link_default); border: 3px solid var(--theme-color-brand_frame); border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none; transition: all 0.3s ease; box-sizing: border-box; min-width: 140px; }',
-      '.closeup-nav-link { flex: 1; min-height: 44px; width: 100%; }',
-      '.closeup-nav-link[aria-disabled="true"] { opacity: 0.5; pointer-events: none; cursor: default; }',
-      '.closeup-back-link:hover, .closeup-nav-link:hover { color: var(--theme-color-accent_hover); }',
-      '@media (max-width: 760px) { .closeup-article { padding: 6px 6px 10px; } .closeup-header h1 { font-size: 1.78rem; } .closeup-heading-major { font-size: 1.55rem; } .closeup-heading-minor { font-size: 1.38rem; } .closeup-media-row { grid-template-columns: 1fr; } .closeup-back-wrap, .closeup-nav-wrap { flex-direction: column; } .closeup-back-link, .closeup-nav-link { width: 100%; text-align: center; } }'
-    ].join('');
-    document.head.appendChild(style);
+    const stylesheet = document.createElement('link');
+    stylesheet.id = 'jamiepedia-closeup-inline-styles';
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = withBasePath('/css/closeup.css');
+    document.head.appendChild(stylesheet);
   }
 
   function renderNotFound(container, slug) {

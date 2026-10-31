@@ -2,6 +2,13 @@
 const pathname = window.location.pathname;
 const basePath = pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
 
+window.__jamiepediaPageReady = false;
+window.__jamiepediaMarkPageReady = function (pageType) {
+  window.__jamiepediaPageType = String(pageType || 'page');
+  window.__jamiepediaPageReady = true;
+  window.dispatchEvent(new Event('jamiepedia:page-ready'));
+};
+
 const themeGateRoot = document.documentElement;
 const themeGatePath = String(window.location.pathname || '');
 const themeGateRoute = basePath && themeGatePath.startsWith(basePath)
@@ -866,7 +873,7 @@ musicFilesScript.onload = function() {
               anchor.removeAttribute('onclick');
             });
 
-            const randomButton = sidebarRoot.querySelector('button[onclick*="goToRandomSong"]');
+            const randomButton = sidebarRoot.querySelector('[data-action="random-song"]');
             if (randomButton) {
               randomButton.removeAttribute('onclick');
               randomButton.addEventListener('click', function () {
@@ -923,6 +930,16 @@ const socialIconsLink = document.createElement('link');
 socialIconsLink.rel = 'stylesheet';
 socialIconsLink.href = basePath + '/css/social-icons.css';
 document.head.appendChild(socialIconsLink);
+
+const sidebarStylesLink = document.createElement('link');
+sidebarStylesLink.rel = 'stylesheet';
+sidebarStylesLink.href = basePath + '/css/sidebar.css';
+document.head.appendChild(sidebarStylesLink);
+
+const linkboxStylesLink = document.createElement('link');
+linkboxStylesLink.rel = 'stylesheet';
+linkboxStylesLink.href = basePath + '/css/linkbox.css';
+document.head.appendChild(linkboxStylesLink);
 
 loadThemeFromCsv();
 
@@ -2766,7 +2783,11 @@ window.initializeArtistCreditPreviews = initializeArtistCreditPreviews;
 window.buildArtistCreditHtml = buildArtistCreditHtml;
 
 function populateAlbumPageCoverCredits() {
-  Promise.all([ensureCoverArtistsLoaded(), ensureArtistDirectoryLoaded()]).finally(function () {
+  if (document.querySelector('.album-main-col[data-static-album="true"]')) {
+    return Promise.resolve();
+  }
+
+  return Promise.all([ensureCoverArtistsLoaded(), ensureArtistDirectoryLoaded()]).finally(function () {
     document.querySelectorAll('.album-cover-credit').forEach(function (creditEl) {
       const container = creditEl.closest('.album-cover-container');
       if (!container) {
@@ -3098,6 +3119,10 @@ function isAlbumIndexPage() {
   return !!albumId;
 }
 
+function isStaticAlbumPage() {
+  return Boolean(document.querySelector('.album-main-col[data-static-album="true"]'));
+}
+
 function switchAlbumTab(tabName) {
   const normalizedTab = String(tabName || '').trim().toLowerCase();
   if (!normalizedTab) {
@@ -3286,6 +3311,10 @@ function appendHardcodedAlbumAltTabs(tabsEl, albumId) {
 window.switchAlbumTab = switchAlbumTab;
 
 function buildAlbumPageFromRow(row) {
+  if (isStaticAlbumPage()) {
+    return true;
+  }
+
   const host = document.querySelector('.bodybar, .album-main-col');
   if (!host || !row) {
     return false;
@@ -3453,6 +3482,10 @@ function initializeAlbumPageFromCsv(onReady) {
     done();
     return;
   }
+  if (isStaticAlbumPage()) {
+    done();
+    return;
+  }
 
   ensureAlbumsCsvLoaded(function (rows) {
     const row = findAlbumRowForCurrentPage(rows || []);
@@ -3480,15 +3513,22 @@ function runPageInitializers() {
 
   initializeAlbumPageFromCsv(function () {
     initializeAlbumTabs();
-    populateAlbumPageCoverCredits();
-    initializeAlbumSongListFromCsv();
-    initializeAlbumSummary();
-    initializeAlbumExtendedInfo();
+    const albumContentTasks = [
+      populateAlbumPageCoverCredits(),
+      initializeAlbumSongListFromCsv(),
+      initializeAlbumSummary(),
+      initializeAlbumExtendedInfo()
+    ];
     initializeDataNavButtons();
 
-    if (albumPage && typeof window.releaseThemeGate === 'function') {
-      window.releaseThemeGate();
-    }
+    Promise.all(albumContentTasks.map((task) => Promise.resolve(task))).finally(function () {
+      if (albumPage && typeof window.__jamiepediaMarkPageReady === 'function') {
+        window.__jamiepediaMarkPageReady('album');
+      }
+      if (albumPage && typeof window.releaseThemeGate === 'function') {
+        window.releaseThemeGate();
+      }
+    });
   });
   initializeSongSidebarData();
 }
@@ -3624,7 +3664,12 @@ function ensureSongSidebarCsvLoaded(onReady) {
         onReady(window.__songSidebarCsvRows);
       }
     })
-    .catch(() => {});
+    .catch(() => {
+      window.__songSidebarCsvRows = [];
+      if (typeof onReady === 'function') {
+        onReady(window.__songSidebarCsvRows);
+      }
+    });
 }
 
 function ensureSongCloseupAvailabilityLoaded(row, onReady) {
@@ -4398,64 +4443,73 @@ function getTrackLabelForAlbum(row, albumId) {
 }
 
 function initializeAlbumSongListFromCsv() {
+  if (isStaticAlbumPage()) {
+    return Promise.resolve();
+  }
+
   const songListEl = document.querySelector('#album-content-tracklist .song-list');
   if (!songListEl) {
-    return;
+    return Promise.resolve();
   }
 
   const albumId = getAlbumIdFromCurrentPage();
   if (!albumId) {
-    return;
+    return Promise.resolve();
   }
 
-  ensureSongSidebarCsvLoaded(function (rows) {
-    if (!Array.isArray(rows) || !rows.length) {
-      return;
-    }
-
-    const matches = rows.filter((row) => {
-      const ids = splitSongSidebarValues((row || {}).album_id || '').map((value) => value.toLowerCase());
-      return ids.includes(albumId);
-    });
-
-    if (!matches.length) {
-      return;
-    }
-
-    const entries = matches.map((row, index) => {
-      const trackLabel = getTrackLabelForAlbum(row, albumId);
-      const parsedTrack = parseInt(String(trackLabel || '').trim(), 10);
-      return {
-        row: row,
-        trackLabel: trackLabel,
-        trackNumber: Number.isFinite(parsedTrack) ? parsedTrack : Number.POSITIVE_INFINITY,
-        originalIndex: index
-      };
-    });
-
-    entries.sort((a, b) => {
-      if (a.trackNumber !== b.trackNumber) {
-        return a.trackNumber - b.trackNumber;
+  return new Promise((resolve) => {
+    ensureSongSidebarCsvLoaded(function (rows) {
+      if (!Array.isArray(rows) || !rows.length) {
+        resolve();
+        return;
       }
-      return a.originalIndex - b.originalIndex;
-    });
 
-    songListEl.innerHTML = '';
+      const matches = rows.filter((row) => {
+        const ids = splitSongSidebarValues((row || {}).album_id || '').map((value) => value.toLowerCase());
+        return ids.includes(albumId);
+      });
 
-    entries.forEach((entry) => {
-      const row = entry.row;
-      const title = rowToAlbumSongTitle(row);
+      if (!matches.length) {
+        resolve();
+        return;
+      }
 
-      const songItem = document.createElement('div');
-      songItem.className = 'song-item';
+      const entries = matches.map((row, index) => {
+        const trackLabel = getTrackLabelForAlbum(row, albumId);
+        const parsedTrack = parseInt(String(trackLabel || '').trim(), 10);
+        return {
+          row: row,
+          trackLabel: trackLabel,
+          trackNumber: Number.isFinite(parsedTrack) ? parsedTrack : Number.POSITIVE_INFINITY,
+          originalIndex: index
+        };
+      });
 
-      const link = document.createElement('a');
-      const href = rowToAlbumSongHref(row);
-      link.href = typeof window.toSiteHref === 'function' ? window.toSiteHref(href) : href;
-      link.textContent = title;
+      entries.sort((a, b) => {
+        if (a.trackNumber !== b.trackNumber) {
+          return a.trackNumber - b.trackNumber;
+        }
+        return a.originalIndex - b.originalIndex;
+      });
 
-      songItem.appendChild(link);
-      songListEl.appendChild(songItem);
+      songListEl.innerHTML = '';
+
+      entries.forEach((entry) => {
+        const row = entry.row;
+        const title = rowToAlbumSongTitle(row);
+
+        const songItem = document.createElement('div');
+        songItem.className = 'song-item';
+
+        const link = document.createElement('a');
+        const href = rowToAlbumSongHref(row);
+        link.href = typeof window.toSiteHref === 'function' ? window.toSiteHref(href) : href;
+        link.textContent = title;
+
+        songItem.appendChild(link);
+        songListEl.appendChild(songItem);
+      });
+      resolve();
     });
   });
 }
@@ -4893,9 +4947,13 @@ function setAlbumTabEmptyState(container, message) {
 }
 
 function initializeAlbumSummary() {
+  if (isStaticAlbumPage()) {
+    return Promise.resolve();
+  }
+
   const summaryContent = document.querySelector('#album-content-summary');
   if (!summaryContent || !document.querySelector('.album-info')) {
-    return;
+    return Promise.resolve();
   }
 
   setAlbumTabEmptyState(summaryContent, 'This page has no summary.');
@@ -4903,12 +4961,12 @@ function initializeAlbumSummary() {
   const route = getMusicRouteContext(window.location.pathname);
   const slug = route.slug;
   if (!slug) {
-    return;
+    return Promise.resolve();
   }
 
   const summaryPath = basePath + '/public/albums/summaries/' + slug + '.txt';
 
-  fetch(summaryPath, { cache: 'no-store' })
+  return fetch(summaryPath, { cache: 'no-store' })
     .then(function (res) {
       return res.ok ? res.text() : null;
     })
@@ -4931,9 +4989,13 @@ function initializeAlbumSummary() {
 }
 
 function initializeAlbumExtendedInfo() {
+  if (isStaticAlbumPage()) {
+    return Promise.resolve();
+  }
+
   const extendedContent = document.querySelector('#album-content-extended');
   if (!extendedContent || !document.querySelector('.album-info')) {
-    return;
+    return Promise.resolve();
   }
 
   setAlbumTabEmptyState(extendedContent, 'This page has no extended info.');
@@ -4941,12 +5003,12 @@ function initializeAlbumExtendedInfo() {
   const route = getMusicRouteContext(window.location.pathname);
   const slug = route.slug;
   if (!slug) {
-    return;
+    return Promise.resolve();
   }
 
   const extendedPath = basePath + '/public/albums/extended/' + slug + '.txt';
 
-  fetch(extendedPath, { cache: 'no-store' })
+  return fetch(extendedPath, { cache: 'no-store' })
     .then(function (res) {
       return res.ok ? res.text() : null;
     })

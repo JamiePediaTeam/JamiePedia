@@ -622,9 +622,9 @@
 
   function loadArtistSummaryText(slug) {
     const candidates = [
-      '../../public/artists/summaries/' + slug + '.txt',
-      '../../public/artists/' + slug + '.txt',
-      '../../public/summaries/' + slug + '.txt'
+      '/public/artists/summaries/' + slug + '.txt',
+      '/public/artists/' + slug + '.txt',
+      '/public/summaries/' + slug + '.txt'
     ];
 
     return candidates.reduce((promise, path) => {
@@ -633,7 +633,8 @@
           return result;
         }
 
-        return fetch(path, { cache: 'no-store' })
+        const requestPath = typeof window.toSiteHref === 'function' ? window.toSiteHref(path) : path;
+        return fetch(requestPath, { cache: 'no-store' })
           .then((response) => response.ok ? response.text() : '')
           .then((text) => String(text || '').trim())
           .catch(() => '');
@@ -731,7 +732,10 @@
   }
 
   function ensureCoverArtistMap() {
-    return fetch('../../public/csv/JamiePedia Data - Cover Artists.csv', { cache: 'no-store' })
+    const csvPath = typeof window.toSiteHref === 'function'
+      ? window.toSiteHref('/public/csv/JamiePedia Data - Cover Artists.csv')
+      : '/public/csv/JamiePedia Data - Cover Artists.csv';
+    return fetch(csvPath, { cache: 'no-store' })
       .then((response) => response.ok ? response.text() : '')
       .then((text) => parseCoverArtistCsv(text))
       .catch(() => Object.create(null));
@@ -946,6 +950,10 @@
         const emptyCreditsNode = document.getElementById('artistCreditsEmpty');
         if (emptyCreditsNode) {
           emptyCreditsNode.hidden = hasAnyCredits;
+        }
+
+        if (typeof window.__jamiepediaMarkPageReady === 'function') {
+          window.__jamiepediaMarkPageReady('artist');
         }
       });
     });

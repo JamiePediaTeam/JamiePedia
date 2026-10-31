@@ -1,0 +1,50 @@
+.sidenavi {
+  line-height: 26px;
+  margin-left: 16px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.sidelink {
+  display: block;
+}
+
+.divide {
+  height: 2px;
+  border-width: 0;
+  margin-right: 16px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+  color: var(--theme-color-border_empty_state);
+  background-color: var(--theme-color-border_empty_state);
+  width: 88px;
+}
+
+.socialleft {
+  display: inline;
+  margin-left: 2px;
+  margin-right: 3px;
+}
+
+.social {
+  display: inline;
+  margin-left: 3px;
+  margin-right: 3px;
+}
+
+.random-btn {
+  background: none;
+  border: none;
+  color: var(--theme-color-link_default);
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 1em;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.3s ease;
+  line-height: 26px;
+}
+
+.random-btn:hover {
+  color: var(--theme-color-accent_hover);
+}

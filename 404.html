@@ -444,7 +444,36 @@
           }
         }
 
-        function redirectToShell(shellPath, pathWithoutBase, siteBase) {
+        function renderShellHtml(html) {
+          var source = String(html || '').trim();
+          if (!source || !/<html[\s>]/i.test(source) || !/<body[\s>]/i.test(source)) {
+            return false;
+          }
+
+          // Reparse as a full document so its shared stylesheets and page scripts run normally.
+          document.open('text/html', 'replace');
+          document.write(source);
+          document.close();
+          return true;
+        }
+
+        async function redirectToShell(shellPath, pathWithoutBase, siteBase) {
+          var normalized = toExtensionlessPath(pathWithoutBase);
+          var routeParts = normalized.split('/').filter(Boolean);
+          var prefix = String(shellPath || '').indexOf('/artists/') === 0
+            ? 'artists'
+            : (String(shellPath || '').indexOf('/motifs/') === 0 ? 'motifs' : 'music');
+          var entitySlug = prefix === 'music'
+            ? String(routeParts[1] || '').trim().toLowerCase()
+            : String(routeParts[1] || '').trim().toLowerCase();
+          if (entitySlug) {
+            var entityHtml = await fetchText(withSiteBase('/' + prefix + '/' + entitySlug + '/index.html', siteBase));
+            if (entityHtml && renderShellHtml(entityHtml)) {
+              return true;
+            }
+          }
+
+          // Keep the legacy client-rendered shell as a development/migration fallback.
           var requestedRoute = pathWithoutBase + window.location.search + window.location.hash;
           var shellHref = withSiteBase(shellPath, siteBase) + '?__jp_route=' + encodeURIComponent(requestedRoute);
           window.location.replace(shellHref);
@@ -683,14 +712,14 @@
             var albumRoutes = await getKnownAlbumRoutes(siteBase);
             var albumSections = new Set(['tracklist', 'summary', 'extended']);
             if (albumRoutes.has(normalized) || hasKnownSectionRoute(normalized, albumRoutes, albumSections, 'music')) {
-              redirectToShell('/music/album-shell.html', pathWithoutBase, siteBase);
+              await redirectToShell('/music/album-shell.html', pathWithoutBase, siteBase);
               return;
             }
 
             var songRoutes = await getKnownSongRoutes(siteBase);
             var songSections = new Set(['connections', 'motifs', 'summary', 'lyrics', 'extended', 'close-up', 'closeup']);
             if (songRoutes.has(normalized) || hasKnownSectionRoute(normalized, songRoutes, songSections, 'music')) {
-              redirectToShell('/music/song-shell.html', pathWithoutBase, siteBase);
+              await redirectToShell('/music/song-shell.html', pathWithoutBase, siteBase);
               return;
             }
 
@@ -705,7 +734,7 @@
           if (normalized.indexOf('/motifs/') === 0) {
             var motifRoutes = await getKnownMotifRoutes(siteBase);
             if (motifRoutes.has(normalized)) {
-              redirectToShell('/motifs/motif-shell.html', pathWithoutBase, siteBase);
+              await redirectToShell('/motifs/motif-shell.html', pathWithoutBase, siteBase);
               return;
             }
 
@@ -721,7 +750,7 @@
             var artistRoutes = await getKnownArtistRoutes(siteBase);
             var artistSections = new Set(['credits', 'summary']);
             if (artistRoutes.has(normalized) || hasKnownSectionRoute(normalized, artistRoutes, artistSections, 'artists')) {
-              redirectToShell('/artists/artist-shell.html', pathWithoutBase, siteBase);
+              await redirectToShell('/artists/artist-shell.html', pathWithoutBase, siteBase);
               return;
             }
 

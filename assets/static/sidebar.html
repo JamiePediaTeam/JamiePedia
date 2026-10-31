@@ -2,102 +2,17 @@
 <!DOCTYPE html>
 <html data-theme-id="default">
   <head>
-    <style>
-      .sidenavi {
-        line-height: 26px;
-        margin-left: 16px;
-        margin-top: 20px;
-        margin-bottom: 20px;
-      }
-      .sidelink {
-        display: block;
-      }
-      a {
-        text-decoration: none;
-        color: var(--theme-color-link_default);
-      }
-      a:hover {
-        color: var(--theme-color-accent_hover);
-      }
-      .divide {
-        height: 2px;
-        border-width:0;
-        margin-right: 16px;
-        margin-top: 12px;
-        margin-bottom: 12px;
-        color: var(--theme-color-border_empty_state);
-        background-color: var(--theme-color-border_empty_state);
-        width: 88px;
-      }
-      .socialleft {
-        display: inline;
-        margin-left: 2px;
-        margin-right: 3px;
-      }
-      .social {
-        display: inline;
-        margin-left: 3px;
-        margin-right: 3px;
-      }
-      .random-btn {
-        background: none;
-        border: none;
-        color: var(--theme-color-link_default);
-        cursor: pointer;
-        text-decoration: none;
-        font-size: 1em;
-        padding: 0;
-        font-family: inherit;
-        transition: color 0.3s ease;
-        line-height: 26px;
-      }
-      .random-btn:hover {
-        color: var(--theme-color-accent_hover);
-      }
-    </style>
   </head>
   <body>
     <div class="sidenavi">
-        <a href="javascript:void(0);" onclick="goToPage('/')" class="sidelink">home</a>
-        <a href="javascript:void(0);" onclick="goToPage('/music.html')" class="sidelink">music</a>
-      <a href="javascript:void(0);" onclick="goToPage('/motifs.html')" class="sidelink">motifs</a>
-      <a href="javascript:void(0);" onclick="goToPage('/artists.html')" class="sidelink">artists</a>
-      <a href="javascript:void(0);" onclick="goToPage('/motif-map.html')" class="sidelink">motif map</a>
-        <button class="sidelink random-btn" onclick="goToRandomSong()">random</button>
-        <a href="javascript:void(0);" onclick="goToPage('/about.html')" class="sidelink">about</a>
-        <a href="javascript:void(0);" onclick="goToPage('/contact.html')" class="sidelink">contact</a>
+      <a href="/" class="sidelink">home</a>
+      <a href="/music" class="sidelink">music</a>
+      <a href="/motifs" class="sidelink">motifs</a>
+      <a href="/artists" class="sidelink">artists</a>
+      <a href="/motif-map" class="sidelink">motif map</a>
+      <button type="button" class="sidelink random-btn" data-action="random-song">random</button>
+      <a href="/about" class="sidelink">about</a>
+      <a href="/contact" class="sidelink">contact</a>
     </div>
-    <script>
-      function goToPage(page) {
-        if (typeof window.toSiteHref === 'function') {
-          window.location.href = window.toSiteHref(page);
-          return;
-        }
-
-        // Determine base path for GitHub Pages compatibility
-        const pathname = window.location.pathname;
-        const basePath = pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
-        window.location.href = basePath + page;
-      }
-      
-      function goToRandomSong() {
-        // Determine base path for GitHub Pages compatibility
-        const pathname = window.location.pathname;
-        const basePath = pathname.includes('/JamiePedia/') ? '/JamiePedia' : '';
-        
-        if (!musicFilePaths || musicFilePaths.length === 0) {
-          console.error('No music files found in musicFilePaths');
-          return;
-        }
-        
-        const randomEntry = musicFilePaths[Math.floor(Math.random() * musicFilePaths.length)];
-        if (typeof window.toSiteHref === 'function') {
-          window.location.href = window.toSiteHref(randomEntry.path);
-          return;
-        }
-
-        window.location.href = basePath + randomEntry.path;
-      }
-    </script>
   </body>
 </html>

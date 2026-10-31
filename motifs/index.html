@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html data-theme-id="default">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Motifs</title>
+    <meta name="title" content="Motifs" />
+    <meta
+      name="description"
+      content="Browse motif pages and references across Jamie Paige songs." />
+
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://jamiepedia.page/JamiePedia/motifs.html" />
+    <meta property="twitter:title" content="Motifs" />
+    <meta
+      property="twitter:description"
+      content="Motif pages and references for songs on JamiePedia." />
+    <meta
+      property="twitter:image"
+      content="https://jamiepedia.page/JamiePedia/public/images/cover-art/bs.png" />
+    <meta name="theme-color" content="#F05E55" />
+    <link rel="icon" type="image/x-icon" href="public/images/favicon.ico" />
+    <link href="styles.css" rel="stylesheet" type="text/css" media="all" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800" />
+    <script
+      src="https://code.jquery.com/jquery-3.6.0.min.js"
+      integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+      crossorigin="anonymous"
+    ></script>
+    <script src="assets/static/load.js"></script>
+    <link href="css/music.css" rel="stylesheet" type="text/css" media="all" />
+    <meta name="robots" content="index,follow" /><meta property="og:type" content="website" /><meta
+      property="og:url"
+      content="https://jamiepedia.page/motifs/" /><meta property="og:title" content="Motifs" /><meta
+      property="og:description"
+      content="Browse motif pages and references across Jamie Paige songs." /><meta
+      name="twitter:url"
+      content="https://jamiepedia.page/motifs/" /><meta
+      name="twitter:title"
+      content="Motifs" /><meta
+      name="twitter:description"
+      content="Browse motif pages and references across Jamie Paige songs." /><link
+      rel="canonical"
+      href="https://jamiepedia.page/motifs/"
+  /></head>
+  <body>
+    <a href="./"><div class="head"></div></a>
+    <div class="navi">
+      <span id="navi"></span>
+    </div>
+
+    <table class="table">
+      <tr>
+        <td>
+          <div class="sidebar1">
+            <span id="sidebar"></span>
+          </div>
+        </td>
+        <td>
+          <div class="bodybar">
+            <div id="motifSections"></div>
+          </div>
+        </td>
+      </tr>
+    </table>
+    <script src="assets/static/csv-data.js"></script>
+    <script>
+      (async function () {
+        function resolveMotifImagePath(rawPath) {
+          const text = String(rawPath || "").trim();
+          if (!text) {
+            return "public/images/cover-art/bs.png";
+          }
+
+          if (/^https?:\/\//i.test(text) || text.startsWith("data:")) {
+            return text;
+          }
+
+          if (text.startsWith("../public/")) {
+            return text.replace(/^\.\.\//, "");
+          }
+
+          return text;
+        }
+
+        function createMotifTile(motif) {
+          const tile = document.createElement("div");
+          tile.className = "album-tile";
+
+          const link = document.createElement("a");
+          link.href = "motifs/" + (motif.pageSlug || motif.id);
+          tile.appendChild(link);
+
+          const hasVariations = Array.isArray(motif.variations) && motif.variations.length > 0;
+
+          if (hasVariations) {
+            const cover = document.createElement("div");
+            cover.className = "album-cover motif-variation-cover-panel";
+
+            const artWrap = document.createElement("div");
+            artWrap.className = "motif-variation-cover-art-wrap";
+            cover.appendChild(artWrap);
+
+            const art = document.createElement("img");
+            art.className = "motif-variation-cover-art";
+            art.src = resolveMotifImagePath(motif.image);
+            art.alt = motif.name + " motif";
+            artWrap.appendChild(art);
+
+            const side = document.createElement("div");
+            side.className = "motif-variation-cover-side";
+            motif.variations.forEach((variation) => {
+              const badge = document.createElement("span");
+              badge.className = "motif-variation-cover-badge";
+              badge.style.setProperty(
+                "--variation-color",
+                variation.color || motif.color || "#9ec7cd",
+              );
+              badge.textContent = variation.label || variation.id || "?";
+              side.appendChild(badge);
+            });
+
+            cover.appendChild(side);
+            link.appendChild(cover);
+          } else {
+            const image = document.createElement("img");
+            image.className = "album-cover";
+            image.src = resolveMotifImagePath(motif.image);
+            image.alt = motif.name + " motif";
+            link.appendChild(image);
+          }
+
+          const title = document.createElement("span");
+          title.className = "album-title";
+          title.textContent = motif.name;
+          link.appendChild(title);
+
+          return tile;
+        }
+
+        function getMotifCategory(motif) {
+          const motifType = String(motif && motif.motifType ? motif.motifType : "").toLowerCase();
+
+          if (motifType === "lyrical" || (motif && motif.isLyrical)) {
+            return "lyrical";
+          }
+
+          if (motifType === "sample") {
+            return "sample";
+          }
+
+          return "motif";
+        }
+
+        function createMotifSection(headingText, motifs) {
+          const section = document.createElement("section");
+
+          const heading = document.createElement("h2");
+          heading.className = "album-section-heading";
+          heading.textContent = headingText;
+          section.appendChild(heading);
+
+          const gallery = document.createElement("div");
+          gallery.className = "albumgallery";
+          section.appendChild(gallery);
+
+          motifs.forEach((motif) => {
+            gallery.appendChild(createMotifTile(motif));
+          });
+
+          return section;
+        }
+
+        const sectionsRoot = document.getElementById("motifSections");
+        const motifs =
+          window.MotifData && Array.isArray(window.MotifData.allMotifs)
+            ? window.MotifData.allMotifs
+            : [];
+
+        if (!sectionsRoot || motifs.length === 0) {
+          return;
+        }
+
+        const motifsWithPages = motifs.filter((motif) => {
+          if (!motif || motif.hasPage === false) {
+            return false;
+          }
+
+          return Boolean(String(motif.pageSlug || motif.id || "").trim());
+        });
+
+        const verifiedMotifs = motifsWithPages;
+
+        const categorized = {
+          motif: [],
+          lyrical: [],
+          sample: [],
+        };
+
+        verifiedMotifs.forEach((motif) => {
+          const category = getMotifCategory(motif);
+          if (!categorized[category]) {
+            categorized.motif.push(motif);
+            return;
+          }
+
+          categorized[category].push(motif);
+        });
+
+        const sections = [
+          { key: "motif", heading: "Motifs" },
+          { key: "lyrical", heading: "Lyrical References" },
+          { key: "sample", heading: "Samples" },
+        ];
+
+        sectionsRoot.innerHTML = "";
+        sections.forEach((section) => {
+          const motifsForSection = categorized[section.key] || [];
+          if (motifsForSection.length === 0) {
+            return;
+          }
+
+          sectionsRoot.appendChild(createMotifSection(section.heading, motifsForSection));
+        });
+        if (typeof window.__jamiepediaMarkPageReady === "function") {
+          window.__jamiepediaMarkPageReady("motifs-index");
+        }
+      })();
+    </script>
+  </body>
+</html>

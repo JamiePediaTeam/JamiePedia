@@ -1487,7 +1487,10 @@ function switchVersion(versionName, options) {
   }
   
   // Preserve the current tab when changing versions, defaulting to Connections.
-  switchTab(nextTabName || 'motifs');
+  switchTab(nextTabName || 'motifs', {
+    skipUrlUpdate: Boolean(settings.skipHashUpdate),
+    urlMode: 'replace'
+  });
 
   syncSongDocumentStateToActiveVersion();
   refreshSongRowDependentUi();
@@ -1891,7 +1894,8 @@ function buildPublicTextPath(folder, slug, extension) {
     lyrics: 'songs/lyrics'
   };
   const mappedFolder = folderByType[folder] || folder;
-  return '../../public/' + mappedFolder + '/' + encodeURIComponent(slug) + '.' + extension;
+  const path = '/public/' + mappedFolder + '/' + encodeURIComponent(slug) + '.' + extension;
+  return typeof window.toSiteHref === 'function' ? window.toSiteHref(path) : path;
 }
 
 function fetchTextFile(path) {
@@ -2478,12 +2482,14 @@ function initializeSongConnectionsFeature() {
     return window.__songConnectionsInitPromise;
   }
 
-  const prefix = '../../';
+  const resolveSiteAsset = (path) => typeof window.toSiteHref === 'function'
+    ? window.toSiteHref('/' + String(path || '').replace(/^\/+/, ''))
+    : ('/' + String(path || '').replace(/^\/+/, ''));
 
   window.__songConnectionsInitPromise = loadScriptOnce('https://www.youtube.com/iframe_api')
-    .then(() => loadScriptOnce(prefix + 'assets/static/csv-data.js'))
-    .then(() => loadScriptOnce(prefix + 'assets/static/song-lyrics.js'))
-    .then(() => loadScriptOnce(prefix + 'assets/static/song-motifs.js?v=20261027f'));
+    .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/csv-data.js')))
+    .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/song-lyrics.js')))
+    .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/song-motifs.js?v=20261027f')));
 
   return window.__songConnectionsInitPromise;
 }
@@ -2614,7 +2620,10 @@ function getCoverArtist(filename) {
 window.getCoverArtist = getCoverArtist;
 
 function initializeSongPage() {
-  Promise.all([ensureCoverArtistsLoaded(), ensureSongSidebarRowsLoaded(), loadScriptOnce('../../assets/static/closeup-page.js?v=20261024a')]).finally(async () => {
+  const closeupScript = typeof window.toSiteHref === 'function'
+    ? window.toSiteHref('/assets/static/closeup-page.js?v=20261024a')
+    : '/assets/static/closeup-page.js?v=20261024a';
+  Promise.all([ensureCoverArtistsLoaded(), ensureSongSidebarRowsLoaded(), loadScriptOnce(closeupScript)]).finally(async () => {
     const songRows = getSongRowsForCurrentPage();
     buildSongMainColShell(songRows);
     loadVersionConfig(songRows);
@@ -2669,6 +2678,10 @@ function initializeSongPage() {
     const textLoadTask = loadSongTextContent();
     const connectionsLoadTask = initializeSongConnectionsFeature();
     await Promise.all([textLoadTask, connectionsLoadTask]);
+
+    if (typeof window.__jamiepediaMarkPageReady === 'function') {
+      window.__jamiepediaMarkPageReady('song');
+    }
 
     window.addEventListener('popstate', () => {
       const targetTab = getSongTabForCurrentUrl() || 'motifs';

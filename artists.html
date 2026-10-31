@@ -7,11 +7,11 @@
     <meta name="title" content="Artists">
     <meta name="description" content="Artist and vocalist pages for collaborators across JamiePedia.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://jamiepediateam.github.io/JamiePedia/artists.html">
+    <meta property="og:url" content="https://jamiepedia.page/JamiePedia/artists.html">
     <meta property="og:title" content="Artists">
     <meta property="og:description" content="Artist and vocalist pages for collaborators across JamiePedia.">
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://jamiepediateam.github.io/JamiePedia/artists.html">
+    <meta property="twitter:url" content="https://jamiepedia.page/JamiePedia/artists.html">
     <meta property="twitter:title" content="Artists">
     <meta property="twitter:description" content="Artist and vocalist pages for collaborators across JamiePedia.">
     <meta name="theme-color" content="#F05E55">
@@ -231,6 +231,9 @@
               }
               mount.appendChild(createSection(headingLabels[type] || (type + 's'), matches, variantCountsBySlug));
             });
+            if (typeof window.__jamiepediaMarkPageReady === 'function') {
+              window.__jamiepediaMarkPageReady('artists-index');
+            }
           });
         }
 

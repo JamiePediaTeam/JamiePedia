@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html data-theme-id="default">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Artists</title>
+    <meta name="title" content="Artists" />
+    <meta
+      name="description"
+      content="Artist and vocalist pages for collaborators across JamiePedia." />
+
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://jamiepedia.page/JamiePedia/artists.html" />
+    <meta property="twitter:title" content="Artists" />
+    <meta
+      property="twitter:description"
+      content="Artist and vocalist pages for collaborators across JamiePedia." />
+    <meta name="theme-color" content="#F05E55" />
+    <link rel="icon" type="image/x-icon" href="public/images/favicon.ico" />
+    <link href="styles.css" rel="stylesheet" type="text/css" media="all" />
+    <link href="css/music.css" rel="stylesheet" type="text/css" media="all" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800" />
+    <script src="assets/static/load.js?v=20261010c"></script>
+    <meta name="robots" content="index,follow" /><meta property="og:type" content="website" /><meta
+      property="og:url"
+      content="https://jamiepedia.page/artists/" /><meta
+      property="og:title"
+      content="Artists" /><meta
+      property="og:description"
+      content="Artist and vocalist pages for collaborators across JamiePedia." /><meta
+      name="twitter:url"
+      content="https://jamiepedia.page/artists/" /><meta
+      name="twitter:title"
+      content="Artists" /><meta
+      name="twitter:description"
+      content="Artist and vocalist pages for collaborators across JamiePedia." /><link
+      rel="canonical"
+      href="https://jamiepedia.page/artists/"
+  /></head>
+  <body>
+    <a href="./"><div class="head"></div></a>
+    <div class="navi">
+      <span id="navi"></span>
+    </div>
+
+    <table class="table">
+      <tr>
+        <td>
+          <div class="sidebar1">
+            <span id="sidebar"></span>
+          </div>
+        </td>
+        <td>
+          <div class="bodybar">
+            <div id="artistSections"></div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <script>
+      (function () {
+        const fallbackOrderedTypes = [
+          "Musical Artists",
+          "Musical Groups",
+          "Vocalists",
+          "Voice Banks",
+          "Text-to-Speech",
+          "Visual Artists",
+          "Miscellaneous",
+        ];
+        const headingLabels = {
+          "Musical Artists": "Musical Artists",
+          "Musical Groups": "Musical Groups",
+          Vocalists: "Vocalists",
+          "Voice Banks": "Voice Banks",
+          "Text-to-Speech": "Text-to-Speech",
+          "Visual Artists": "Visual Artists",
+          Miscellaneous: "Miscellaneous",
+        };
+
+        function splitPipeValues(value) {
+          return String(value || "")
+            .split(/\s*\|\s*/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+
+        function normalizeArtistCategoryType(value) {
+          const raw = splitPipeValues(value)[0] || "";
+          if (!raw) {
+            return "";
+          }
+          const normalized = raw.toLowerCase();
+          if (
+            normalized === "musical artists" ||
+            normalized === "musical artist" ||
+            normalized === "music artists" ||
+            normalized === "music artist"
+          ) {
+            return "Musical Artists";
+          }
+          if (
+            normalized === "musical groups" ||
+            normalized === "music group" ||
+            normalized === "music groups" ||
+            normalized === "musical group"
+          ) {
+            return "Musical Groups";
+          }
+          if (normalized === "vocalists" || normalized === "vocalist") {
+            return "Vocalists";
+          }
+          if (
+            normalized === "voice banks" ||
+            normalized === "voice bank" ||
+            normalized === "voicebanks" ||
+            normalized === "voicebank"
+          ) {
+            return "Voice Banks";
+          }
+          if (
+            normalized === "text-to-speech" ||
+            normalized === "text to speech" ||
+            normalized === "text-to-speechs" ||
+            normalized === "text to speeches"
+          ) {
+            return "Text-to-Speech";
+          }
+          if (
+            normalized === "visual artists" ||
+            normalized === "visual artist" ||
+            normalized === "graphic artist" ||
+            normalized === "graphic artists"
+          ) {
+            return "Visual Artists";
+          }
+          if (normalized === "miscellaneous" || normalized === "misc." || normalized === "misc") {
+            return "Miscellaneous";
+          }
+          return raw;
+        }
+
+        function getArtistCategoryOrder() {
+          const basePath = window.location.pathname.includes("/JamiePedia/") ? "/JamiePedia" : "";
+          return fetch(basePath + "/public/csv/JamiePedia Data - Categories.csv", {
+            cache: "no-store",
+          })
+            .then((response) => (response.ok ? response.text() : ""))
+            .then((text) => {
+              const lines = String(text || "")
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter(Boolean);
+              if (lines.length < 2) {
+                return fallbackOrderedTypes;
+              }
+
+              const headers = lines[0].split(",").map((header) =>
+                String(header || "")
+                  .trim()
+                  .toLowerCase(),
+              );
+              const artistsDefaultIndex = headers.indexOf("artists default");
+              if (artistsDefaultIndex === -1) {
+                return fallbackOrderedTypes;
+              }
+
+              const orderedTypes = [];
+              const seen = new Set();
+              lines.slice(1).forEach((line) => {
+                const values = line.split(",");
+                const value = String(values[artistsDefaultIndex] || "").trim();
+                const normalized = normalizeArtistCategoryType(value);
+                if (!normalized || seen.has(normalized)) {
+                  return;
+                }
+                orderedTypes.push(normalized);
+                seen.add(normalized);
+              });
+
+              return orderedTypes.length ? orderedTypes : fallbackOrderedTypes;
+            })
+            .catch(() => fallbackOrderedTypes);
+        }
+
+        function getArtistTileHref(page, hasSiblingVariants) {
+          if (!page) {
+            return "#";
+          }
+
+          const baseRoute = "/artists/" + String(page.slug || "").trim();
+          const canonicalRoute =
+            typeof window.toSiteHref === "function" ? window.toSiteHref(baseRoute) : baseRoute;
+
+          if (hasSiblingVariants) {
+            return canonicalRoute;
+          }
+
+          return page.routeKey || page.href || canonicalRoute;
+        }
+
+        function createArtistTile(page, hasSiblingVariants) {
+          const alias = (page.aliases || [])[0] || {};
+          const tileName =
+            String(
+              (page && (page.artistCategory || page.category || page.primaryName)) || "",
+            ).trim() || "Untitled";
+          const tile = document.createElement("div");
+          tile.className = "album-tile";
+
+          const link = document.createElement("a");
+          link.href = getArtistTileHref(page, hasSiblingVariants);
+          tile.appendChild(link);
+
+          const image = document.createElement("img");
+          image.className = "album-cover";
+          image.alt = tileName + " image";
+          if (alias.image) {
+            image.src = alias.image;
+          }
+          link.appendChild(image);
+
+          const title = document.createElement("span");
+          title.className = "album-title";
+          title.textContent = tileName;
+          link.appendChild(title);
+
+          return tile;
+        }
+
+        function createSection(titleText, pages, variantCountsBySlug) {
+          const section = document.createElement("section");
+          const heading = document.createElement("h2");
+          heading.className = "album-section-heading";
+          heading.textContent = titleText;
+          section.appendChild(heading);
+
+          const gallery = document.createElement("div");
+          gallery.className = "albumgallery";
+          pages.forEach((page) => {
+            const slug = String((page && page.slug) || "")
+              .trim()
+              .toLowerCase();
+            const hasSiblingVariants = (variantCountsBySlug[slug] || 0) > 1;
+            gallery.appendChild(createArtistTile(page, hasSiblingVariants));
+          });
+          section.appendChild(gallery);
+          return section;
+        }
+
+        function renderArtistSections() {
+          const mount = document.getElementById("artistSections");
+          if (!mount || typeof ensureArtistDirectoryLoaded !== "function") {
+            return;
+          }
+
+          Promise.all([ensureArtistDirectoryLoaded(), getArtistCategoryOrder()]).then(function ([
+            directory,
+            orderedTypes,
+          ]) {
+            const allPages =
+              directory && Array.isArray(directory.pages)
+                ? directory.pages.filter(function (page) {
+                    return page && page.hasPage !== false;
+                  })
+                : [];
+
+            const variantCountsBySlug = allPages.reduce(function (accumulator, page) {
+              const slug = String((page && page.slug) || "")
+                .trim()
+                .toLowerCase();
+              if (!slug) {
+                return accumulator;
+              }
+              accumulator[slug] = (accumulator[slug] || 0) + 1;
+              return accumulator;
+            }, Object.create(null));
+
+            const seenSlugs = new Set();
+            const pages = allPages.filter(function (page) {
+              const slug = String((page && page.slug) || "")
+                .trim()
+                .toLowerCase();
+              if (!slug || seenSlugs.has(slug)) {
+                return false;
+              }
+              seenSlugs.add(slug);
+              return true;
+            });
+
+            mount.innerHTML = "";
+            const effectiveTypes =
+              orderedTypes && orderedTypes.length ? orderedTypes : fallbackOrderedTypes;
+            effectiveTypes.forEach(function (type) {
+              const matches = pages
+                .filter(function (page) {
+                  return page && page.type === type;
+                })
+                .sort(function (a, b) {
+                  return String(a.primaryName || "").localeCompare(String(b.primaryName || ""));
+                });
+              if (!matches.length) {
+                return;
+              }
+              mount.appendChild(
+                createSection(headingLabels[type] || type + "s", matches, variantCountsBySlug),
+              );
+            });
+            if (typeof window.__jamiepediaMarkPageReady === "function") {
+              window.__jamiepediaMarkPageReady("artists-index");
+            }
+          });
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", renderArtistSections, { once: true });
+        } else {
+          renderArtistSections();
+        }
+      })();
+    </script>
+  </body>
+</html>

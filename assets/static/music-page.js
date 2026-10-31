@@ -510,9 +510,15 @@
           mount.appendChild(heading);
           mount.appendChild(gallery);
         });
+        if (typeof window.__jamiepediaMarkPageReady === 'function') {
+          window.__jamiepediaMarkPageReady('music-index');
+        }
       })
       .catch(() => {
         mount.innerHTML = '';
+        if (typeof window.__jamiepediaMarkPageReady === 'function') {
+          window.__jamiepediaMarkPageReady('music-index');
+        }
       });
   }
 

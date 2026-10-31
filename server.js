@@ -2,7 +2,15 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3000;
+const requestedPort = Number(process.env.PORT);
+const PORT = Number.isInteger(requestedPort) && requestedPort >= 0 ? requestedPort : 3000;
+const SITE_BASE_PATH = (() => {
+  const raw = String(process.env.SITE_BASE_PATH || '').trim();
+  if (!raw || raw === '/') {
+    return '';
+  }
+  return '/' + raw.split('/').filter(Boolean).join('/');
+})();
 const SONGS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Songs.csv');
 const ALBUMS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Albums.csv');
 const MOTIFS_CSV_PATH = path.join(__dirname, 'public/csv/JamiePedia Data - Motifs.csv');
@@ -469,8 +477,8 @@ function getCandidatePaths(requestPath) {
   const candidates = [relativePath];
 
   if (!path.extname(relativePath)) {
-    candidates.push(relativePath + '.html');
     candidates.push(path.join(relativePath, 'index.html'));
+    candidates.push(relativePath + '.html');
   }
 
   return Array.from(new Set(candidates)).map((candidate) => path.join(__dirname, candidate));
@@ -596,6 +604,8 @@ function detectContentType(filePath) {
   if (filePath.endsWith('.css')) return 'text/css';
   if (filePath.endsWith('.js')) return 'application/javascript';
   if (filePath.endsWith('.csv')) return 'text/csv';
+  if (filePath.endsWith('.xml')) return 'application/xml';
+  if (filePath.endsWith('.txt')) return 'text/plain';
   if (filePath.endsWith('.mp3')) return 'audio/mpeg';
   if (filePath.endsWith('.wav')) return 'audio/wav';
   if (filePath.endsWith('.m4a')) return 'audio/mp4';
@@ -698,13 +708,43 @@ function readFirstExistingFile(candidates, callback) {
   next(null);
 }
 
+function serveGeneratedRouteOrShell(res, routePath, shellPath, shellLabel) {
+  const generatedIndexPath = path.join(__dirname, toRelativeRequestPath(routePath), 'index.html');
+  fs.readFile(generatedIndexPath, (indexError, generatedHtml) => {
+    if (!indexError) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(generatedHtml, 'utf-8');
+      return;
+    }
+
+    fs.readFile(shellPath, (shellError, shellContent) => {
+      if (shellError) {
+        console.error(`Error reading ${shellPath}:`, shellError.message);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('500 - ' + shellLabel + ' shell missing', 'utf-8');
+        return;
+      }
+
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(shellContent, 'utf-8');
+    });
+  });
+}
+
 const server = http.createServer((req, res) => {
   // Parse URL so query strings do not become part of the local file path.
   const rawUrl = req.url || '/';
   let requestPath = '/';
+  let forceShellRender = false;
   try {
     const parsedUrl = new URL(rawUrl, 'http://localhost');
     requestPath = decodeURIComponent(parsedUrl.pathname || '/');
+    if (SITE_BASE_PATH && requestPath === SITE_BASE_PATH) {
+      requestPath = '/';
+    } else if (SITE_BASE_PATH && requestPath.startsWith(SITE_BASE_PATH + '/')) {
+      requestPath = requestPath.slice(SITE_BASE_PATH.length) || '/';
+    }
+    forceShellRender = parsedUrl.searchParams.get('__jp_render') === '1';
   } catch (error) {
     // Fall back to best effort for malformed URLs.
     requestPath = rawUrl.split('?')[0].split('#')[0] || '/';
@@ -715,84 +755,38 @@ const server = http.createServer((req, res) => {
     }
   }
 
-  const candidatePaths = getCandidatePaths(requestPath);
+  const candidatePaths = forceShellRender ? [] : getCandidatePaths(requestPath);
 
   const rawRouteRequested = /\/raw\/?$/i.test(requestPath);
   
   readFirstExistingFile(candidatePaths, (err, file) => {
     if (err) {
       if (!rawRouteRequested && isKnownSongRouteRequest(requestPath)) {
-        fs.readFile(SONG_SHELL_PATH, (shellErr, shellContent) => {
-          if (shellErr) {
-            console.error(`Error reading ${SONG_SHELL_PATH}:`, shellErr.message);
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('500 - Song shell missing', 'utf-8');
-            return;
-          }
-
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end(shellContent, 'utf-8');
-        });
+        const parts = normalizeSongRoutePath(requestPath).split('/').filter(Boolean);
+        serveGeneratedRouteOrShell(res, '/music/' + parts[1], SONG_SHELL_PATH, 'Song');
         return;
       }
 
       if (!rawRouteRequested && isKnownAlbumRouteRequest(requestPath)) {
-        fs.readFile(ALBUM_SHELL_PATH, (shellErr, shellContent) => {
-          if (shellErr) {
-            console.error(`Error reading ${ALBUM_SHELL_PATH}:`, shellErr.message);
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('500 - Album shell missing', 'utf-8');
-            return;
-          }
-
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end(shellContent, 'utf-8');
-        });
+        const parts = normalizeAlbumRoutePath(requestPath).split('/').filter(Boolean);
+        serveGeneratedRouteOrShell(res, '/music/' + parts[1], ALBUM_SHELL_PATH, 'Album');
         return;
       }
 
       if (!rawRouteRequested && isKnownMotifRouteRequest(requestPath)) {
-        fs.readFile(MOTIF_SHELL_PATH, (shellErr, shellContent) => {
-          if (shellErr) {
-            console.error(`Error reading ${MOTIF_SHELL_PATH}:`, shellErr.message);
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('500 - Motif shell missing', 'utf-8');
-            return;
-          }
-
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end(shellContent, 'utf-8');
-        });
+        serveGeneratedRouteOrShell(res, normalizeMotifRoutePath(requestPath), MOTIF_SHELL_PATH, 'Motif');
         return;
       }
 
       if (!rawRouteRequested && isKnownArtistRouteRequest(requestPath)) {
-        fs.readFile(ARTIST_SHELL_PATH, (shellErr, shellContent) => {
-          if (shellErr) {
-            console.error(`Error reading ${ARTIST_SHELL_PATH}:`, shellErr.message);
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('500 - Artist shell missing', 'utf-8');
-            return;
-          }
-
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end(shellContent, 'utf-8');
-        });
+        const parts = normalizeArtistRoutePath(requestPath).split('/').filter(Boolean);
+        serveGeneratedRouteOrShell(res, '/artists/' + parts[1], ARTIST_SHELL_PATH, 'Artist');
         return;
       }
 
       if (!rawRouteRequested && isKnownCloseupRouteRequest(requestPath)) {
-        fs.readFile(SONG_SHELL_PATH, (shellErr, shellContent) => {
-          if (shellErr) {
-            console.error(`Error reading ${SONG_SHELL_PATH}:`, shellErr.message);
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('500 - Song shell missing', 'utf-8');
-            return;
-          }
-
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end(shellContent, 'utf-8');
-        });
+        const parts = normalizeCloseupRoutePath(requestPath).split('/').filter(Boolean);
+        serveGeneratedRouteOrShell(res, '/music/' + parts[1], SONG_SHELL_PATH, 'Song');
         return;
       }
 
@@ -827,5 +821,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}/`);
+  const address = server.address();
+  const listeningPort = address && typeof address === 'object' ? address.port : PORT;
+  console.log(`Server running at http://localhost:${listeningPort}/`);
 });

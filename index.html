@@ -1,56 +1,234 @@
 <!DOCTYPE html>
-<html data-theme-id="default">
+<html
+  data-theme-id="default"
+  data-theme-source="/public/csv/JamiePedia Data - Themes.csv"
+  data-theme-ready="true"
+>
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JamiePedia!</title>
-    <meta name="title" content="JamiePedia!">
-    <meta name="description" content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://jamiepediateam.github.io/JamiePedia/">
-    <meta property="og:title" content="JamiePedia!">
-    <meta property="og:description" content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception.">
-    <meta property="og:image" content="https://jamies.page/images/jamie.jpg">
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://jamiepediateam.github.io/JamiePedia/">
-    <meta property="twitter:title" content="JamiePedia!">
-    <meta property="twitter:description" content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception.">
-    <meta property="twitter:image" content="https://jamies.page/images/jamie.jpg">
-    <meta name="theme-color" content="#F05E55">
-    <link rel="icon" type="image/x-icon" href="public/images/favicon.ico">
-    <link href="styles.css" rel="stylesheet" type="text/css" media="all">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <meta name="title" content="JamiePedia!" />
+    <meta
+      name="description"
+      content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a fan-built resource for her songs, collaborators, and recurring motifs." />
+
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://jamiepedia.page/JamiePedia/" />
+    <meta property="twitter:title" content="JamiePedia!" />
+    <meta
+      property="twitter:description"
+      content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a pedantry prose of pure perception." />
+    <meta property="twitter:image" content="https://jamies.page/images/jamie.jpg" />
+    <meta name="theme-color" content="#F05E55" />
+    <link rel="icon" type="image/x-icon" href="public/images/favicon.ico" />
+    <link href="styles.css" rel="stylesheet" type="text/css" media="all" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400..800" />
+    <script
+      src="https://code.jquery.com/jquery-3.6.0.min.js"
+      integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+      crossorigin="anonymous"
+    ></script>
     <script src="assets/static/load.js"></script>
-  </head>
+    <meta name="robots" content="index,follow" />
+    <link rel="stylesheet" href="/css/linkbox.css" />
+    <meta name="robots" content="index,follow" />
+    <link rel="stylesheet" href="/css/linkbox.css" />
+    <meta name="robots" content="index,follow" />
+
+    <link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><link rel="stylesheet" href="/css/linkbox.css" /><meta
+      name="robots"
+      content="index,follow" /><meta property="og:type" content="website" /><meta
+      property="og:url"
+      content="https://jamiepedia.page/" /><meta property="og:title" content="JamiePedia!" /><meta
+      property="og:description"
+      content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a fan-built resource for her songs, collaborators, and recurring motifs." /><meta
+      name="twitter:url"
+      content="https://jamiepedia.page/" /><meta name="twitter:title" content="JamiePedia!" /><meta
+      name="twitter:description"
+      content="JamiePedia is an encyclopedia of musician and songwriter Jamie Paige, a fan-built resource for her songs, collaborators, and recurring motifs." /><link
+      rel="canonical"
+      href="https://jamiepedia.page/"
+  /></head>
   <body>
-  <a href="./"><div class="head"></div></a>
-  <div class="navi">
-  <span id="navi"></span>
-  </div>
-  <table class="table">
-    <tr>
-      <td>
-        <div class="sidebar1">
-          <span id="sidebar"></span>
-        </div>
-      </td>
-      <td>
-        <div class="bodybar" style="text-align:center;">
-          <h1 style="margin-top:24px;margin-bottom:-4px;"><img src="public/images/redhrt.png" class="emojimg">Welcome to JamiePedia! [OPEN BETA]<img src="public/images/grnhrt.png" class="emojimg"></h1>
-          <br>
-          <p style="margin-left:20px;margin-right:20px;">This is an unofficial encyclopedia ran by fans, for the purpose of creating an all-encompassing fountain of knowledge all about the musician Jamie Paige.<br>
-          <br>
-          On this site you can find accurate transcriptions, associated leitmotifs and lyrical motifs, the history behind songs, and other associated information for every single song composed by, or associated with, Jamie Paige.<br>
-          <br>
-          Here's where else you can listen to Jamie Paige:<br>
-          <span id="linkbox"></span><br>
-          <p style="font-size:12px;margin-left:20px;margin-right:20px;">art by <a target="_blank" rel="noopener noreferrer" href="https://twitter.com/reverieque">REVERIEQUE.</a><br><br><img src="public/images/craw.gif" class="bodyimg" style="margin-bottom:24px;"> </p>
-          <p>-</p>
-          <p>Site Layout based on <a href="https://jamies.page">Jamie Paige's Official Site.</a></p>
-        </div>
-      </td>
-    </tr>
-  </table>
+    <a href="/"><div class="head"></div></a>
+    <div class="navi">
+      <span id="navi"></span>
+    </div>
+    <table class="table">
+      <tbody>
+        <tr>
+          <td>
+            <div class="sidebar1">
+              <span id="sidebar"></span>
+            </div>
+          </td>
+          <td>
+            <div class="bodybar">
+              <h1>
+                <img src="/public/images/redhrt.png" class="emojimg" />
+                Welcome to JamiePedia! [OPEN BETA]
+                <img src="/public/images/grnhrt.png" class="emojimg" />
+              </h1>
+              <br />
+              <p>
+                This is an unofficial encyclopedia ran by fans, for the purpose of creating an
+                all-encompassing fountain of knowledge all about the musician Jamie Paige.
+                <br />
+                <br />
+                On this site you can find accurate transcriptions, associated leitmotifs and lyrical
+                motifs, the history behind songs, and other associated information for every single
+                song composed by, or associated with, Jamie Paige.
+                <br />
+                <br />
+                Here's where else you can listen to Jamie Paige:
+                <br />
+                <span id="linkbox">
+                  <ul class="linkcontainer">
+                    <li class="linkbox"
+                      ><a
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href="https://jamiepaige.bandcamp.com"
+                        ><span class="social-icon" data-service="bandcamp"
+                          ><img
+                            src="https://s4.bcbits.com/client-bundle/1/PageLayout_1/favicon-78ff127104384a042453aca8d73be7dc.static/favicon/favicon-16x16.png"
+                            alt="Bandcamp"
+                            title="Bandcamp"
+                            class="social-icon-img" /></span
+                        >bandcamp</a
+                      ></li
+                    >
+                    <li class="linkbox"
+                      ><a
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href="https://www.youtube.com/channel/UCDsaRDKTCsGBJMUKx-KtukA"
+                        ><span class="social-icon" data-service="youtube"
+                          ><img
+                            src="https://youtube.com/favicon.ico"
+                            alt="YouTube"
+                            title="YouTube"
+                            class="social-icon-img" /></span
+                        >youtube</a
+                      ></li
+                    >
+                    <li class="linkbox"
+                      ><a
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href="https://soundcloud.com/jamieirl"
+                        ><span class="social-icon" data-service="soundcloud"
+                          ><img
+                            src="/public/images/sc.ico"
+                            alt="SoundCloud"
+                            title="SoundCloud"
+                            class="social-icon-img" /></span
+                        >soundcloud</a
+                      ></li
+                    >
+                  </ul>
+                </span></p
+              ><ul class="linkcontainer">
+                <li class="linkbox">
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://jamiepaige.bandcamp.com"
+                  >
+                    bandcamp
+                  </a>
+                </li>
+                <li class="linkbox">
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://www.youtube.com/channel/UCDsaRDKTCsGBJMUKx-KtukA"
+                  >
+                    youtube
+                  </a>
+                </li>
+                <li class="linkbox">
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://soundcloud.com/jamieirl"
+                  >
+                    soundcloud
+                  </a>
+                </li>
+              </ul>
+
+              <p></p>
+              <ul class="linkcontainer">
+                <li class="linkbox">
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://jamiepaige.bandcamp.com"
+                  >
+                    bandcamp
+                  </a>
+                </li>
+                <li class="linkbox">
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://www.youtube.com/channel/UCDsaRDKTCsGBJMUKx-KtukA"
+                  >
+                    youtube
+                  </a>
+                </li>
+                <li class="linkbox">
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://soundcloud.com/jamieirl"
+                  >
+                    soundcloud
+                  </a>
+                </li>
+              </ul>
+
+              <br />
+              <p></p>
+              <p>
+                art by
+                <a target="_blank" rel="noopener noreferrer" href="https://twitter.com/reverieque">
+                  REVERIEQUE.
+                </a>
+                <br />
+                <br />
+                <img src="/public/images/craw.gif" class="bodyimg" />
+              </p>
+              <p>-</p>
+              <p>
+                Site Layout based on
+                <a href="https://jamies.page">Jamie Paige's Official Site.</a>
+              </p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </body>
 </html>
