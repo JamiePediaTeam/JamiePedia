@@ -1,8 +1,15 @@
 Song ID,Motif ID,Start Time,End Time,Type,Lyrics
 AGGRANDICIZE,constant-companions,3:25,3:28,rhythmic,
+AGGRANDICIZE,DESTINY,2:15.6,2:16,lyrical,destiny
+AGGRANDICIZE,destiny,2:14.9,2:17.2,rhythmic,
+AGGRANDICIZE,autumn-every-day,2:34,2:40.2,rhythmic,
+AGGRANDICIZE,paisley-pudge-a,3:38,3:42,rhythmic,
+ASEMIC_SPEECH,autumn-every-day,2:10.42,2:13.85,rhythmic,
 BIRDBRAIN,constant-companions,1:29,1:37,rhythmic,
+BIRDBRAIN,WHEN_SPRING_COMES,2:24.7,2:34.9,lyrical,Is it all for a show? | In the golden hour you seem to know no fear | Is it really true?
 BREEZE_BLOWS,constant-companions,1:37,1:43,rhythmic,
 BREEZE_BLOWS,constant-companions,1:43,1:48,rhythmic,
+BREEZE_BLOWS,NOT_QUITE_THERE,0:42,0:44,lyrical,not quite there
 CADMIUM_COLORS,kalia-vibte,1:39,1:44.7,rhythmic,
 CADMIUM_COLORS,paisley-pudge-a,2:14,2:21,rhythmic,
 CADMIUM_COLORS,constant-companions,2:23.5,2:28.5,rhythmic,
@@ -12,6 +19,11 @@ CADMIUM_COLORS,autumn-every-day,4:24,4:26.8,rhythmic,
 CADMIUM_COLORS,constant-companions,2:34.3,2:39.2,rhythmic,
 CADMIUM_COLORS,constant-companions,3:57.5,4:03.7,rhythmic,
 CADMIUM_COLORS,constant-companions,4:10.5,4:16.7,rhythmic,
+CADMIUM_COLORS,little-nothings,0:32,0:34,lyrical,All the little nothings
+CADMIUM_COLORS,constant-companions,2:23.5,2:28.5,lyrical,"Baby, do you know what it's like to die | To see the sparkle fade from inside your eye"
+CADMIUM_COLORS,constant-companions,3:57.5,4:03.7,lyrical,"Baby, do you know what you wanna hear | 'Cause you can say the word, make it oh so clear"
+CADMIUM_COLORS,rainy-day,4:16.3,4:25.4,lyrical,I kept a bullet in the chamber for a rainy day | But what's the point in planning for it anyway | I've got too many colors for a shade of grey
+CADMIUM_COLORS,AUTUMN_EVERY_DAY,4:27,4:29.7,lyrical,autumn every <single> day
 CLOUDDROP,constant-companions,1:04,1:07,rhythmic,
 CLOUDDROP,constant-companions,1:33,1:41,rhythmic,
 CLOUDDROP,fantasize,1:41,1:44,rhythmic,
@@ -36,6 +48,22 @@ CLOUDDROP,constant-companions,5:16,5:24,rhythmic,
 CLOUDDROP,constant-companions,5:26,5:28,rhythmic,
 CLOUDDROP,constant-companions,5:32,5:45,rhythmic,
 CLOUDDROP,constant-companions,3:24.8,3:27,rhythmic,
+CLOUDDROP,rainy-day,5:30.5,5:41,lyrical,You've got far too many colors for some hopeless shade of grey | Where the clouds that blot the sun out never seem to overstay
+CONNECT_COMMUNE,paisley-pudge,0:29,0:30.83,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,1:00,1:02,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,1:12.2,1:14,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,1:21.4,1:23.2,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,1:27.5,1:29.4,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,2:15.35,2:17,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,2:27.6,2:29.5,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,2:36.9,2:38.7,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,2:43,2:44.8,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,3:01.5,3:03.3,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,3:16.7,3:18.5,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,3:23.1,3:24.7,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,3:29.3,3:30.7,rhythmic,
+CONNECT_COMMUNE,paisley-pudge,3:35.3,3:37.1,rhythmic,
+CONNECT_COMMUNE,jya,1:21.10,1:21.45,sample,
 DANCE_DELIGHTFUL,PEOPLE_POSTURE_PLAY_PRETEND,0:02,0:03,sample,
 DANCE_DELIGHTFUL,NOT_QUITE_THERE,0:25,0:25,sample,
 DANCE_DELIGHTFUL,ROT_FOR_CLOUT,0:25,0:25,sample,
@@ -94,11 +122,21 @@ DANCE_DELIGHTFUL,kalia-vibte,2:41,2:44,rhythmic,
 DANCE_DELIGHTFUL,constant-companions,2:44,2:50,rhythmic,
 DANCE_DELIGHTFUL,gummyworm-a,3:33,3:38,rhythmic,
 DANCE_DELIGHTFUL,let-the-bass-go,0:24.5,0:24.5,sample,
+DANCE_DELIGHTFUL,bolt-of-blue,2:32.5,2:33.5,lyrical,bolt of blue
 DYAD,constant-companions,0:56.7,1:03,rhythmic,
 DYAD,constant-companions,1:06.7,1:11,rhythmic,
 DYAD,constant-companions,1:42,1:47,rhythmic,
 DYAD,constant-companions,2:32.8,2:39.8,rhythmic,
 DYAD,constant-companions,2:42.3,2:49.8,rhythmic,
+DYAD,constant-companions,0:56.7,1:03,lyrical,"Baby, do you know what you wanna hear? | 'Cause you can say the word, make it all so clear | Or you can sit around, watch it disappear"
+DYAD,constant-companions,1:06.7,1:11,lyrical,"But you don't even know what you wanna say | It only takes an instant to slip away | But if you grab a hold, make a grand escape"
+DYAD,constant-companions,1:42,1:47,lyrical,"Baby, do you know what you wanna hear? | 'Cause you can say the word, make it all so clear "
+DYAD,constant-companions,2:32.8,2:39.8,lyrical,"Baby, do you know what you wanna hear? | 'Cause you can say the word, make it all so clear | Or you can sit around, watch it disappear"
+DYAD,constant-companions,2:42.3,2:49.8,lyrical,"But you don't even know what you wanna say | You'll wait until your life starts to slip away | But if you grab a hold, let the message play"
+DYAD,A_REPETITION,0:30.4,0:31.2,lyrical,a repetition
+DYAD,never-meant-to-know,3:23.4,3:27,lyrical,break and fall away | To order from the disarray
+DYAD,GRAND_RESTORE,3:36.5,3:37.2,lyrical,grand restore
+GRAND_RESTORE,in-a-dream,3:25.15,3:50.2,lyrical,She came to me | In a dream | In a dream | In a dream
 GUMMYWORM,gummyworm-b,0:20,0:31,rhythmic,
 GUMMYWORM,gummyworm-b,0:33,0:43,rhythmic,
 GUMMYWORM,gummyworm-a,2:02,2:14,rhythmic,
@@ -119,7 +157,7 @@ I_WISH_THAT_I_COULD_FALL,where-hearts-thaw,3:12,3:37,rhythmic,
 I_WISH_THAT_I_COULD_FALL,kalia-vibte,3:28.3,3:36,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,3:28,3:31.4,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,3:35,3:38.5,rhythmic,
-I_WISH_THAT_I_COULD_FALL,patterns-of-clouds,3:39,3:50,rhythmic,
+I_WISH_THAT_I_COULD_FALL,THE_PATTERNS_OF_CLOUDS,3:39,3:50,rhythmic,
 I_WISH_THAT_I_COULD_FALL,erri-nollau,3:39,3:47,rhythmic,
 I_WISH_THAT_I_COULD_FALL,where-hearts-thaw,3:53,4:21,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,0:17.6,0:21,rhythmic,
@@ -131,11 +169,25 @@ I_WISH_THAT_I_COULD_FALL,constant-companions,2:19.5,2:23,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,3:17.7,3:21.3,rhythmic,
 I_WISH_THAT_I_COULD_FALL,constant-companions,3:31.5,3:35,rhythmic,
 I_WISH_THAT_I_COULD_FALL,paisley-pudge-b,3:46.7,3:48.7,rhythmic,
+I_WISH_THAT_I_COULD_FALL,HOLD_ME_TIGHTLY,2:17.9,2:19,lyrical,hold me tight
+I_WISH_THAT_I_COULD_FALL,beck-and-call,0:03,0:05,lyrical,at your beck and call
+I_WISH_THAT_I_COULD_FALL,want-to-do,0:41.8,0:45,lyrical,All I wanna do is to do you right
+I_WISH_THAT_I_COULD_FALL,want-to-do,1:55.4,1:58.8,lyrical,All I wanna do is to do you right
+I_WISH_THAT_I_COULD_FALL,want-to-do,2:19.55,2:22,lyrical,All I wanna do is to do you right
+I_WISH_THAT_I_COULD_FALL,want-to-do,3:34.9,3:38.4,lyrical,All I wanna do is to do you right
 LIAISON,constant-companions,1:20,1:28,rhythmic,
 LIAISON,constant-companions,2:23,2:28,rhythmic,
 LIAISON,constant-companions,2:52,3:02,rhythmic,
 LIAISON,constant-companions,3:05,3:13,rhythmic,
 LIAISON,fantasize,3:13,3:16,rhythmic,
+LIAISON,keep-a-bullet,2:22,2:24.8,lyrical,I keep a bullet with your name inside my zone
+MACHINE_LOVE,beck-and-call,1:12,1:12.9,lyrical,at your beck and call
+MACHINE_LOVE,eared-robot,1:05.9,1:10,lyrical,恋をして ふられ また 捨てられて
+MACHINE_LOVE,eared-robot,2:17,2:21.5,lyrical,泣きたくなっても それでも かき集め
+MACHINE_LOVE,eared-robot,2:43.3,2:44.8,lyrical,恋をして
+MACHINE_LOVE,eared-robot,3:18.9,3:20,lyrical,恋をして
+MACHINE_LOVE,eared-robot,3:21.7,3:23.7,lyrical,恋をして
+MACHINE_LOVE,eared-robot,3:24.3,3:29,lyrical,その過去を 捨てて ここまでおいで
 MANIFESTO,fantasize,0:20,0:25,rhythmic,
 MANIFESTO,fantasize,0:43,0:45,rhythmic,
 MANIFESTO,constant-companions,0:45,0:48,rhythmic,
@@ -151,6 +203,7 @@ MANIFESTO,constant-companions,2:06,2:08,rhythmic,
 MANIFESTO,fantasize,2:09,2:11,rhythmic,
 MANIFESTO,constant-companions,2:11,2:14,rhythmic,
 MANIFESTO,constant-companions,2:36,2:54,rhythmic,
+MANIFESTO,rainy-day,2:24.5,2:32.5,lyrical,But what's the point in planning anyways? | A thousand colors in a shade of grey | Manifesto for a rainy day
 MY_DARLING_MY_COMPANION,constant-companions,3:21,3:29,rhythmic,
 MY_DARLING_MY_COMPANION,GENTLE_HEART,1:42,1:43,lyrical,gentle heart
 MY_DARLING_MY_COMPANION,destiny,0:28,0:35.4,rhythmic,
@@ -204,6 +257,8 @@ OBJECT_OF_AFFECTION,jerma-woo,3:52,3:52,sample,
 OBJECT_OF_AFFECTION,HOLD_ME_TIGHTLY,3:55.5,3:56.7,lyrical,hold me tight
 OBJECT_OF_AFFECTION,honor-majesty,4:08,4:15,rhythmic,
 OBJECT_OF_AFFECTION,honor-majesty,4:17,4:22,rhythmic,
+OBJECT_OF_AFFECTION,constant-companions,1:33.4,1:41.6,lyrical,They don't even know what they wanna hear | They only know the torch and the warmth of fear
+OBJECT_OF_AFFECTION,constant-companions,3:11,3:13.7,lyrical,They don't even know
 PAISLEY_PATTERNS,pp-alliteration,0:34,0:35,lyrical,paisley patterns
 PAISLEY_PATTERNS,GENTLE_HEART,1:04,1:05,lyrical,gentle heart
 PAISLEY_PATTERNS,pp-alliteration,1:40,1:41,lyrical,paisley patterns
@@ -213,11 +268,23 @@ PAISLEY_PATTERNS,GENTLE_HEART,3:05.5,3:06.1,lyrical,gentle heart
 PAISLEY_PATTERNS,BITTERSWEET,3:18.5,3:19.6,lyrical,bittersweet
 PAISLEY_PATTERNS,where-hearts-thaw,1:20.68,1:22.39,lyrical,heart will thaw
 PEOPLE_POSTURE_PLAY_PRETEND,where-hearts-thaw,3:04.1,3:15.3,rhythmic,
+RADIANT_REVIVAL,little-nothings,0:52.5,0:54.2,lyrical,All the little nothings
+RADIANT_REVIVAL,little-nothings,1:54.4,1:56.3,lyrical,All the little nothings
+RADIANT_REVIVAL,constant-companions,2:02.15,2:05.8,lyrical,"Baby, do you know what you wanna hear?"
+RADIANT_REVIVAL,constant-companions,2:02.15,2:05.8,rhythmic,
+RADIANT_REVIVAL,anew-again,2:12.8,2:14.5,lyrical,"anew, again"
+RADIANT_REVIVAL,little-nothings,3:11.80,3:13.7,lyrical,All the little nothings
+RADIANT_REVIVAL,constant-companions,3:23.5,3:27.1,rhythmic,
+RADIANT_REVIVAL,jya,3:27.1,3:27.4,sample,
 ROT_FOR_CLOUT,constant-companions,1:11,1:16,rhythmic,
+ROT_FOR_CLOUT,let-the-bass-go,1:49.06,1:50.1,sample,
+ROT_FOR_CLOUT,im-crazy,3:44.9,3:46,sample,
+ROT_FOR_CLOUT,jerma-woo,0:00.7,0:01.1,sample,
+ROT_FOR_CLOUT,jerma-woo,1:49.9,1:50.2,sample,
 SHINY_CHARIOT,paisley-pudge-a,0:05,0:08,rhythmic,
 SHINY_CHARIOT,paisley-pudge-b,0:12,0:15,rhythmic,
 SHINY_CHARIOT,kalia-vibte,0:41,0:53,rhythmic,
-SHINY_CHARIOT,MY_DARLING_MY_COMPANION,1:09:08,1:11,lyrical,i try so hard to trust you
+SHINY_CHARIOT,MY_DARLING_MY_COMPANION,1:09.08,1:11,lyrical,i try so hard to trust you
 SHINY_CHARIOT,MY_DARLING_MY_COMPANION,1:13,1:15,lyrical,i hold out for the breakthrough
 SHINY_CHARIOT,MY_DARLING_MY_COMPANION,1:17,1:18,lyrical,it never seems to reach you
 SHINY_CHARIOT,MY_DARLING_MY_COMPANION,1:26,1:29,lyrical,my darling my companion
@@ -267,67 +334,38 @@ WHERE_HEARTS_THAW,kalia-vibte,1:42,1:54.1,rhythmic,
 WHERE_HEARTS_THAW,where-hearts-thaw,0:04.8,1:29.1,rhythmic,
 WHERE_HEARTS_THAW,kalia-vibte,1:12.1,1:24.2,rhythmic,
 WHERE_HEARTS_THAW,kalia-vibte,1:28.3,1:40.1,rhythmic,
-,,,,,
-DYAD,constant-companions,0:56.7,1:03,lyrical,"Baby, do you know what you wanna hear? | 'Cause you can say the word, make it all so clear | Or you can sit around, watch it disappear"
-DYAD,constant-companions,1:06.7,1:11,lyrical,"But you don't even know what you wanna say | It only takes an instant to slip away | But if you grab a hold, make a grand escape"
-DYAD,constant-companions,1:42,1:47,lyrical,"Baby, do you know what you wanna hear? | 'Cause you can say the word, make it all so clear "
-DYAD,constant-companions,2:32.8,2:39.8,lyrical,"Baby, do you know what you wanna hear? | 'Cause you can say the word, make it all so clear | Or you can sit around, watch it disappear"
-DYAD,constant-companions,2:42.3,2:49.8,lyrical,"But you don't even know what you wanna say | You'll wait until your life starts to slip away | But if you grab a hold, let the message play"
-DYAD,A_REPETITION,0:30.4,0:31.2,lyrical,a repetition
-DYAD,never-meant-to-know,3:23.4,3:27,lyrical,break and fall away | To order from the disarray
-DYAD,GRAND_RESTORE,3:36.5,3:37.2,lyrical,grand restore
-I_WISH_THAT_I_COULD_FALL,HOLD_ME_TIGHTLY,2:17.9,2:19,lyrical,hold me tight
-I_WISH_THAT_I_COULD_FALL,beck-and-call,0:03,0:05,lyrical,at your beck and call
-I_WISH_THAT_I_COULD_FALL,want-to-do,0:41.8,0:45,lyrical,All I wanna do is to do you right
-I_WISH_THAT_I_COULD_FALL,want-to-do,1:55.4,1:58.8,lyrical,All I wanna do is to do you right
-I_WISH_THAT_I_COULD_FALL,want-to-do,2:19.55,2:22,lyrical,All I wanna do is to do you right
-I_WISH_THAT_I_COULD_FALL,want-to-do,3:34.9,3:38.4,lyrical,All I wanna do is to do you right
-CADMIUM_COLORS,little-nothings,0:32,0:34,lyrical,All the little nothings
-CADMIUM_COLORS,constant-companions,2:23.5,2:28.5,lyrical,"Baby, do you know what it's like to die | To see the sparkle fade from inside your eye"
-CADMIUM_COLORS,constant-companions,3:57.5,4:03.7,lyrical,"Baby, do you know what you wanna hear | 'Cause you can say the word, make it oh so clear"
-CADMIUM_COLORS,rainy-day,4:16.3,4:25.4,lyrical,I kept a bullet in the chamber for a rainy day | But what's the point in planning for it anyway | I've got too many colors for a shade of grey
-CLOUDDROP,rainy-day,5:30.5,5:41,lyrical,You've got far too many colors for some hopeless shade of grey | Where the clouds that blot the sun out never seem to overstay
-MANIFESTO,rainy-day,2:24.5,2:32.5,lyrical,But what's the point in planning anyways? | A thousand colors in a shade of grey | Manifesto for a rainy day
-CADMIUM_COLORS,AUTUMN_EVERY_DAY,4:27,4:29.7,lyrical,autumn every <single> day
-BREEZE_BLOWS,NOT_QUITE_THERE,0:42,0:44,lyrical,not quite there
-AGGRANDICIZE,DESTINY,2:15.6,2:16,lyrical,destiny
-AGGRANDICIZE,destiny,2:14.9,2:17.2,rhythmic,
-AGGRANDICIZE,autumn-every-day,2:34,2:40.2,rhythmic,
-AGGRANDICIZE,paisley-pudge-b,3:38,3:42,rhythmic,
-LIAISON,keep-a-bullet,2:22,2:24.8,lyrical,I keep a bullet with your name inside my zone
-OBJECT_OF_AFFECTION,constant-companions,1:33.4,1:41.6,lyrical,They don't even know what they wanna hear | They only know the torch and the warmth of fear
-OBJECT_OF_AFFECTION,constant-companions,3:11,3:13.7,lyrical,They don't even know
-MACHINE_LOVE,beck-and-call,1:12,1:12.9,lyrical,at your beck and call
-MACHINE_LOVE,eared-robot,1:05.9,1:10,lyrical,恋をして ふられ また 捨てられて
-MACHINE_LOVE,eared-robot,2:17,2:21.5,lyrical,泣きたくなっても それでも かき集め
-MACHINE_LOVE,eared-robot,2:43.3,2:44.8,lyrical,恋をして
-MACHINE_LOVE,eared-robot,3:18.9,3:20,lyrical,恋をして
-MACHINE_LOVE,eared-robot,3:21.7,3:23.7,lyrical,恋をして
-MACHINE_LOVE,eared-robot,3:24.3,3:29,lyrical,その過去を 捨てて ここまでおいで
-BIRDBRAIN,WHEN_SPRING_COMES,2:24.7,2:34.9,lyrical,Is it all for a show? | In the golden hour you seem to know no fear | Is it really true?
-DANCE_DELIGHTFUL,bolt-of-blue,2:32.5,2:33.5,lyrical,bolt of blue
-ASEMIC_SPEECH,autumn-every-day,2:10.42,2:13.85,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,0:29,0:30.83,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,1:00,1:02,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,1:12.2,1:14,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,1:21.4,1:23.2,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,1:27.5,1:29.4,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,2:15.35,2:17,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,2:27.6,2:29.5,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,2:36.9,2:38.7,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,2:43,2:44.8,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,3:01.5,3:03.3,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,3:16.7,3:18.5,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,3:23.1,3:24.7,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,3:29.3,3:30.7,rhythmic,
-CONNECT_COMMUNE,paisley-pudge,3:35.3,3:37.1,rhythmic,
-CONNECT_COMMUNE,jya,1:21.10,1:21.45,sample,
-RADIANT_REVIVAL,little-nothings,0:52.5,0:54.2,lyrical,All the little nothings
-RADIANT_REVIVAL,little-nothings,1:54.4,1:56.3,lyrical,All the little nothings
-RADIANT_REVIVAL,constant-companions,2:02.15,2:05.8,lyrical,"Baby, do you know what you wanna hear?"
-RADIANT_REVIVAL,constant-companions,2:02.15,2:05.8,rhythmic,
-RADIANT_REVIVAL,anew-again,2:12.8,2:14.5,lyrical,"anew, again"
-RADIANT_REVIVAL,little-nothings,3:11.80,3:13.7,lyrical,All the little nothings
-RADIANT_REVIVAL,constant-companions,3:23.5,3:27.1,rhythmic,
-RADIANT_REVIVAL,jya,3:27.1,3:27.4,sample,
-GRAND_RESTORE,in-a-dream,3:25.15,3:50.2,lyrical,She came to me | In a dream | In a dream | In a dream
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-a,0:02,0:12.5,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,kalia-vibte,0:36,0:47,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-b,0:47.2,0:59.05,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-b,0:59.05,1:10.90,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-a,1:11.2,1:24,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,kalia-vibte,1:53.35,2:03.5,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-b,2:03.75,2:15.55,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-b,2:15.60,2:27.55,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,kalia-vibte,2:27.9,2:40.5,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-a,2:41,2:51,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,kalia-vibte,2:51.45,3:02.8,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,kalia-vibte,3:03,3:14.4,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,autumn-every-day,3:14.2,3:15.9,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-a,3:16,3:26.8,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-b,3:26.3,3:38.05,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-b,3:38.1,3:49.8,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-b,3:49.85,4:01.7,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,paisley-pudge-a,4:02.2,4:14.6,rhythmic,
+PEOPLE_POSTURE_PLAY_PRETEND,jerma-woo,0:48.7,0:49,sample,
+PEOPLE_POSTURE_PLAY_PRETEND,jerma-woo,1:24,1:24.4,sample,
+PEOPLE_POSTURE_PLAY_PRETEND,jya,1:29.45,1:29.65,sample,
+PEOPLE_POSTURE_PLAY_PRETEND,jerma-woo,2:40.55,2:40.85,sample,
+PEOPLE_POSTURE_PLAY_PRETEND,jerma-woo,2:52.3,2:52.6,sample,
+PEOPLE_POSTURE_PLAY_PRETEND,jya,3:15.35,3:15.55,sample,
+PEOPLE_POSTURE_PLAY_PRETEND,jerma-woo,3:27.7,3:27.9,sample,
+PEOPLE_POSTURE_PLAY_PRETEND,jya,3:27.2,3:27.4,sample,
+PEOPLE_POSTURE_PLAY_PRETEND,jerma-woo,4:14.8,4:15.1,sample,
+PEOPLE_POSTURE_PLAY_PRETEND,pp-alliteration,0:56.6,0:59,lyrical,passive poem psyche penned
+PEOPLE_POSTURE_PLAY_PRETEND,pp-alliteration,2:13.2,2:15.5,lyrical,"proud performance, pure pretense"
+PEOPLE_POSTURE_PLAY_PRETEND,pp-alliteration,2:22.05,2:23.5,lyrical,pass the prosy par
+PEOPLE_POSTURE_PLAY_PRETEND,pp-alliteration,3:35.6,3:38,lyrical,perfect person? Preference
+PEOPLE_POSTURE_PLAY_PRETEND,pp-alliteration,3:47.25,3:49.7,lyrical,"Proclaim your pleasure, pirouette"
+PEOPLE_POSTURE_PLAY_PRETEND,play-pretend,1:09.8,1:10.9,lyrical,play pretend
+PEOPLE_POSTURE_PLAY_PRETEND,play-pretend,2:26.4,2:27.5,lyrical,play pretend
+PEOPLE_POSTURE_PLAY_PRETEND,play-pretend,4:00.6,4:01.7,lyrical,play pretend

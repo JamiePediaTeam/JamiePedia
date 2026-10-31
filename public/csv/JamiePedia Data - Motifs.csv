@@ -1,42 +1,41 @@
 Motif Name,Category ID,Motif ID,Motif Image (Page and Map),Type?,Has Page,reference link,motif color
-Paisley Pudge,paisley-pudge,paisley-pudge-a,../public/images/motif-art/paisley-pudge.png,Motif,TRUE,,F391CC
-Paisley Pudge,paisley-pudge,paisley-pudge-b,,Motif,TRUE,,734590
-Kalia Vibte,,kalia-vibte,../public/images/motif-art/kalia-vibte.png,Motif,TRUE,,B1785B
-Errianna Nollau,,erri-nollau,../public/images/motif-art/errianna-nollau.png,Motif,TRUE,,FFFFFF
-Constant Companions,,constant-companions,../public/images/cover-art/cc.png,Motif,TRUE,,FA0B06
-Gummyworm,gummyworm,gummyworm-a,../public/images/motif-art/gummyworm.png,Motif,TRUE,,4BE22A
-Gummyworm,gummyworm,gummyworm-b,../public/images/motif-art/gummyworm.png,Motif,TRUE,,F7EC6F
-Space Center,space-center,space-center-a,../public/images/cover-art/aa.png,Motif,TRUE,,9EC7CD
-Space Center,space-center,space-center-b,,Motif,TRUE,,9EC7CD
-Jya~,,jya,../public/images/motif-art/jya.png,Sample,TRUE,,FCE73E
-Let The Bass Go,,let-the-bass-go,../public/images/motif-art/letthebassgo.png,Sample,TRUE,,1F1F1F
-PP Aliteration,,pp-alliteration,../public/images/cover-art/pjscpfp.jpg,Lyrical,TRUE,,F391CC
-Where Hearts Thaw,,where-hearts-thaw,,Motif,TRUE,,615858
-The Patterns of Clouds,,patterns-of-clouds,../public/images/cover-art/tpoc.jpg,Motif,TRUE,,FFFFFF
-Autumn Every Day,,autumn-every-day,../public/images/cover-art/aed.png,Motif,TRUE,,E05C43
-On Fire,,on-fire,,Motif,TRUE,,FFFFFF
-Jijo,,jijo,,Motif,TRUE,,FFFFFF
-Decree,,decree,,Motif,TRUE,,FFFFFF
-When Spring Comes,,when-spring-comes,../public/images/cover-art/wscrr.png,Motif,TRUE,,FFFFFF
-jermawoo,,jerma-woo,../public/images/motif-art/jerma.png,Sample,TRUE,,FFFFFF
-Say it Ain't So,,say-it-aint-so,../public/images/motif-art/weezer-blue.png,Lyrical,FALSE,https://www.youtube.com/watch?v=OoPHItnUFkw,00ACE6
-Anew Again,anew-again,anew-again,../public/images/cover-art/aa.png,Lyrical,TRUE,,9EC7CD
-Fantasize,,fantasize,,Motif,TRUE,,FA4333
-Honor Majesty,,honor-majesty,,Motif,TRUE,,E31C2C
-"My Darling, My Companion",,my-darling-my-companion,,Motif,FALSE,,FFFFFF
-Destiny,destiny,destiny,../public/images/cover-art/destiny.jpg,Motif,TRUE,,EB9139
-AURogerBeep,,aurogerbeep,,Sample,TRUE,,FFFFFF
-Never Meant to Know,,never-meant-to-know,../public/images/motif-art/good-evil.jpg,Lyrical,FALSE,https://www.youtube.com/watch?v=IawfoCuBV3c,FFFFFF
-Beck and Call,,beck-and-call,,Lyrical,TRUE,,6ab5ae
 All I Want To Do,,want-to-do,,Lyrical,TRUE,,FFFFFF
 All the Little Nothings,,little-nothings,,Lyrical,TRUE,,FFFFFF
-Rainy Day,,rainy-day,,Lyrical,TRUE,,778899
-Keep a Bullet,,keep-a-bullet,,Lyrical,TRUE,,71dab1
-Song of the Eared Robot,,eared-robot,,Lyrical,TRUE,,566baa
+Anew Again,anew-again,anew-again,../public/images/cover-art/aa.png,Lyrical,TRUE,,9EC7CD
+AURogerBeep,,aurogerbeep,,Sample,TRUE,,FFFFFF
+Autumn Every Day,,autumn-every-day,../public/images/cover-art/aed.png,Motif,TRUE,,E05C43
+Beck and Call,,beck-and-call,,Lyrical,TRUE,,6ab5ae
 Bolt of Blue,,bolt-of-blue,,Lyrical,TRUE,,87cefa
+Constant Companions,,constant-companions,../public/images/cover-art/cc.png,Motif,TRUE,,FA0B06
+Decree,,decree,,Motif,TRUE,,FFFFFF
+Destiny,destiny,destiny,../public/images/cover-art/destiny.jpg,Motif,TRUE,,EB9139
+Errianna Nollau,,erri-nollau,../public/images/motif-art/errianna-nollau.png,Motif,TRUE,,FFFFFF
+Fantasize,,fantasize,,Motif,TRUE,,FA4333
+Gummyworm,gummyworm,gummyworm-a,../public/images/motif-art/gummyworm.png,Motif,TRUE,,4BE22A
+Gummyworm,gummyworm,gummyworm-b,../public/images/motif-art/gummyworm.png,Motif,TRUE,,F7EC6F
+Honor Majesty,,honor-majesty,,Motif,TRUE,,E31C2C
+jermawoo,,jerma-woo,../public/images/motif-art/jerma.png,Sample,TRUE,,FFFFFF
+Jijo,,jijo,,Motif,TRUE,,FFFFFF
+Jya~,,jya,../public/images/motif-art/jya.png,Sample,TRUE,,FCE73E
+Kalia Vibte,,kalia-vibte,../public/images/motif-art/kalia-vibte.png,Motif,TRUE,,B1785B
+Keep a Bullet,,keep-a-bullet,,Lyrical,TRUE,,71dab1
+Let The Bass Go,,let-the-bass-go,../public/images/motif-art/letthebassgo.png,Sample,TRUE,,1F1F1F
+"My Darling, My Companion",,my-darling-my-companion,,Motif,FALSE,,FFFFFF
+Never Meant to Know,,never-meant-to-know,../public/images/motif-art/good-evil.jpg,Lyrical,FALSE,https://www.youtube.com/watch?v=IawfoCuBV3c,FFFFFF
+On Fire,,on-fire,,Motif,TRUE,,FF7500
+Paisley Pudge,paisley-pudge,paisley-pudge-a,../public/images/motif-art/paisley-pudge.png,Motif,TRUE,,F391CC
+Paisley Pudge,paisley-pudge,paisley-pudge-b,,Motif,TRUE,,734590
+PP Aliteration,,pp-alliteration,../public/images/cover-art/pjscpfp.jpg,Lyrical,TRUE,,F391CC
+Rainy Day,,rainy-day,,Lyrical,TRUE,,778899
+Say it Ain't So,,say-it-aint-so,../public/images/motif-art/weezer-blue.png,Lyrical,FALSE,https://www.youtube.com/watch?v=OoPHItnUFkw,00ACE6
 She came to me in a dream,,in-a-dream,,Lyrical,TRUE,,A7E6D1
-,,,,,,,FFFFFF
-,,,,,,,FFFFFF
+Song of the Eared Robot,,eared-robot,,Lyrical,TRUE,,566baa
+Space Center,space-center,space-center-a,../public/images/cover-art/aa.png,Motif,TRUE,,9EC7CD
+Space Center,space-center,space-center-b,,Motif,TRUE,,9EC7CD
+When Spring Comes,,when-spring-comes,../public/images/cover-art/wscrr.png,Motif,TRUE,,FFFFFF
+Where Hearts Thaw,,where-hearts-thaw,,Motif,TRUE,,615858
+I'm crazaeiaieae,,im-crazy,,Sample,FALSE,https://www.youtube.com/watch?v=fiCbaR0xXyc,FFFFFF
+Play Pretend,,play-pretend,../public/images/cover-art/pppp.png,,,,9D4D88
 ,,,,,,,FFFFFF
 ,,,,,,,FFFFFF
 ,,,,,,,FFFFFF
