@@ -1,45 +1,45 @@
-Motif Name,Category ID,Motif ID,Motif Image (Page and Map),Type?,Has Page,reference link,motif color
-All I Want To Do,,want-to-do,,Lyrical,TRUE,,FFFFFF
-All the Little Nothings,,little-nothings,,Lyrical,TRUE,,FFFFFF
-Anew Again,anew-again,anew-again,../public/images/cover-art/aa.png,Lyrical,TRUE,,9EC7CD
-AURogerBeep,,aurogerbeep,,Sample,TRUE,,FFFFFF
-Autumn Every Day,,autumn-every-day,../public/images/cover-art/aed.png,Motif,TRUE,,E05C43
-Beck and Call,,beck-and-call,,Lyrical,TRUE,,6ab5ae
-Bolt of Blue,,bolt-of-blue,,Lyrical,TRUE,,87cefa
-Constant Companions,,constant-companions,../public/images/cover-art/cc.png,Motif,TRUE,,FA0B06
-Decree,,decree,,Motif,TRUE,,FFFFFF
-Destiny,destiny,destiny,../public/images/cover-art/destiny.jpg,Motif,TRUE,,EB9139
-Errianna Nollau,,erri-nollau,../public/images/motif-art/errianna-nollau.png,Motif,TRUE,,FFFFFF
-Fantasize,,fantasize,,Motif,TRUE,,FA4333
-Gummyworm,gummyworm,gummyworm-a,../public/images/motif-art/gummyworm.png,Motif,TRUE,,4BE22A
-Gummyworm,gummyworm,gummyworm-b,../public/images/motif-art/gummyworm.png,Motif,TRUE,,F7EC6F
-Honor Majesty,,honor-majesty,,Motif,TRUE,,E31C2C
-jermawoo,,jerma-woo,../public/images/motif-art/jerma.png,Sample,TRUE,,FFFFFF
-Jijo,,jijo,,Motif,TRUE,,FFFFFF
-Jya~,,jya,../public/images/motif-art/jya.png,Sample,TRUE,,FCE73E
-Kalia Vibte,,kalia-vibte,../public/images/motif-art/kalia-vibte.png,Motif,TRUE,,B1785B
-Keep a Bullet,,keep-a-bullet,,Lyrical,TRUE,,71dab1
-Let The Bass Go,,let-the-bass-go,../public/images/motif-art/letthebassgo.png,Sample,TRUE,,1F1F1F
-"My Darling, My Companion",,my-darling-my-companion,,Motif,FALSE,,FFFFFF
-Never Meant to Know,,never-meant-to-know,../public/images/motif-art/good-evil.jpg,Lyrical,FALSE,https://www.youtube.com/watch?v=IawfoCuBV3c,FFFFFF
-On Fire,,on-fire,,Motif,TRUE,,FF7500
-Paisley Pudge,paisley-pudge,paisley-pudge-a,../public/images/motif-art/paisley-pudge.png,Motif,TRUE,,F391CC
-Paisley Pudge,paisley-pudge,paisley-pudge-b,,Motif,TRUE,,734590
-PP Aliteration,,pp-alliteration,../public/images/cover-art/pjscpfp.jpg,Lyrical,TRUE,,F391CC
-Rainy Day,,rainy-day,,Lyrical,TRUE,,778899
-Say it Ain't So,,say-it-aint-so,../public/images/motif-art/weezer-blue.png,Lyrical,FALSE,https://www.youtube.com/watch?v=OoPHItnUFkw,00ACE6
-She came to me in a dream,,in-a-dream,,Lyrical,TRUE,,A7E6D1
-Song of the Eared Robot,,eared-robot,,Lyrical,TRUE,,566baa
-Space Center,space-center,space-center-a,../public/images/cover-art/aa.png,Motif,TRUE,,9EC7CD
-Space Center,space-center,space-center-b,,Motif,TRUE,,9EC7CD
-When Spring Comes,,when-spring-comes,../public/images/cover-art/wscrr.png,Motif,TRUE,,FFFFFF
-Where Hearts Thaw,,where-hearts-thaw,,Motif,TRUE,,615858
-I'm crazaeiaieae,,im-crazy,,Sample,FALSE,https://www.youtube.com/watch?v=fiCbaR0xXyc,FFFFFF
-Play Pretend,,play-pretend,../public/images/cover-art/pppp.png,,,,9D4D88
-,,,,,,,FFFFFF
-,,,,,,,FFFFFF
-,,,,,,,FFFFFF
-,,,,,,,FFFFFF
-,,,,,,,FFFFFF
-,,,,,,,FFFFFF
-,,,,,,,FFFFFF
+Motif Name,Category ID,Motif ID,motif color,Motif Image (Page and Map),Type?,Has Page,reference link
+All I Want To Do,,want-to-do,FFFFFF,,Lyrical,TRUE,
+All the Little Nothings,,little-nothings,FFFFFF,,Lyrical,TRUE,
+Anew Again,anew-again,anew-again,9EC7CD,../public/images/cover-art/aa.png,Lyrical,TRUE,
+AURogerBeep,,aurogerbeep,FFFFFF,,Sample,TRUE,
+Autumn Every Day,,autumn-every-day,F2C587,../public/images/cover-art/aed.png,Motif,TRUE,
+Beck and Call,,beck-and-call,6ab5ae,,Lyrical,TRUE,
+Bolt of Blue,,bolt-of-blue,87cefa,,Lyrical,TRUE,
+Constant Companions,,constant-companions,FA0B06,../public/images/cover-art/cc.png,Motif,TRUE,
+Decree,,decree,FFFFFF,,Motif,TRUE,
+Destiny,destiny,destiny,EB9139,../public/images/cover-art/destiny.jpg,Motif,TRUE,
+Errianna Nollau,,erri-nollau,FFFFFF,../public/images/motif-art/errianna-nollau.png,Motif,TRUE,
+Fantasize,,fantasize,FA4333,,Motif,TRUE,
+Gummyworm,gummyworm,gummyworm-a,4BE22A,../public/images/motif-art/gummyworm.png,Motif,TRUE,
+Gummyworm,gummyworm,gummyworm-b,F7EC6F,../public/images/motif-art/gummyworm.png,Motif,TRUE,
+Honor Majesty,,honor-majesty,E31C2C,,Motif,TRUE,
+jermawoo,,jerma-woo,FFFFFF,../public/images/motif-art/jerma.png,Sample,TRUE,
+Jijo,,jijo,FFFFFF,,Motif,TRUE,
+Jya~,,jya,FCE73E,../public/images/motif-art/jya.png,Sample,TRUE,
+Kalia Vibte,,kalia-vibte,B1785B,../public/images/motif-art/kalia-vibte.png,Motif,TRUE,
+Keep a Bullet,,keep-a-bullet,71dab1,,Lyrical,TRUE,
+Let The Bass Go,,let-the-bass-go,1F1F1F,../public/images/motif-art/letthebassgo.png,Sample,TRUE,
+"My Darling, My Companion",,my-darling-my-companion,FFFFFF,,Motif,TRUE,
+Never Meant to Know,,never-meant-to-know,FFFFFF,../public/images/motif-art/good-evil.jpg,Lyrical,FALSE,https://www.youtube.com/watch?v=IawfoCuBV3c
+On Fire,,on-fire,FF7500,,Motif,TRUE,
+Paisley Pudge,paisley-pudge,paisley-pudge-a,F391CC,../public/images/motif-art/paisley-pudge.png,Motif,TRUE,
+Paisley Pudge,paisley-pudge,paisley-pudge-b,734590,,Motif,TRUE,
+PP Aliteration,,pp-alliteration,F391CC,../public/images/cover-art/pjscpfp.jpg,Lyrical,TRUE,
+Rainy Day,,rainy-day,778899,,Lyrical,TRUE,
+Say it Ain't So,,say-it-aint-so,00ACE6,../public/images/motif-art/weezer-blue.png,Lyrical,FALSE,https://www.youtube.com/watch?v=OoPHItnUFkw
+She came to me in a dream,,in-a-dream,A7E6D1,,Lyrical,TRUE,
+Song of the Eared Robot,,eared-robot,566baa,,Lyrical,TRUE,
+Space Center,space-center,space-center-a,9EC7CD,../public/images/cover-art/aa.png,Motif,TRUE,
+Space Center,space-center,space-center-b,9EC7CD,,Motif,TRUE,
+When Spring Comes,,when-spring-comes,FFFFFF,../public/images/cover-art/wscrr.png,Motif,TRUE,
+Where Hearts Thaw,,where-hearts-thaw,615858,,Motif,TRUE,
+I'm crazaeiaieae,,im-crazy,FFFFFF,,Sample,FALSE,https://www.youtube.com/watch?v=fiCbaR0xXyc
+Play Pretend,,play-pretend,9D4D88,../public/images/cover-art/pppp.png,Lyrical,TRUE,
+All For a Show,,all-for-a-show,ff1470,,Motif,TRUE,
+Black Night,,black-night,000000,,Lyrical,TRUE,
+Bell,,bell,F1E36E,,Sample,TRUE,
+,,,FFFFFF,,,,
+,,,FFFFFF,,,,
+,,,FFFFFF,,,,
+,,,FFFFFF,,,,
