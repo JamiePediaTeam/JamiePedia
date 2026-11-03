@@ -670,7 +670,9 @@ function songMotifsResolveReferenceTarget(referenceId) {
 
 function songMotifsResolveMotifHref(motif, motifId) {
   if (motif && motif.hasPage !== false) {
-    return '../../motifs/' + ((motif && motif.pageSlug) ? motif.pageSlug : (motif ? motif.id : motifId));
+    const pageSlug = (motif && motif.pageSlug) ? motif.pageSlug : (motif ? motif.id : motifId);
+    const pageHash = motif && motif.pageHashToken ? ('#' + encodeURIComponent(motif.pageHashToken)) : '';
+    return '../../motifs/' + pageSlug + pageHash;
   }
 
   if (motif && motif.referenceLink) {
@@ -695,12 +697,13 @@ function songMotifsResolveReferenceHref(entry) {
   }
 
   const variationKey = String(entry.variationId || '').trim();
-  if (!variationKey) {
-    return baseHref;
-  }
-
-  const separator = baseHref.includes('?') ? '&' : '?';
-  return baseHref + separator + 'v=' + encodeURIComponent(variationKey);
+  const hashIndex = baseHref.indexOf('#');
+  const route = hashIndex < 0 ? baseHref : baseHref.slice(0, hashIndex);
+  const hash = hashIndex < 0 ? '' : baseHref.slice(hashIndex);
+  const withVariation = variationKey
+    ? route + (route.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(variationKey)
+    : route;
+  return withVariation + hash;
 }
 
 function songMotifsGetKaraokeLyricHighlights(entry) {

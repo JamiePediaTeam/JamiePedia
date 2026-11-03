@@ -85,6 +85,9 @@ function normalizeJamiePediaBool(value) {
 
 function normalizeJamiePediaMotifType(value) {
   const text = normalizeJamiePediaText(value).toLowerCase();
+  if (text === 'rhythmic' || text === 'rhythm') {
+    return 'rhythmic';
+  }
   if (text === 'lyrical') {
     return 'lyrical';
   }
@@ -338,6 +341,10 @@ class Motif {
     this.name = name;
     this.image = image;
     this.categoryId = options.categoryId || id;
+    this.groupId = options.groupId || '';
+    this.groupName = options.groupName || '';
+    this.groupType = options.groupType || '';
+    this.pageHashToken = options.pageHashToken || '';
     this.aliases = aliases;
     this.color = color;
     this.hasPage = options.hasPage !== false;
@@ -459,9 +466,14 @@ function createJamiePediaData() {
   const songDataRows = songsRows.slice(1).filter((row) => row.some((cell) => normalizeJamiePediaText(cell) !== ''));
 
   const motifColumns = {
+    groupId: getMotifColumnIndex('Group ID'),
+    groupMetadataId: getMotifColumnIndex('Group ID', 1),
     motifName: getMotifColumnIndex('Motif Name'),
     motifId: getMotifColumnIndex('Motif ID', 0),
-    motifCategoryId: getMotifColumnIndex('Category ID'),
+    altId: getMotifColumnIndex('Alt-ID'),
+    groupName: getMotifColumnIndex('Group Name'),
+    groupImage: getMotifColumnIndex('Group Image'),
+    groupType: getMotifColumnIndex('Group Type?'),
     motifImage: getMotifColumnIndex('Motif Image (Page and Map)'),
     motifIsVariation: getMotifColumnIndex('is variation'),
     motifType: getMotifColumnIndex('Type?'),
@@ -516,6 +528,8 @@ function createJamiePediaData() {
   };
 
   const motifRecords = new Map();
+  const motifAliases = new Map();
+  const motifGroupRecords = new Map();
   const songRecords = new Map();
   const refsBySongId = new Map();
   const sampleRefsBySongId = new Map();
@@ -557,9 +571,13 @@ function createJamiePediaData() {
   });
 
   motifTables.motifDataRows.forEach((row) => {
+    const groupId = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.groupId)).toLowerCase();
     const motifId = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifId));
     const motifName = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifName));
-    const motifCategoryId = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifCategoryId)) || motifId;
+    const altId = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.altId)).toLowerCase();
+    const motifCategoryId = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifCategoryId)).toLowerCase() || groupId || motifId.toLowerCase();
+    const groupName = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.groupName));
+    const groupType = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.groupType));
     const motifImage = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.motifImage));
     const motifIsVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, motifColumns.motifIsVariation));
     const motifType = normalizeJamiePediaMotifType(readJamiePediaRowValue(row, motifColumns.motifType));
@@ -575,18 +593,79 @@ function createJamiePediaData() {
       return;
     }
 
-    motifRecords.set(motifId, {
-      id: motifId,
-      categoryId: motifCategoryId,
-      name: motifName || motifId,
-      image: motifImage || null,
-      color: motifColor || '#ef8a85',
-      isVariation: motifIsVariation,
-      motifType,
-      isLyrical: motifIsLyrical,
-      hasPage: motifHasPage,
-      referenceLink: motifReferenceLink
-    });
+    const normalizedMotifId = motifId.toLowerCase();
+    let record = motifRecords.get(normalizedMotifId);
+    if (!record) {
+      record = {
+        id: normalizedMotifId,
+        categoryId: motifCategoryId,
+        groupId,
+        groupName,
+        groupType,
+        name: motifName || motifId,
+        image: motifImage || null,
+        color: motifColor || '#ef8a85',
+        motifType,
+        isLyrical: motifIsLyrical,
+        hasPage: motifHasPage,
+        referenceLink: motifReferenceLink,
+        variations: [],
+        aliases: []
+      };
+      motifRecords.set(normalizedMotifId, record);
+    } else {
+      record.image = record.image || motifImage || null;
+      record.hasPage = record.hasPage || motifHasPage;
+      record.referenceLink = record.referenceLink || motifReferenceLink;
+    }
+
+    if (altId) {
+      const variation = {
+        id: altId,
+        label: /(?:^|[-_])([a-z])$/i.exec(altId)?.[1]?.toUpperCase() || motifName.match(/\b([A-Z])$/)?.[1] || String(record.variations.length + 1),
+        name: motifName || record.name,
+        image: motifImage || record.image,
+        color: motifColor || record.color
+      };
+      if (!record.variations.some((item) => item.id === altId)) {
+        record.variations.push(variation);
+      }
+      record.aliases.push(altId);
+      motifAliases.set(altId, { motifId: normalizedMotifId, variationId: altId });
+    }
+
+    if (groupId) {
+      if (!motifGroupRecords.has(groupId)) {
+        motifGroupRecords.set(groupId, { id: groupId, name: groupName || groupId, type: groupType || motifType, image: '', members: [] });
+      }
+      const group = motifGroupRecords.get(groupId);
+      if (groupName) group.name = groupName;
+      if (groupType) group.type = groupType;
+      if (!group.members.includes(normalizedMotifId)) group.members.push(normalizedMotifId);
+    }
+  });
+
+  const groupMetadataRows = motifTables.motifDataRows;
+  groupMetadataRows.forEach((row) => {
+    const groupId = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.groupMetadataId)).toLowerCase();
+    const groupName = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.groupName));
+    const groupType = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.groupType));
+    const groupImage = normalizeJamiePediaText(readJamiePediaRowValue(row, motifColumns.groupImage));
+    if (!groupId) return;
+    if (!motifGroupRecords.has(groupId)) {
+      motifGroupRecords.set(groupId, { id: groupId, name: groupName || groupId, type: groupType, image: groupImage, members: [] });
+    } else {
+      const group = motifGroupRecords.get(groupId);
+      if (groupName) group.name = groupName;
+      group.type = groupType || group.type;
+      group.image = groupImage || group.image || '';
+    }
+  });
+
+  motifRecords.forEach((record) => {
+    if (!record.groupId) return;
+    const group = motifGroupRecords.get(record.groupId);
+    if (group && group.members.length > 1) record.pageHashToken = record.id;
   });
 
   function resolveVariationMotifId(targetId, isVariation, variationLetter) {
@@ -595,11 +674,13 @@ function createJamiePediaData() {
       return '';
     }
 
-    if (motifRecords.has(rawTarget)) {
-      return rawTarget;
+    const normalizedRawTarget = rawTarget.toLowerCase();
+    if (motifAliases.has(normalizedRawTarget)) {
+      return motifAliases.get(normalizedRawTarget).motifId;
     }
+    if (motifRecords.has(normalizedRawTarget)) return normalizedRawTarget;
 
-    const normalizedTarget = rawTarget.toLowerCase();
+    const normalizedTarget = normalizedRawTarget;
     const normalizedLetter = normalizeJamiePediaText(variationLetter).toLowerCase();
     const variationEnabled = !!isVariation;
 
@@ -629,6 +710,19 @@ function createJamiePediaData() {
     return candidate ? candidate.id : rawTarget;
   }
 
+  function resolveMotifVariationId(targetId, isVariation, variationLetter) {
+    const raw = normalizeJamiePediaText(targetId).toLowerCase();
+    const alias = motifAliases.get(raw);
+    if (alias) return alias.variationId;
+    if (!isVariation) return '';
+    const motifId = resolveVariationMotifId(raw, isVariation, variationLetter);
+    const record = motifRecords.get(String(motifId || '').toLowerCase());
+    if (!record) return '';
+    const letter = normalizeJamiePediaText(variationLetter).toLowerCase();
+    const variation = record.variations.find((item) => item.id === raw || item.label.toLowerCase() === letter || item.id.endsWith('-' + letter));
+    return variation ? variation.id : '';
+  }
+
   function ensureSongRef(songId) {
     const normalizedSongId = String(songId || '').trim();
     if (!normalizedSongId) {
@@ -648,7 +742,7 @@ function createJamiePediaData() {
     return normalizedSongId;
   }
 
-  function pushRhythmicReference(songId, targetId, startTime, endTime, isDefinition) {
+  function pushRhythmicReference(songId, targetId, startTime, endTime, isDefinition, variationId = '') {
     if (!songId || !targetId || !startTime || !endTime) {
       return;
     }
@@ -663,11 +757,12 @@ function createJamiePediaData() {
       endTime,
       false,
       !!isDefinition,
-      targetId
+      variationId,
+      { isVariation: Boolean(variationId) }
     ));
   }
 
-  function pushLyricalReference(songId, targetId, startTime, endTime, lyricText) {
+  function pushLyricalReference(songId, targetId, startTime, endTime, lyricText, variationId = '') {
     if (!songId || !targetId || !startTime || !endTime) {
       return;
     }
@@ -682,8 +777,9 @@ function createJamiePediaData() {
       endTime,
       false,
       false,
-      targetId,
+      variationId,
       {
+        isVariation: Boolean(variationId),
         isLyrical: true,
         lyrics: lyricText,
         lyricsLines: splitJamiePediaLyricLines(lyricText)
@@ -691,7 +787,7 @@ function createJamiePediaData() {
     ));
   }
 
-  function pushSampleReference(songId, targetId, startTime, endTime) {
+  function pushSampleReference(songId, targetId, startTime, endTime, variationId = '') {
     if (!songId || !targetId || !startTime || !endTime) {
       return;
     }
@@ -706,8 +802,9 @@ function createJamiePediaData() {
       endTime,
       false,
       false,
-      targetId,
+      variationId,
       {
+        isVariation: Boolean(variationId),
         isSample: true
       }
     ));
@@ -754,6 +851,7 @@ function createJamiePediaData() {
         ? readJamiePediaRowValue(row, referenceColumns.variationLetter)
         : '';
       const targetId = resolveVariationMotifId(rawTargetId, isVariation, variationLetter);
+      const targetVariationId = resolveMotifVariationId(rawTargetId, isVariation, variationLetter);
 
       const normalizedType = normalizeReferenceType(readJamiePediaRowValue(row, referenceColumns.type));
       const isRhythmic = referenceColumns.rhythmic >= 0
@@ -769,13 +867,13 @@ function createJamiePediaData() {
       const lyricText = normalizeJamiePediaText(readJamiePediaRowValue(row, referenceColumns.lyrics));
 
       if (isRhythmic || (!isLyrical && !isSample)) {
-        pushRhythmicReference(songId, targetId, startTime, endTime, isDefinition);
+        pushRhythmicReference(songId, targetId, startTime, endTime, isDefinition, targetVariationId);
       }
       if (isLyrical) {
-        pushLyricalReference(songId, targetId, startTime, endTime, lyricText);
+        pushLyricalReference(songId, targetId, startTime, endTime, lyricText, targetVariationId);
       }
       if (isSample) {
-        pushSampleReference(songId, targetId, startTime, endTime);
+        pushSampleReference(songId, targetId, startTime, endTime, targetVariationId);
       }
       return;
     }
@@ -788,7 +886,8 @@ function createJamiePediaData() {
     const rhythmicIsVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicVariation));
     const rhythmicVariationLetter = readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicVariationLetter);
     const rhythmicTarget = resolveVariationMotifId(rhythmicTargetRaw, rhythmicIsVariation, rhythmicVariationLetter);
-    pushRhythmicReference(rhythmicSongId, rhythmicTarget, rhythmicStart, rhythmicEnd, rhythmicIsDefinition);
+    const rhythmicVariationId = resolveMotifVariationId(rhythmicTargetRaw, rhythmicIsVariation, rhythmicVariationLetter);
+    pushRhythmicReference(rhythmicSongId, rhythmicTarget, rhythmicStart, rhythmicEnd, rhythmicIsDefinition, rhythmicVariationId);
 
     const lyricalSongId = ensureSongRef(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalSongId));
     const lyricalTargetRaw = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalMotifId));
@@ -796,82 +895,79 @@ function createJamiePediaData() {
     const lyricalEnd = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalEnd));
     const lyricalText = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalLyrics));
     const lyricalTarget = resolveVariationMotifId(lyricalTargetRaw, false, '');
-    pushLyricalReference(lyricalSongId, lyricalTarget, lyricalStart, lyricalEnd, lyricalText);
+    const lyricalVariationId = resolveMotifVariationId(lyricalTargetRaw, false, '');
+    pushLyricalReference(lyricalSongId, lyricalTarget, lyricalStart, lyricalEnd, lyricalText, lyricalVariationId);
 
     const sampleSongId = ensureSongRef(readJamiePediaRowValue(row, legacyReferenceColumns.sampleSongId));
     const sampleTargetRaw = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.sampleMotifId));
     const sampleStart = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.sampleStart));
     const sampleEnd = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.sampleEnd));
     const sampleTarget = resolveVariationMotifId(sampleTargetRaw, false, '');
-    pushSampleReference(sampleSongId, sampleTarget, sampleStart, sampleEnd);
+    const sampleVariationId = resolveMotifVariationId(sampleTargetRaw, false, '');
+    pushSampleReference(sampleSongId, sampleTarget, sampleStart, sampleEnd, sampleVariationId);
   });
 
-  const allMotifs = [];
-  const motifAliasMap = new Map([
-    ['kalia-vibte', ['kalia-vibte']]
-  ]);
+  const allMotifs = Array.from(motifRecords.values()).map((record) => {
+    const aliases = Array.from(new Set(record.aliases.filter((alias) => alias !== record.id)));
+    const pageSlug = record.groupId || record.id;
+    const group = record.groupId ? motifGroupRecords.get(record.groupId) : null;
+    const variationPalette = buildVariationColors(record.color || '#ef8a85', record.variations.length);
+    const variations = record.variations.map((variation, index) => ({
+      ...variation,
+      color: variation.color || variationPalette[index] || record.color || '#ef8a85'
+    }));
 
-  const motifGroups = new Map();
-  motifRecords.forEach((record) => {
-    const key = record.categoryId || record.id;
-    if (!motifGroups.has(key)) {
-      motifGroups.set(key, []);
-    }
-    motifGroups.get(key).push(record);
-  });
-
-  motifGroups.forEach((group, categoryId) => {
-    if (!Array.isArray(group) || group.length === 0) {
-      return;
-    }
-
-    const primary = group.find((item) => !item.isVariation) || group[0];
-    const variationPalette = buildVariationColors(primary.color || '#ef8a85', group.length);
-    const hasVariations = group.length > 1;
-    const variations = hasVariations
-      ? group.map((item, index) => {
-          const suffix = item.id.startsWith(categoryId + '-')
-            ? item.id.slice(categoryId.length + 1)
-            : '';
-          const derivedLabel = suffix
-            ? suffix.toUpperCase()
-            : (item.name && item.name !== primary.name ? item.name : String(index + 1));
-          return {
-            id: item.id,
-            label: derivedLabel,
-            color: item.color || variationPalette[index] || primary.color || '#ef8a85'
-          };
-        })
-      : [];
-
-    const aliases = [];
-    (motifAliasMap.get(categoryId) || []).forEach((alias) => aliases.push(alias));
-    group.forEach((item) => {
-      if (item.id !== categoryId) {
-        aliases.push(item.id);
-      }
+    return new Motif(record.id, record.name, record.image, aliases, record.color, {
+      categoryId: record.categoryId || record.id,
+      groupId: record.groupId,
+      groupName: record.groupName || (group && group.name) || '',
+      groupType: record.groupType || (group && group.type) || '',
+      pageHashToken: record.pageHashToken || '',
+      hasPage: record.hasPage,
+      referenceLink: record.referenceLink,
+      motifType: record.motifType,
+      isLyrical: record.isLyrical,
+      pageSlug,
+      variationGroup: record.id,
+      variations
     });
+  });
 
-    const uniqueAliases = Array.from(new Set(aliases.filter(Boolean)));
-    const fallbackImage = group.find((item) => !!item.image);
+  const motifById = new Map(allMotifs.map((motif) => [motif.id, motif]));
+  const allMotifGroups = [];
+  const assignedMotifs = new Set();
+  motifGroupRecords.forEach((group) => {
+    const members = group.members.map((id) => motifById.get(id)).filter(Boolean);
+    if (!members.length) return;
+    members.forEach((motif) => {
+      motif.groupId = group.id;
+      motif.groupName = group.name;
+      motif.groupType = group.type;
+      motif.pageSlug = group.id;
+      motif.pageHashToken = members.length > 1 ? motif.id : '';
+      assignedMotifs.add(motif.id);
+    });
+    allMotifGroups.push({
+      id: group.id,
+      name: group.name || members[0].name,
+      type: normalizeJamiePediaMotifType(group.type || members[0].motifType),
+      image: group.image || '',
+      pageSlug: group.id,
+      hasPage: members.some((motif) => motif.hasPage),
+      members
+    });
+  });
 
-    allMotifs.push(new Motif(
-      categoryId,
-      primary.name,
-      primary.image || (fallbackImage ? fallbackImage.image : null),
-      uniqueAliases,
-      primary.color || '#ef8a85',
-      {
-        categoryId,
-        hasPage: primary.hasPage,
-        referenceLink: primary.referenceLink,
-        motifType: primary.motifType,
-        isLyrical: group.some((item) => item.isLyrical),
-        pageSlug: categoryId === 'kalia-vibte' ? 'kalia-vibte' : categoryId,
-        variationGroup: categoryId,
-        variations
-      }
-    ));
+  allMotifs.forEach((motif) => {
+    if (assignedMotifs.has(motif.id)) return;
+    allMotifGroups.push({
+      id: motif.id,
+      name: motif.name,
+      type: motif.motifType,
+      pageSlug: motif.pageSlug,
+      hasPage: motif.hasPage,
+      members: [motif]
+    });
   });
 
   const allSongs = [];
@@ -890,12 +986,22 @@ function createJamiePediaData() {
 
   return {
     allMotifs,
+    allMotifGroups,
     allSongs,
     Motif,
     Song,
     MotifReference,
     getMotifById(id) {
-      return allMotifs.find((motif) => motif.id === id || motif.aliases.includes(id));
+      const target = String(id || '').trim().toLowerCase();
+      return allMotifs.find((motif) => motif.id === target || motif.aliases.includes(target));
+    },
+    getMotifByPage(pageSlug, hashToken = '') {
+      const slug = String(pageSlug || '').trim().toLowerCase();
+      const hash = String(hashToken || '').trim().replace(/^#/, '').toLowerCase();
+      const members = allMotifs.filter((motif) => motif.pageSlug === slug && motif.hasPage !== false);
+      return members.find((motif) => motif.pageHashToken && (motif.pageHashToken.toLowerCase() === hash || motif.id === hash || motif.aliases.includes(hash)))
+        || members[0]
+        || this.getMotifById(slug);
     },
     getSongsWithMotifId(motifId) {
       const target = String(motifId || '').trim();
@@ -926,8 +1032,10 @@ if (!window.__JamiePediaCsvData) {
 window.MotifData = {
   Motifs: Object.fromEntries(window.__JamiePediaCsvData.allMotifs.map((motif) => [motif.id.toUpperCase().replace(/-/g, '_'), motif])),
   allMotifs: window.__JamiePediaCsvData.allMotifs,
+  allMotifGroups: window.__JamiePediaCsvData.allMotifGroups,
   Motif,
-  getMotifById: window.__JamiePediaCsvData.getMotifById
+  getMotifById: window.__JamiePediaCsvData.getMotifById,
+  getMotifByPage: window.__JamiePediaCsvData.getMotifByPage
 };
 
 window.SongData = {

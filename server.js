@@ -330,26 +330,32 @@ function loadKnownMotifRoutesFromCsv() {
 
     const headers = splitCsvLine(lines[0]).map((value) => value.toLowerCase());
     const motifIdIndex = headers.indexOf('motif id');
-    const categoryIdIndex = headers.indexOf('category id');
+    const groupIdIndex = headers.indexOf('group id');
     const hasPageIndex = headers.indexOf('has page');
 
     if (hasPageIndex === -1) {
       return knownRoutes;
     }
 
+    const groupByMotifId = new Map();
+    for (let index = 1; index < lines.length; index += 1) {
+      const values = splitCsvLine(lines[index]);
+      const motifId = String(values[motifIdIndex] || '').trim().toLowerCase();
+      const groupId = String(values[groupIdIndex] || '').trim();
+      if (motifId && groupId && !groupByMotifId.has(motifId)) groupByMotifId.set(motifId, groupId);
+    }
+
     for (let index = 1; index < lines.length; index += 1) {
       const values = splitCsvLine(lines[index]);
       const motifId = String(values[motifIdIndex] || '').trim();
-      const categoryId = String(values[categoryIdIndex] || '').trim();
+      const groupId = String(values[groupIdIndex] || '').trim() || groupByMotifId.get(motifId.toLowerCase()) || '';
       const hasPage = String(values[hasPageIndex] || '').trim().toUpperCase();
 
       if (!motifId || !(hasPage === 'TRUE' || hasPage === 'YES' || hasPage === '1')) {
         continue;
       }
 
-      const pageSlug = categoryId === 'kalia-vibte'
-        ? 'kalia-vibte'
-        : (categoryId || motifId);
+      const pageSlug = groupId || motifId;
 
       const normalized = normalizeMotifRoutePath('/motifs/' + pageSlug);
       if (normalized) {

@@ -123,7 +123,13 @@ function parseCsv(text) {
     return [];
   }
 
-  const headers = rows[0].map((header) => String(header || '').trim().toLowerCase());
+  const headerCounts = new Map();
+  const headers = rows[0].map((header) => {
+    const normalized = String(header || '').trim().toLowerCase();
+    const occurrence = (headerCounts.get(normalized) || 0) + 1;
+    headerCounts.set(normalized, occurrence);
+    return occurrence > 1 ? normalized + '__' + occurrence : normalized;
+  });
   return rows.slice(1)
     .filter((values) => values.some((value) => String(value || '').trim()))
     .map((values) => {
@@ -272,13 +278,25 @@ async function loadSiteData() {
   });
 
   const motifPagesBySlug = new Map();
+  const motifGroupNames = new Map();
+  motifs.forEach((row) => {
+    const groupId = normalizeSlug(field(row, 'group id__2'));
+    const groupName = field(row, 'group name');
+    if (groupId && groupName) motifGroupNames.set(groupId, groupName);
+  });
+  const motifGroupById = new Map();
+  motifs.forEach((row) => {
+    const motifId = field(row, 'motif id', 'motif_id').toLowerCase();
+    const groupId = field(row, 'group id', 'group_id');
+    if (motifId && groupId && !motifGroupById.has(motifId)) motifGroupById.set(motifId, groupId);
+  });
   motifs.forEach((row) => {
     const motifId = field(row, 'motif id', 'motif_id');
     if (!motifId || !isTruthy(field(row, 'has page', 'has_page'))) {
       return;
     }
-    const categoryId = field(row, 'category id', 'category_id');
-    const slug = normalizeSlug(categoryId || motifId);
+    const groupId = field(row, 'group id', 'group_id') || motifGroupById.get(motifId.toLowerCase()) || '';
+    const slug = normalizeSlug(groupId || motifId);
     if (!slug || motifPagesBySlug.has(slug)) {
       return;
     }
@@ -286,7 +304,7 @@ async function loadSiteData() {
       kind: 'motif',
       slug,
       route: '/motifs/' + slug,
-      title: field(row, 'motif name', 'motif_name') || slug,
+      title: motifGroupNames.get(slug) || field(row, 'motif name', 'motif_name') || slug,
       summary: String(((searchIndex || {}).motifs || {})[slug] || '')
     });
   });
@@ -423,6 +441,34 @@ function replaceHeadMeta(html, selector, replacement) {
   return expression.test(html) ? html.replace(expression, replacement) : html;
 }
 
+function removeGeneratedHeadTags(html, headTags) {
+  let cleaned = html
+    .replace(/<meta\b(?=[^>]*\bname=["']robots["'])[^>]*>\s*/giu, '')
+    .replace(/<meta\b(?=[^>]*\bproperty=["']og:[^"']+["'])[^>]*>\s*/giu, '')
+    .replace(/<meta\b(?=[^>]*\b(?:name|property)=["']twitter:(?:url|title|description)["'])[^>]*>\s*/giu, '')
+    .replace(/<link\b(?=[^>]*\brel=["']canonical["'])[^>]*>\s*/giu, '');
+
+  const generatedHrefs = Array.from(String(headTags || '').matchAll(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*>/giu), (match) => match[1]);
+  generatedHrefs.forEach((href) => {
+    const escapedHref = href.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    const expression = new RegExp(`<link\\b(?=[^>]*\\bhref=["']${escapedHref}["'])[^>]*>\\s*`, 'giu');
+    cleaned = cleaned.replace(expression, '');
+  });
+
+  return cleaned;
+}
+
+function removeGeneratedBodyTags(html, bodyTags) {
+  let cleaned = html;
+  const generatedSources = Array.from(String(bodyTags || '').matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>\s*<\/script>/giu), (match) => match[1]);
+  generatedSources.forEach((source) => {
+    const escapedSource = source.replace(/^\/+/, '').replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    const expression = new RegExp(`<script\\b(?=[^>]*\\bsrc=["']\\/?${escapedSource}["'])[^>]*>\\s*<\\/script\\s*>\\s*`, 'giu');
+    cleaned = cleaned.replace(expression, '');
+  });
+  return cleaned;
+}
+
 async function buildEntityHtml(shellSource, rendered, entity, description, siteOrigin, extras = {}) {
   let html = String(shellSource || '');
   const title = entity.title || entity.slug;
@@ -431,8 +477,10 @@ async function buildEntityHtml(shellSource, rendered, entity, description, siteO
   const safeDescription = escapeHtmlAttribute(description);
   const safeCanonical = escapeHtmlAttribute(canonicalUrl);
 
-  html = html.replace(/<script\b(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/giu, '');
-  html = html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/giu, '');
+  if (!extras.preserveInlineAssets) {
+    html = html.replace(/<script\b(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/giu, '');
+    html = html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/giu, '');
+  }
   html = html.replace(/<script\b(?=[^>]*\bsrc=["'][^"']*(?:music-files|nav-order|search|social-icons)\.js(?:[?#][^"']*)?)[^>]*>[\s\S]*?<\/script>/giu, '');
   html = html.replace(/<link\b(?=[^>]*href=["'][^"']*\/css\/(?:theme|social-icons)\.css(?:[?#][^"']*)?)[^>]*>/giu, '');
   html = html.replace(/<meta\b(?=[^>]*(?:property="og:[^"]+"|name="twitter:[^"]+"))[^>]*>/giu, '');
@@ -462,11 +510,11 @@ async function buildEntityHtml(shellSource, rendered, entity, description, siteO
     '<meta name="twitter:description" content="' + safeDescription + '">',
     '<link rel="canonical" href="' + safeCanonical + '">'
   ].join('');
-  html = html.replace(/<link\b[^>]*rel="canonical"[^>]*>/giu, '');
+  html = removeGeneratedHeadTags(html, extras.headTags);
   html = html.replace(/<\/head>/iu, String(extras.headTags || '') + seoTags + '</head>');
-  const bodyHtml = String(rendered.bodyHtml || '')
+  const bodyHtml = removeGeneratedBodyTags(String(rendered.bodyHtml || '')
     .replace(/\s+style="[^"]*"/giu, '')
-    .replace(/\s+on[a-z]+="[^"]*"/giu, '');
+    .replace(/\s+on[a-z]+="[^"]*"/giu, ''), extras.bodyTags);
   html = html.replace(/<body\b[^>]*>[\s\S]*?<\/body>/iu, '<body>\n' + bodyHtml + '\n</body>');
   html = html.replace(/<\/body>/iu, String(extras.bodyTags || '') + '</body>');
 
@@ -513,27 +561,20 @@ async function renderEntity(entity, data, siteOrigin, stagingRoot, generatedFile
 
 async function captureStaticAlias(spec, siteOrigin, stagingRoot, generatedFiles) {
   const source = (await fs.readFile(path.join(projectRoot, spec.source), 'utf8'))
-    .replace(/<br\s*\/?\s*>\s*<\/br>/giu, '<br>');
+    .replace(/<br\s*\/?\s*>\s*<\/br>/giu, '<br>')
+    .replace(/<link\b(?=[^>]*\bhref=["']\/?css\/generated\/motif-map-page\.css["'])[^>]*>\s*/giu, '')
+    .replace(/<script\b(?=[^>]*\bsrc=["']\/assets\/static\/(?:csv-data\.js|generated\/motif-map-page\.js)["'])[^>]*>[\s\S]*?<\/script\s*>\s*/giu, '');
+  let bodyHtml = source.match(/<body\b[^>]*>([\s\S]*?)<\/body>/iu)?.[1] || '';
   const rendered = {
-    bodyHtml: source.match(/<body\b[^>]*>([\s\S]*?)<\/body>/iu)?.[1] || '',
+    bodyHtml,
     themeId: source.match(/<html\b[^>]*data-theme-id="([^"]*)"/iu)?.[1] || 'default',
     themeColor: source.match(/<meta\b[^>]*name="theme-color"[^>]*content="([^"]*)"/iu)?.[1] || '#F05E55'
   };
-  const extras = { headTags: '', bodyTags: '' };
-
-  if (spec.source === 'motif-map.html') {
-    const inlineScript = source.match(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/iu);
-    const inlineStyle = source.match(/<style\b[^>]*>([\s\S]*?)<\/style>/iu);
-    if (inlineScript && inlineScript[1]) {
-      await writeStagedAsset(stagingRoot, 'assets/static/generated/motif-map-page.js', inlineScript[1], generatedFiles);
-      extras.bodyTags += '<script src="/assets/static/csv-data.js"></script>'
-        + '<script src="/assets/static/generated/motif-map-page.js"></script>';
-    }
-    if (inlineStyle && inlineStyle[1]) {
-      await writeStagedAsset(stagingRoot, 'css/generated/motif-map-page.css', inlineStyle[1], generatedFiles);
-      extras.headTags += '<link rel="stylesheet" href="/css/generated/motif-map-page.css">';
-    }
-  }
+  const extras = {
+    headTags: '',
+    bodyTags: '',
+    preserveInlineAssets: spec.source === 'motif-map.html'
+  };
 
   if (spec.route === '/') {
     extras.headTags += '<link rel="stylesheet" href="/css/linkbox.css">';

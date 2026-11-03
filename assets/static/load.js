@@ -262,11 +262,13 @@ function parseTxtCsvRows(text) {
   return { headers, rows };
 }
 
-function findTxtHeaderIndex(headers, aliases) {
+function findTxtHeaderIndex(headers, aliases, occurrence = 0) {
   const normalizedAliases = (Array.isArray(aliases) ? aliases : []).map((alias) => String(alias || '').trim().toLowerCase());
+  let matches = 0;
   for (let index = 0; index < headers.length; index += 1) {
     if (normalizedAliases.includes(String(headers[index] || '').trim().toLowerCase())) {
-      return index;
+      if (matches === occurrence) return index;
+      matches += 1;
     }
   }
   return -1;
@@ -328,8 +330,16 @@ async function ensureTxtInternalLinkIndexLoaded() {
     });
 
     const motifIdIndex = findTxtHeaderIndex(motifs.headers, ['motif id', 'motif_id']);
-    const categoryIdIndex = findTxtHeaderIndex(motifs.headers, ['category id', 'category_id']);
+    const groupIdIndex = findTxtHeaderIndex(motifs.headers, ['group id', 'group_id']);
+    const altIdIndex = findTxtHeaderIndex(motifs.headers, ['alt-id', 'alt id', 'alt_id']);
+    const categoryIdIndex = findTxtHeaderIndex(motifs.headers, ['group id', 'group_id'], 1);
     const hasPageIndex = findTxtHeaderIndex(motifs.headers, ['has page', 'has_page']);
+    const groupByMotifId = Object.create(null);
+    motifs.rows.forEach((values) => {
+      const motifId = normalizeTxtLinkToken(values[motifIdIndex] || '');
+      const groupId = normalizeTxtLinkToken(values[groupIdIndex] || '');
+      if (motifId && groupId && !groupByMotifId[motifId]) groupByMotifId[motifId] = groupId;
+    });
     motifs.rows.forEach((values) => {
       const hasPage = hasPageIndex === -1 ? true : isTxtTruthyFlag(values[hasPageIndex] || '');
       if (!hasPage) {
@@ -337,21 +347,26 @@ async function ensureTxtInternalLinkIndexLoaded() {
       }
 
       const motifId = normalizeTxtLinkToken(values[motifIdIndex] || '');
+      const groupId = normalizeTxtLinkToken(values[groupIdIndex] || '') || groupByMotifId[motifId];
+      const altId = normalizeTxtLinkToken(values[altIdIndex] || '');
       const categoryId = normalizeTxtLinkToken(values[categoryIdIndex] || '');
-      const pageSlug = categoryId === 'kalia-vibte'
-        ? 'kalia-vibte'
-        : (categoryId || motifId);
+      const pageSlug = groupId || motifId;
+      const pagePath = pageSlug + (groupId && motifId ? ('#' + motifId) : '');
 
       if (!pageSlug) {
         return;
       }
 
       if (motifId && !txtInternalLinkIndex.motifPageByMotifId[motifId]) {
-        txtInternalLinkIndex.motifPageByMotifId[motifId] = pageSlug;
+        txtInternalLinkIndex.motifPageByMotifId[motifId] = pagePath;
+      }
+
+      if (altId && !txtInternalLinkIndex.motifPageByMotifId[altId]) {
+        txtInternalLinkIndex.motifPageByMotifId[altId] = pageSlug + '?v=' + encodeURIComponent(altId) + (groupId && motifId ? ('#' + motifId) : '');
       }
 
       if (categoryId && !txtInternalLinkIndex.motifPageByCategoryId[categoryId]) {
-        txtInternalLinkIndex.motifPageByCategoryId[categoryId] = pageSlug;
+        txtInternalLinkIndex.motifPageByCategoryId[categoryId] = categoryId;
       }
     });
 
@@ -2599,26 +2614,23 @@ function showArtistPreviewPopover(target) {
     card.style.setProperty('--artist-preview-color', previewEntry.color || '#F05E55');
   }
   if (image) {
-    if (previewEntry.image) {
-      image.src = previewEntry.image;
-      image.alt = previewEntry.previewName || previewEntry.name;
-      media.style.display = '';
-      image.onload = function () {
-        if (window.__jamiePreviewSequence === previewToken && window.__activeArtistPreviewTarget) {
-          positionArtistPreviewPopover(popover, window.__activeArtistPreviewTarget);
-        }
-      };
-      image.onerror = function () {
-        media.style.display = 'none';
-        if (window.__jamiePreviewSequence === previewToken && window.__activeArtistPreviewTarget) {
-          positionArtistPreviewPopover(popover, window.__activeArtistPreviewTarget);
-        }
-      };
-    } else {
-      image.removeAttribute('src');
-      image.alt = '';
-      media.style.display = 'none';
-    }
+    const placeholder = typeof window.toSiteHref === 'function'
+      ? window.toSiteHref('/public/images/placeholder.png')
+      : (basePath || '') + '/public/images/placeholder.png';
+    image.alt = previewEntry.previewName || previewEntry.name || 'Page preview';
+    image.onload = function () {
+      if (window.__jamiePreviewSequence === previewToken && window.__activeArtistPreviewTarget) {
+        positionArtistPreviewPopover(popover, window.__activeArtistPreviewTarget);
+      }
+    };
+    image.onerror = function () {
+      const placeholderUrl = new URL(placeholder, window.location.href).href;
+      if (image.src !== placeholderUrl) {
+        image.src = placeholder;
+      }
+    };
+    media.style.display = '';
+    image.src = previewEntry.image || placeholder;
   }
   if (title) {
     title.textContent = previewEntry.previewName || previewEntry.name;

@@ -44,6 +44,16 @@ function createHrefResolver(data, basePath) {
   const songs = new Set((data.songs || []).map((row) => normalizeSlug(field(row, 'path id', 'path_id', 'page_path', 'path'))));
   const albums = new Set((data.albums || []).flatMap((row) => splitPipe(field(row, 'album_id', 'album id')).map(normalizeSlug)));
   const motifPages = new Map();
+  const motifGroupById = new Map();
+  const motifIdsByGroup = new Map();
+  (data.motifs || []).forEach((row) => {
+    const id = field(row, 'motif id', 'motif_id').toLowerCase();
+    const group = normalizeSlug(field(row, 'group id', 'group_id'));
+    if (!id || !group) return;
+    if (!motifGroupById.has(id)) motifGroupById.set(id, group);
+    if (!motifIdsByGroup.has(group)) motifIdsByGroup.set(group, new Set());
+    motifIdsByGroup.get(group).add(id);
+  });
   const artistsByName = new Map();
   (data.artists || []).forEach((row) => {
     const ids = splitPipe(field(row, 'artist id'));
@@ -63,10 +73,13 @@ function createHrefResolver(data, basePath) {
   (data.motifs || []).forEach((row) => {
     if (String(field(row, 'has page', 'has_page')).trim() && !/^(true|yes|1)$/iu.test(field(row, 'has page', 'has_page'))) return;
     const id = normalizeSlug(field(row, 'motif id', 'motif_id'));
-    const category = normalizeSlug(field(row, 'category id', 'category_id'));
-    const page = category || id;
-    if (id && page) motifPages.set(id, page);
-    if (category && page) motifPages.set(category, page);
+    const group = normalizeSlug(field(row, 'group id', 'group_id')) || motifGroupById.get(id) || '';
+    const altId = normalizeSlug(field(row, 'alt-id', 'alt id', 'alt_id'));
+    const page = group || id;
+    const hash = group && id && (motifIdsByGroup.get(group) || new Set()).size > 1 ? '#' + id : '';
+    if (id && page) motifPages.set(id, page + hash);
+    if (altId && page) motifPages.set(altId, page + '?v=' + encodeURIComponent(altId) + hash);
+    if (group && page) motifPages.set(group, page);
   });
 
   return (raw) => {
@@ -242,10 +255,14 @@ function renderSongConnections(rows, data, basePath, resolveHref) {
     if (!entries.has(group)) entries.set(group, []);
     const variation = field(ref, 'variation', 'variation letter');
     const title = name + (variation ? ' (' + variation + ')' : '');
-    const pageSlug = normalizeSlug(field(motif, 'category id', 'category_id') || id);
+    const groupId = normalizeSlug(field(motif, 'group id', 'group_id'));
+    const pageSlug = groupId || normalizeSlug(id);
     const hasPage = !field(motif, 'has page', 'has_page') || /^(true|yes|1)$/iu.test(field(motif, 'has page', 'has_page'));
     const time = [field(ref, 'start time'), field(ref, 'end time')].filter(Boolean).join('–');
-    const href = hasPage ? '/motifs/' + pageSlug : resolveHref('motif:' + id);
+    const memberHash = groupId && (new Set((data.motifs || [])
+      .filter((row) => normalizeSlug(field(row, 'group id', 'group_id')) === groupId)
+      .map((row) => field(row, 'motif id', 'motif_id').toLowerCase()))).size > 1 ? '#' + normalizeSlug(id) : '';
+    const href = hasPage ? '/motifs/' + pageSlug + memberHash : resolveHref('motif:' + id);
     const item = (href ? link(href, title, basePath) : escapeHtml(title)) + (time ? ' <span class="song-motif-reference-time">' + escapeHtml(time) + '</span>' : '');
     if (!entries.get(group).includes(item)) entries.get(group).push(item);
   });
@@ -265,7 +282,7 @@ async function renderSong(entity, data, basePath, resolveHref) {
   const extendedText = await readText('songs/extended/' + entity.slug + '.txt');
   const lrcText = annotationText ? '' : await readText('songs/lyrics/' + entity.slug + '.lrc');
   const closeupText = await readText('close ups/text/' + entity.slug + '.txt');
-  const summaryHtml = renderMarkdown(summaryText, resolveHref, { preserveIndent: true }) || empty('summary');
+  const summaryHtml = renderMarkdown(summaryText, resolveHref) || empty('summary');
   const lyricsHtml = annotationText
     ? (renderAnnotation(annotationText, resolveHref) || empty('annotated lyrics'))
     : lrcText ? '<p>' + escapeHtml(lrcText.split(/\r?\n/u).map((line) => line.replace(/\[[^\]]+\]/gu, '').replace(/\{[^}]*\}/gu, '').trim()).filter(Boolean).join('<br>')) + '</p>' : empty('annotated lyrics');
@@ -277,7 +294,7 @@ async function renderSong(entity, data, basePath, resolveHref) {
   }).join('');
   const closeupTab = closeupText.trim() ? '<button class="song-tab" type="button" data-song-tab="closeup">Close-Up</button>' : '';
   const artTabs = coverArts.length > 1 ? '<div class="album-tabs-container"><div class="album-tabs">' + coverArts.map((art, index) => '<button class="album-tab' + (index === 0 ? ' active' : '') + '" type="button" data-art="' + escapeHtml(art) + '">' + escapeHtml(coverLabels[index] || coverLabels[0] || 'Cover') + '</button>').join('') + '</div></div>' : '';
-  const image = cover ? '<img src="' + escapeHtml((basePath || '') + '/public/images/cover-art/' + cover) + '" alt="' + escapeHtml(title.replace(/\s*\|\s*/gu, ' ')) + ' Cover" style="width:100%;height:100%;object-fit:cover;border-radius:4px">' : '';
+  const image = '<img src="' + escapeHtml(cover ? (basePath || '') + '/public/images/cover-art/' + cover : (basePath || '') + '/public/images/placeholder.png') + '" alt="' + escapeHtml(title.replace(/\s*\|\s*/gu, ' ')) + ' Cover" style="width:100%;height:100%;object-fit:cover;border-radius:4px">';
   const artists = splitPipe(field(primary, 'artists'));
   const listenLabels = splitPipe(field(primary, 'listen text', 'listen_text'));
   const listenUrls = splitPipe(field(primary, 'listen links', 'listen_links'));
@@ -364,6 +381,9 @@ async function renderArtist(entity, data, basePath, resolveHref) {
   });
   const related = (items) => Array.from(items, ([href, item]) => '<article class="artist-related-item">' + link(href, item.title, basePath) + (item.roles ? '<div class="artist-related-meta">' + escapeHtml(item.roles instanceof Set ? Array.from(item.roles).join(', ') : item.roles) + '</div>' : '') + '</article>').join('');
   const images = splitPipe(field(primary, 'artist image'));
+  const artistImage = images[0]
+    ? (basePath || '') + '/' + images[0].replace(/^\/+/, '')
+    : (basePath || '') + '/public/images/placeholder.png';
   const imageLabels = splitPipe(field(primary, 'image label'));
   const tabs = rows.length > 1 ? rows.map((row, index) => {
     const token = field(row, 'artist id').split('#')[1] || '';
@@ -376,14 +396,21 @@ async function renderArtist(entity, data, basePath, resolveHref) {
   }).filter(Boolean).join('');
   return {
     themeId: field(primary, 'theme') || 'default',
-    bodyHtml: '<a href="' + (basePath || '') + '/"><div class="head"></div></a><div class="navi"><span id="navi"></span></div><table class="table"><tr><td><div class="sidebar1"><span id="sidebar"></span></div></td><td><div class="artist-main-col"><div class="song-tabs-container artist-tabs-container"><div class="song-tabs artist-tabs"><button type="button" class="song-tab artist-tab active" data-artist-tab="credits">Credits</button><button type="button" class="song-tab artist-tab" data-artist-tab="summary">Summary</button><div class="tabs-spacer"></div>' + tabs + '</div></div><div class="bodybar artist-bodybar"><section class="song-container artist-page-shell"><div class="song-leftview artist-leftview"><h1 id="artistPageName" class="song-title artist-page-name">' + escapeHtml(title) + '</h1><p id="artistPageType" class="song-length artist-page-type">' + (uniqueNames.length > 1 ? 'Also known as: ' + escapeHtml(uniqueNames.slice(1).join(' / ')) : '') + '</p><section class="song-content artist-content" data-artist-panel="summary"><div id="artistSummaryContent" class="artist-summary-content">' + renderMarkdown(summaryText || desc, resolveHref) + '</div></section><section class="song-content artist-content artist-content-active" data-artist-panel="credits"><div class="artist-credits-grid"><section id="artistSongsSection" class="artist-section artist-credits-section"><h2 class="song-markdown-h2 artist-section-title">Songs</h2><div id="artistSongsList" class="artist-related-list artist-related-list-compact">' + related(songItems) + '</div></section><section id="artistAlbumsSection" class="artist-section artist-credits-section"><h2 class="song-markdown-h2 artist-section-title">Albums</h2><div id="artistAlbumsList" class="artist-related-list artist-related-list-compact">' + related(albumItems) + '</div></section><div id="artistCreditsEmpty" class="artist-empty-box artist-credits-empty"' + (songItems.size || albumItems.size ? ' hidden' : '') + '>There are no credits for this artist yet.</div></div></section></div><div class="song-rightview artist-rightview"><div id="artistImageTabsContainer" class="album-tabs-container artist-image-tabs-container"' + (images.length > 1 ? '' : ' style="display:none"') + '><div id="artistImageTabs" class="album-tabs artist-image-tabs">' + images.map((image, index) => '<button class="album-tab' + (!index ? ' active' : '') + '" type="button">' + escapeHtml(imageLabels[index] || imageLabels[0] || 'Image') + '</button>').join('') + '</div></div><div class="song-cover artist-song-cover"><img id="artistPageImage" class="artist-page-image" src="' + escapeHtml(images[0] ? (basePath + '/' + images[0].replace(/^\/+/, '')) : '') + '" alt="' + escapeHtml(title + (imageLabels[0] ? ' - ' + imageLabels[0] : '')) + '"></div><div class="song-nav-buttons"></div><div class="song-info-sidebar artist-info-sidebar"><div class="song-info-block artist-description-block"><div class="song-info-content"><p id="artistPageAliases" class="artist-page-aliases">' + escapeHtml(uniqueNames.slice(1).join(' / ')) + '</p><p id="artistPageDescription" class="artist-page-description">' + escapeHtml(desc) + '</p></div></div><div class="song-info-block"><div class="song-info-label">Links</div><div id="artistPageLinks" class="song-links artist-page-links">' + links + '</div></div></div></div></section></div></div></td></tr></table>'
+    bodyHtml: '<a href="' + (basePath || '') + '/"><div class="head"></div></a><div class="navi"><span id="navi"></span></div><table class="table"><tr><td><div class="sidebar1"><span id="sidebar"></span></div></td><td><div class="artist-main-col"><div class="song-tabs-container artist-tabs-container"><div class="song-tabs artist-tabs"><button type="button" class="song-tab artist-tab active" data-artist-tab="credits">Credits</button><button type="button" class="song-tab artist-tab" data-artist-tab="summary">Summary</button><div class="tabs-spacer"></div>' + tabs + '</div></div><div class="bodybar artist-bodybar"><section class="song-container artist-page-shell"><div class="song-leftview artist-leftview"><h1 id="artistPageName" class="song-title artist-page-name">' + escapeHtml(title) + '</h1><p id="artistPageType" class="song-length artist-page-type">' + (uniqueNames.length > 1 ? 'Also known as: ' + escapeHtml(uniqueNames.slice(1).join(' / ')) : '') + '</p><section class="song-content artist-content" data-artist-panel="summary"><div id="artistSummaryContent" class="artist-summary-content">' + renderMarkdown(summaryText || desc, resolveHref) + '</div></section><section class="song-content artist-content artist-content-active" data-artist-panel="credits"><div class="artist-credits-grid"><section id="artistSongsSection" class="artist-section artist-credits-section"><h2 class="song-markdown-h2 artist-section-title">Songs</h2><div id="artistSongsList" class="artist-related-list artist-related-list-compact">' + related(songItems) + '</div></section><section id="artistAlbumsSection" class="artist-section artist-credits-section"><h2 class="song-markdown-h2 artist-section-title">Albums</h2><div id="artistAlbumsList" class="artist-related-list artist-related-list-compact">' + related(albumItems) + '</div></section><div id="artistCreditsEmpty" class="artist-empty-box artist-credits-empty"' + (songItems.size || albumItems.size ? ' hidden' : '') + '>There are no credits for this artist yet.</div></div></section></div><div class="song-rightview artist-rightview"><div id="artistImageTabsContainer" class="album-tabs-container artist-image-tabs-container"' + (images.length > 1 ? '' : ' style="display:none"') + '><div id="artistImageTabs" class="album-tabs artist-image-tabs">' + images.map((image, index) => '<button class="album-tab' + (!index ? ' active' : '') + '" type="button">' + escapeHtml(imageLabels[index] || imageLabels[0] || 'Image') + '</button>').join('') + '</div></div><div class="song-cover artist-song-cover"><img id="artistPageImage" class="artist-page-image" src="' + escapeHtml(artistImage) + '" alt="' + escapeHtml(title + (imageLabels[0] ? ' - ' + imageLabels[0] : '')) + '"></div><div class="song-nav-buttons"></div><div class="song-info-sidebar artist-info-sidebar"><div class="song-info-block artist-description-block"><div class="song-info-content"><p id="artistPageAliases" class="artist-page-aliases">' + escapeHtml(uniqueNames.slice(1).join(' / ')) + '</p><p id="artistPageDescription" class="artist-page-description">' + escapeHtml(desc) + '</p></div></div><div class="song-info-block"><div class="song-info-label">Links</div><div id="artistPageLinks" class="song-links artist-page-links">' + links + '</div></div></div></div></section></div></div></td></tr></table>'
   };
 }
 
 function getMotifPageData(data, slug) {
-  const motifRows = (data.motifs || []).filter((row) => normalizeSlug(field(row, 'category id', 'category_id') || field(row, 'motif id', 'motif_id')) === slug);
+  const groupRows = (data.motifs || []).filter((row) => normalizeSlug(field(row, 'group id', 'group_id')) === slug);
+  const groupedMotifIds = new Set(groupRows.map((row) => field(row, 'motif id', 'motif_id').toLowerCase()).filter(Boolean));
+  const motifRows = groupRows.length
+    ? (data.motifs || []).filter((row) => {
+      const motifId = field(row, 'motif id', 'motif_id').toLowerCase();
+      return normalizeSlug(field(row, 'group id', 'group_id')) === slug || groupedMotifIds.has(motifId);
+    })
+    : (data.motifs || []).filter((row) => !field(row, 'group id', 'group_id') && normalizeSlug(field(row, 'motif id', 'motif_id')) === slug);
   const primary = motifRows.find((row) => !field(row, 'motif id', 'motif_id').startsWith(slug + '-')) || motifRows[0] || {};
-  const motifIds = new Set(motifRows.map((row) => field(row, 'motif id', 'motif_id').toLowerCase()));
+  const motifIds = new Set(motifRows.flatMap((row) => [field(row, 'motif id', 'motif_id'), field(row, 'alt-id', 'alt id', 'alt_id')].map((id) => id.toLowerCase()).filter(Boolean)));
   const refs = (data.references || []).filter((ref) => motifIds.has(field(ref, 'motif id', 'motif_id').toLowerCase()));
   return { motifRows, primary, refs, motifIds };
 }
@@ -391,8 +418,11 @@ async function renderMotif(entity, data, basePath, resolveHref) {
   const motifData = getMotifPageData(data, entity.slug);
   const { primary, motifRows, refs } = motifData;
   const title = field(primary, 'motif name', 'motif_name') || entity.title;
-  const imagePath = field(primary, 'motif image (page and map)', 'motif image', 'image').replace(/^\.\.\//u, '/');
+  const imagePath = (field(primary, 'motif image (page and map)', 'motif image', 'image') || '/public/images/placeholder.png').replace(/^\.\.\//u, '/');
   const summaryText = await readText('motifs/summaries/' + entity.slug + '.txt') || await readText('motifs/motif-summaries/' + entity.slug + '.txt') || await readText('motif-summaries/' + entity.slug + '.txt') || await readText('summaries/' + entity.slug + '.txt');
+  const summaryHtml = summaryText
+    ? '<div id="motifSummaryBox" class="motif-summary-box"><h2 class="motif-section-title motif-summary-title">Summary</h2><div id="motifSummaryContent" class="motif-summary-content">' + renderMarkdown(summaryText, resolveHref) + '</div></div>'
+    : '';
   const songById = mapById(data.songs, 'song id', 'song_id');
   const motifById = mapById(data.motifs, 'motif id', 'motif_id');
   const songMap = new Map();
@@ -404,10 +434,15 @@ async function renderMotif(entity, data, basePath, resolveHref) {
     if (!songMap.has(slug)) songMap.set(slug, { row: song, refs: [] });
     songMap.get(slug).refs.push(ref);
   });
-  const first = Array.from(songMap.values()).flatMap((entry) => entry.refs.map((ref) => ({ entry, time: timeToSeconds(field(ref, 'start time')) }))).sort((a, b) => a.time - b.time)[0];
-  const variationSections = motifRows.length > 1 ? motifRows.map((variant) => {
-    const variantId = field(variant, 'motif id', 'motif_id').toLowerCase();
-    const label = variantId.startsWith(entity.slug + '-') ? variantId.slice(entity.slug.length + 1).toUpperCase() : field(variant, 'motif name', 'motif_name');
+  const firstSong = (data.songs || []).find((song) => songMap.has(songPathSlug(song)));
+  const first = firstSong
+    ? { entry: songMap.get(songPathSlug(firstSong)) }
+    : null;
+  const altId = (row) => field(row, 'alt-id', 'alt id', 'alt_id').toLowerCase();
+  const variationRows = motifRows.filter((row) => field(row, 'motif id', 'motif_id').toLowerCase() === field(primary, 'motif id', 'motif_id').toLowerCase());
+  const variationSections = variationRows.some((row) => altId(row)) ? variationRows.map((variant) => {
+    const variantId = altId(variant) || field(variant, 'motif id', 'motif_id').toLowerCase();
+    const label = field(variant, 'motif name', 'motif_name') || variantId;
     const items = Array.from(songMap.values()).filter((entry) => entry.refs.some((ref) => field(ref, 'motif id', 'motif_id').toLowerCase() === variantId)).map((entry) => {
       const song = entry.row;
       const relatedRefs = entry.refs.filter((ref) => field(ref, 'motif id', 'motif_id').toLowerCase() === variantId);
@@ -422,13 +457,8 @@ async function renderMotif(entity, data, basePath, resolveHref) {
   }).join('');
   return {
     themeId: 'default',
-    bodyHtml: '<a href="' + (basePath || '') + '/"><div class="head"></div></a><div class="navi"><span id="navi"></span></div><table class="table"><tr><td><div class="sidebar1"><span id="sidebar"></span></div></td><td><div class="bodybar"><div class="motif-layout"><section class="motif-main"><section id="motifOverview" class="motif-overview"><div class="motif-overview-summary"><h1 id="motifName">' + escapeHtml(title) + '</h1><div id="motifSummaryBox" class="motif-summary-box"><h2 class="motif-summary-title">Summary</h2><div id="motifSummaryContent" class="motif-summary-content">' + (summaryText ? renderMarkdown(summaryText, resolveHref) : '<div class="motif-empty-box">This motif has no summary.</div>') + '</div></div></div><aside class="motif-overview-meta"><div id="motifMetaPanel" class="motif-meta-panel"><div class="motif-image-wrap"><img id="motifImage" class="motif-image" src="' + escapeHtml(toSiteHref(imagePath || '/public/images/cover-art/bs.png', basePath)) + '" alt="' + escapeHtml(title + ' motif image') + '"></div><div id="motifFirstAppearsWrap" class="motif-first-appears"><h3 class="motif-first-appears-title">First Appears In</h3><div id="motifFirstAppearsValue" class="motif-first-appears-value">' + (first ? link('/music/' + songPathSlug(first.entry.row), field(first.entry.row, 'page title'), basePath) : 'Unknown') + '</div></div><div class="motif-volume-wrap"><label class="motif-volume-label" for="motifVolumeSlider">Volume</label><input id="motifVolumeSlider" class="motif-volume-slider" type="range" min="0" max="100" step="1" aria-label="Motif player volume"></div><div id="motifTranscriptControlDock" class="motif-transcript-control-dock"><div class="motif-transcript-control-label">Play Transcript</div></div></div></aside></section><h2 id="motifSongsHeading" class="motif-section-title">Songs with ' + escapeHtml(title) + '</h2><div id="motifSongList" class="motif-song-list">' + (variationSections || '<div class="motif-empty">No songs for the ' + escapeHtml(title) + ' motif.</div>') + '</div></section></div></div></td></tr></table>'
+    bodyHtml: '<a href="' + (basePath || '') + '/"><div class="head"></div></a><div class="navi"><span id="navi"></span></div><table class="table"><tr><td><div class="sidebar1"><span id="sidebar"></span></div></td><td><div class="song-tabs-container motif-group-tabs-container" id="motifGroupTabsContainer" hidden><div class="song-tabs motif-group-tabs" id="motifGroupTabs" role="tablist"></div></div><div class="bodybar"><div class="motif-layout"><section class="motif-main"><section id="motifOverview" class="motif-overview"><div class="motif-overview-summary"><h1 id="motifName">' + escapeHtml(title) + '</h1>' + summaryHtml + '</div><aside class="motif-overview-meta"><div id="motifMetaPanel" class="motif-meta-panel"><div class="motif-image-wrap"><img id="motifImage" class="motif-image" src="' + escapeHtml(toSiteHref(imagePath || '/public/images/placeholder.png', basePath)) + '" alt="' + escapeHtml(title + ' motif image') + '"></div><div id="motifFirstAppearsWrap" class="motif-first-appears"><h3 class="motif-first-appears-title">First Appears In</h3><div id="motifFirstAppearsValue" class="motif-first-appears-value">' + (first ? link('/music/' + songPathSlug(first.entry.row), field(first.entry.row, 'page title'), basePath) : 'Unknown') + '</div></div><div class="motif-volume-wrap"><label class="motif-volume-label" for="motifVolumeSlider">Volume</label><input id="motifVolumeSlider" class="motif-volume-slider" type="range" min="0" max="100" step="1" aria-label="Motif player volume"></div><div id="motifTranscriptControlDock" class="motif-transcript-control-dock"><div class="motif-transcript-control-label">Play Transcript</div></div></div></aside></section><h2 id="motifSongsHeading" class="motif-section-title">Songs with ' + escapeHtml(title) + '</h2><div id="motifSongList" class="motif-song-list">' + (variationSections || '<div class="motif-empty">No songs for the ' + escapeHtml(title) + ' motif.</div>') + '</div></section></div></div></td></tr></table>'
   };
-}
-
-function timeToSeconds(value) {
-  const parts = String(value || '').split(':').map(Number);
-  return parts.length === 2 ? parts[0] * 60 + parts[1] : parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : Number(value) || 0;
 }
 
 function renderTrack(row, basePath) {

@@ -156,9 +156,15 @@
           const image = document.createElement('img');
           image.className = 'album-cover';
           image.alt = tileName + ' image';
-          if (alias.image) {
-            image.src = alias.image;
-          }
+          const placeholder = typeof window.toSiteHref === 'function'
+            ? window.toSiteHref('/public/images/placeholder.png')
+            : '/public/images/placeholder.png';
+          image.src = alias.image || placeholder;
+          image.onerror = function () {
+            if (image.src !== new URL(placeholder, window.location.href).href) {
+              image.src = placeholder;
+            }
+          };
           link.appendChild(image);
 
           const title = document.createElement('span');

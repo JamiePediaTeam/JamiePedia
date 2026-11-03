@@ -373,23 +373,34 @@ function ensureSearchMotifIndexLoaded(basePath) {
     const motifIdsByCategory = Object.create(null);
     const motifHeaders = motifLines.length ? splitSearchCsvLine(motifLines[0]).map((header) => header.toLowerCase()) : [];
     const motifIdIndex = motifHeaders.indexOf('motif id');
+    const motifGroupIndex = motifHeaders.indexOf('group id');
+    const motifAltIndex = motifHeaders.indexOf('alt-id');
     const motifNameIndex = motifHeaders.indexOf('motif name');
-    const motifCategoryIndex = motifHeaders.indexOf('category id');
+
+    const groupByMotifId = Object.create(null);
+    motifLines.slice(1).forEach((line) => {
+      const values = splitSearchCsvLine(line);
+      const id = String(values[motifIdIndex] || '').trim().toLowerCase();
+      const groupId = String(values[motifGroupIndex] || '').trim().toLowerCase();
+      if (id && groupId && !groupByMotifId[id]) groupByMotifId[id] = groupId;
+    });
 
     motifLines.slice(1).forEach((line) => {
       const values = splitSearchCsvLine(line);
       const id = String(values[motifIdIndex] || '').trim().toLowerCase();
-      const categoryId = String(values[motifCategoryIndex] || '').trim().toLowerCase();
+      const groupId = String(values[motifGroupIndex] || '').trim().toLowerCase() || groupByMotifId[id] || '';
+      const altId = String(values[motifAltIndex] || '').trim().toLowerCase();
       const name = String(values[motifNameIndex] || '').trim();
       if (id && name) {
         motifNames[id] = name;
       }
-      if (id && categoryId) {
-        if (!motifIdsByCategory[categoryId]) {
-          motifIdsByCategory[categoryId] = [];
+      if (altId && name) motifNames[altId] = name;
+      if (id && groupId) {
+        if (!motifIdsByCategory[groupId]) {
+          motifIdsByCategory[groupId] = [];
         }
-        if (!motifIdsByCategory[categoryId].includes(id)) {
-          motifIdsByCategory[categoryId].push(id);
+        if (!motifIdsByCategory[groupId].includes(id)) {
+          motifIdsByCategory[groupId].push(id);
         }
       }
     });
@@ -736,9 +747,13 @@ function buildSearchImageMapFromMotifCsv(csvText) {
   }
 
   const headers = splitSearchCsvLine(lines[0]).map((header) => header.toLowerCase());
-  const categoryIdIndex = headers.indexOf('category id');
+  const groupIdIndex = headers.indexOf('group id');
+  const groupMetadataIdIndex = headers.indexOf('group id', groupIdIndex + 1);
+  const groupNameIndex = headers.indexOf('group name');
+  const groupImageIndex = headers.indexOf('group image');
   const motifIdIndex = headers.indexOf('motif id');
   const motifNameIndex = headers.indexOf('motif name');
+  const altIdIndex = headers.indexOf('alt-id');
   const motifImageIndex = headers.indexOf('motif image (page and map)');
   const hasPageIndex = headers.indexOf('has page');
   if (motifIdIndex === -1 || motifImageIndex === -1 || hasPageIndex === -1) {
@@ -747,24 +762,40 @@ function buildSearchImageMapFromMotifCsv(csvText) {
 
   const motifRows = [];
   const imageByCategorySlug = Object.create(null);
+  const groupNameById = Object.create(null);
+  const groupImageById = Object.create(null);
+  const groupByMotifId = Object.create(null);
   let firstMotifImagePath = '';
 
   for (let index = 1; index < lines.length; index += 1) {
     const values = splitSearchCsvLine(lines[index]);
+    const motifId = String(values[motifIdIndex] || '').trim().toLowerCase();
+    const groupId = String(groupIdIndex >= 0 ? (values[groupIdIndex] || '') : '').trim().toLowerCase();
+    const metadataGroupId = String(groupMetadataIdIndex >= 0 ? (values[groupMetadataIdIndex] || '') : '').trim().toLowerCase();
+    const groupName = String(values[groupNameIndex] || '').trim();
+    const groupImage = normalizeSearchImagePath(values[groupImageIndex] || '');
+    if (motifId && groupId && !groupByMotifId[motifId]) groupByMotifId[motifId] = groupId;
+    if (metadataGroupId && groupName) groupNameById[metadataGroupId] = groupName;
+    if (metadataGroupId && groupImage) groupImageById[metadataGroupId] = groupImage;
+  }
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitSearchCsvLine(lines[index]);
     const motifId = String(values[motifIdIndex] || '').trim();
-    const categoryId = String(categoryIdIndex >= 0 ? (values[categoryIdIndex] || '') : '').trim();
+    const groupId = String(groupIdIndex >= 0 ? (values[groupIdIndex] || '') : '').trim() || groupByMotifId[motifId.toLowerCase()] || '';
+    const altId = String(altIdIndex >= 0 ? (values[altIdIndex] || '') : '').trim();
     const motifName = String(motifNameIndex >= 0 ? (values[motifNameIndex] || '') : '').trim();
     if (!motifId || !isSearchTruthyFlag(values[hasPageIndex])) {
       continue;
     }
 
-    const categorySlug = resolveSearchMotifPageSlug(categoryId, motifId);
+    const categorySlug = resolveSearchMotifPageSlug(groupId, motifId);
     if (!categorySlug) {
       continue;
     }
 
-    const imagePath = normalizeSearchImagePath(values[motifImageIndex]);
-    motifRows.push({ motifId, categorySlug, imagePath, motifName });
+    const imagePath = groupImageById[groupId] || normalizeSearchImagePath(values[motifImageIndex]);
+    motifRows.push({ motifId, groupId, altId, categorySlug, imagePath, motifName });
 
     if (!firstMotifImagePath && imagePath) {
       firstMotifImagePath = imagePath;
@@ -774,37 +805,33 @@ function buildSearchImageMapFromMotifCsv(csvText) {
       imageByCategorySlug[categorySlug] = imagePath;
     }
 
-    const motifPath = '/motifs/' + motifId;
-    if (motifName && !titleByPath[motifPath]) {
-      titleByPath[motifPath] = motifName;
+    const motifPath = '/motifs/' + categorySlug + (groupId ? '#' + motifId : '');
+    const pageTitle = groupNameById[groupId] || motifName;
+    if (pageTitle && !titleByPath[motifPath]) {
+      titleByPath[motifPath] = pageTitle;
     }
 
     const categoryPath = '/motifs/' + categorySlug;
-    if (motifName && !titleByPath[categoryPath]) {
-      titleByPath[categoryPath] = motifName;
+    if (pageTitle && !titleByPath[categoryPath]) {
+      titleByPath[categoryPath] = pageTitle;
     }
   }
 
   motifRows.forEach((row) => {
-    const categoryImage = imageByCategorySlug[row.categorySlug] || firstMotifImagePath || '';
-    if (!categoryImage) {
-      return;
-    }
+    const categoryImage = imageByCategorySlug[row.categorySlug] || '/public/images/placeholder.png';
 
     const categoryPath = '/motifs/' + row.categorySlug;
     if (!map[categoryPath]) {
       map[categoryPath] = categoryImage;
     }
 
-    const motifPath = '/motifs/' + row.motifId;
+    const motifPath = '/motifs/' + row.categorySlug + (row.groupId ? '#' + row.motifId : '');
     if (!map[motifPath]) {
       map[motifPath] = categoryImage;
     }
   });
 
-  if (firstMotifImagePath) {
-    map['/motifs'] = firstMotifImagePath;
-  }
+  map['/motifs'] = firstMotifImagePath || '/public/images/placeholder.png';
 
   return { map, titleByPath };
 }

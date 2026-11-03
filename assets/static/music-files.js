@@ -216,7 +216,9 @@ function parseMotifEntriesFromCsv(text) {
 
   const headers = splitCsvLine(lines[0]).map((header) => header.toLowerCase());
   const motifNameIndex = headers.indexOf('motif name');
-  const categoryIdIndex = headers.indexOf('category id');
+  const groupIdIndex = headers.indexOf('group id');
+  const groupMetadataIdIndex = headers.indexOf('group id', groupIdIndex + 1);
+  const groupNameIndex = headers.indexOf('group name');
   const motifIdIndex = headers.indexOf('motif id');
   const hasPageIndex = headers.indexOf('has page');
 
@@ -225,31 +227,43 @@ function parseMotifEntriesFromCsv(text) {
   }
 
   const entries = [];
-  const seenMotifIds = new Set();
+  const seenMotifPages = new Set();
+  const groupNames = new Map();
+  const groupByMotifId = new Map();
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = splitCsvLine(lines[index]);
+    const groupId = String(values[groupMetadataIdIndex] || '').trim().toLowerCase();
+    const groupName = String(values[groupNameIndex] || '').trim();
+    const motifId = String(values[motifIdIndex] || '').trim().toLowerCase();
+    if (groupId && groupName) groupNames.set(groupId, groupName);
+    if (groupId && motifId && !groupByMotifId.has(motifId)) groupByMotifId.set(motifId, groupId);
+  }
 
   for (let index = 1; index < lines.length; index += 1) {
     const values = splitCsvLine(lines[index]);
     const motifId = String(values[motifIdIndex] || '').trim();
-    const categoryId = String(categoryIdIndex >= 0 ? (values[categoryIdIndex] || '') : '').trim();
+    const explicitGroupId = String(groupIdIndex >= 0 ? (values[groupIdIndex] || '') : '').trim().toLowerCase();
+    const groupId = explicitGroupId || groupByMotifId.get(motifId.toLowerCase()) || '';
     const motifName = String(motifNameIndex >= 0 ? (values[motifNameIndex] || '') : '').trim();
     const hasPage = isTruthyFlag(values[hasPageIndex]);
+    const pageSlug = groupId || motifId.toLowerCase();
+    const path = '/motifs/' + pageSlug + (groupId && motifId ? ('#' + motifId.toLowerCase()) : '');
 
-    if (!motifId || !hasPage || seenMotifIds.has(motifId)) {
+    if (!motifId || !hasPage || seenMotifPages.has(path)) {
       continue;
     }
 
-    const pageSlug = resolveMotifPageSlug(categoryId, motifId);
     if (!pageSlug) {
       continue;
     }
 
-    seenMotifIds.add(motifId);
+    seenMotifPages.add(path);
     entries.push({
       album: 'Motifs',
-      title: buildMotifSearchTitle(motifName, categoryId, motifId),
-      path: '/motifs/' + pageSlug,
+      title: groupNames.get(groupId) || motifName || motifId,
+      path,
       motifId: motifId,
-      motifCategoryId: String(categoryId || motifId).trim().toLowerCase()
+      motifCategoryId: groupId || motifId.toLowerCase()
     });
   }
 

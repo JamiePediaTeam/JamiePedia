@@ -519,6 +519,15 @@
       });
     }
 
+    if (!options.length) {
+      options.push({
+        src: typeof window.toSiteHref === 'function'
+          ? window.toSiteHref('/public/images/placeholder.png')
+          : '/public/images/placeholder.png',
+        label: 'Placeholder'
+      });
+    }
+
     return options;
   }
 
@@ -533,6 +542,12 @@
     imageNode.style.display = '';
     imageNode.src = active.src;
     imageNode.alt = titleText ? (titleText + ' - ' + active.label) : active.label;
+    imageNode.onerror = function () {
+      const placeholder = typeof window.toSiteHref === 'function'
+        ? window.toSiteHref('/public/images/placeholder.png')
+        : '/public/images/placeholder.png';
+      if (imageNode.src !== new URL(placeholder, window.location.href).href) imageNode.src = placeholder;
+    };
 
     if (tabsRoot) {
       tabsRoot.querySelectorAll('.album-tab').forEach((tab, tabIndex) => {
@@ -551,17 +566,6 @@
     const tabsRoot = document.getElementById('artistImageTabs');
     const options = buildArtistImageOptions(page, primaryAlias);
     const titleText = String(titleOverride || (primaryAlias && primaryAlias.name) || (page && page.primaryName) || 'Artist').trim();
-
-    if (!options.length) {
-      imageNode.style.display = 'none';
-      if (tabsRoot) {
-        tabsRoot.innerHTML = '';
-      }
-      if (tabsContainer) {
-        tabsContainer.style.display = 'none';
-      }
-      return;
-    }
 
     applyArtistPageImage(imageNode, options, 0, tabsRoot, titleText);
 

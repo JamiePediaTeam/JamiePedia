@@ -4,6 +4,49 @@ function getCurrentMotifId() {
   return filename.replace('.html', '').toLowerCase();
 }
 
+function renderMotifGroupTabs(pageSlug, activeMotif) {
+  const heading = document.getElementById('motifName');
+  if (!heading || !window.MotifData || !Array.isArray(window.MotifData.allMotifs)) return;
+  let container = document.getElementById('motifGroupTabsContainer');
+  let tabs = document.getElementById('motifGroupTabs');
+  if (!container || !tabs) {
+    container = document.createElement('div');
+    container.id = 'motifGroupTabsContainer';
+    container.className = 'song-tabs-container motif-group-tabs-container';
+    container.hidden = true;
+    tabs = document.createElement('div');
+    tabs.id = 'motifGroupTabs';
+    tabs.className = 'song-tabs motif-group-tabs';
+    tabs.setAttribute('role', 'tablist');
+    container.appendChild(tabs);
+    const bodybar = document.querySelector('.bodybar');
+    if (bodybar && bodybar.parentNode) bodybar.parentNode.insertBefore(container, bodybar);
+    else heading.insertAdjacentElement('beforebegin', container);
+  }
+
+  const members = window.MotifData.allMotifs.filter((motif) => {
+    return motif.hasPage !== false && String(motif.pageSlug || '').toLowerCase() === String(pageSlug || '').toLowerCase();
+  });
+  tabs.innerHTML = '';
+  if (members.length < 2) {
+    container.hidden = true;
+    return;
+  }
+
+  tabs.setAttribute('aria-label', (activeMotif.groupName || 'Motif group') + ' motifs');
+  container.hidden = false;
+  members.forEach((member) => {
+    const token = member.pageHashToken || member.id;
+    const button = document.createElement('a');
+    button.className = 'motif-group-tab' + (member.id === activeMotif.id ? ' active' : '');
+    button.href = (typeof window.toSiteHref === 'function' ? window.toSiteHref('/motifs/' + pageSlug) : '/motifs/' + pageSlug) + '#' + encodeURIComponent(token);
+    button.textContent = member.name;
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', member.id === activeMotif.id ? 'true' : 'false');
+    tabs.appendChild(button);
+  });
+}
+
 function motifPageResolveAssetPath(value) {
   const source = String(value || '').trim();
   if (!source) {
@@ -15,6 +58,10 @@ function motifPageResolveAssetPath(value) {
 
   const rootPath = '/' + source.replace(/^(\.\.\/)+/u, '').replace(/^\/+/, '');
   return typeof window.toSiteHref === 'function' ? window.toSiteHref(rootPath) : rootPath;
+}
+
+function motifPageSamplesBaseUrl() {
+  return motifPageResolveAssetPath('/public/samples') + '/';
 }
 
 function timeToSeconds(value) {
@@ -143,7 +190,7 @@ function createMeowSampler() {
       C4: 'meow.mp3'
     },
     release: 0.9,
-    baseUrl: motifPageResolveAssetPath('/public/samples/')
+    baseUrl: motifPageSamplesBaseUrl()
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -153,7 +200,7 @@ function createWscPluckSampler() {
       E5: 'WSC_E5.wav'
     },
     release: 0.8,
-    baseUrl: motifPageResolveAssetPath('/public/samples/')
+    baseUrl: motifPageSamplesBaseUrl()
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -163,7 +210,7 @@ function createWoofSampler() {
       C5: 'woof.wav'
     },
     release: 0.9,
-    baseUrl: motifPageResolveAssetPath('/public/samples/')
+    baseUrl: motifPageSamplesBaseUrl()
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -174,7 +221,7 @@ function createPaisleyHornsSampler() {
       E5: 'paisley-pudge-a_a5.wav'
     },
     release: 0.9,
-    baseUrl: motifPageResolveAssetPath('/public/samples/')
+    baseUrl: motifPageSamplesBaseUrl()
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -184,7 +231,7 @@ function createWHTSampler() {
       C4: 'where-hearts-thaw_c4.wav'
     },
     release: 0.9,
-    baseUrl: motifPageResolveAssetPath('/public/samples/')
+    baseUrl: motifPageSamplesBaseUrl()
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -194,7 +241,7 @@ function createMpPianoSampler() {
       C5: 'mppiano.wav'
     },
     release: 0.9,
-    baseUrl: motifPageResolveAssetPath('/public/samples/')
+    baseUrl: motifPageSamplesBaseUrl()
   }).connect(getMotifTranscriptMasterGain());
 }
 function createPPPPluckSampler() {
@@ -203,7 +250,7 @@ function createPPPPluckSampler() {
       'G#5': 'ppppluck.wav'
     },
     release: 0.9,
-    baseUrl: motifPageResolveAssetPath('/public/samples/')
+    baseUrl: motifPageSamplesBaseUrl()
   }).connect(getMotifTranscriptMasterGain());
 }
 
@@ -386,10 +433,6 @@ function renderMotifSummaryParagraphs(text) {
     .join('');
 }
 
-function makeMotifEmptyBoxHtml(label) {
-  return '<div class="motif-empty-box">This motif has no ' + label + '.</div>';
-}
-
 async function loadMotifSummaryText(motifId) {
   const candidates = [
     motifPageResolveAssetPath('/public/motifs/summaries/' + motifId + '.txt'),
@@ -419,14 +462,47 @@ async function loadMotifSummaryText(motifId) {
 }
 
 async function renderMotifSummary(motifId) {
-  const summaryNode = document.getElementById('motifSummaryContent');
-  if (!summaryNode) {
+  const summaryText = await loadMotifSummaryText(motifId);
+  let summaryBox = document.getElementById('motifSummaryBox');
+  if (!summaryText) {
+    if (summaryBox) {
+      summaryBox.remove();
+    }
     return;
   }
 
-  const summaryText = await loadMotifSummaryText(motifId);
-  if (!summaryText) {
-    summaryNode.innerHTML = makeMotifEmptyBoxHtml('summary');
+  const layout = ensureMotifOverviewLayout();
+  const summaryColumn = layout && layout.summaryColumn;
+  if (!summaryColumn) {
+    return;
+  }
+
+  if (!summaryBox) {
+    summaryBox = document.createElement('div');
+    summaryBox.id = 'motifSummaryBox';
+    summaryBox.className = 'motif-summary-box';
+
+    const summaryTitle = document.createElement('h2');
+    summaryTitle.className = 'motif-section-title motif-summary-title';
+    summaryTitle.textContent = 'Summary';
+    summaryBox.appendChild(summaryTitle);
+
+    const summaryContent = document.createElement('div');
+    summaryContent.id = 'motifSummaryContent';
+    summaryContent.className = 'motif-summary-content';
+    summaryBox.appendChild(summaryContent);
+  }
+
+  const summaryTitle = summaryBox.querySelector('.motif-summary-title');
+  if (summaryTitle) {
+    summaryTitle.classList.add('motif-section-title');
+  }
+
+  const transcriptSection = summaryColumn.querySelector('#motifTranscriptSection');
+  summaryColumn.insertBefore(summaryBox, transcriptSection || null);
+
+  const summaryNode = document.getElementById('motifSummaryContent');
+  if (!summaryNode) {
     return;
   }
 
@@ -435,7 +511,11 @@ async function renderMotifSummary(motifId) {
   }
 
   const html = renderMotifSummaryParagraphs(summaryText);
-  summaryNode.innerHTML = html || makeMotifEmptyBoxHtml('summary');
+  if (!html) {
+    summaryBox.remove();
+    return;
+  }
+  summaryNode.innerHTML = html;
 }
 
 function ensureMotifOverviewLayout() {
@@ -471,25 +551,6 @@ function ensureMotifOverviewLayout() {
 
   if (motifName.parentNode !== summaryColumn) {
     summaryColumn.appendChild(motifName);
-  }
-
-  let summaryBox = document.getElementById('motifSummaryBox');
-  if (!summaryBox) {
-    summaryBox = document.createElement('div');
-    summaryBox.id = 'motifSummaryBox';
-    summaryBox.className = 'motif-summary-box';
-
-    const summaryTitle = document.createElement('h2');
-    summaryTitle.className = 'motif-summary-title';
-    summaryTitle.textContent = 'Summary';
-    summaryBox.appendChild(summaryTitle);
-
-    const summaryContent = document.createElement('div');
-    summaryContent.id = 'motifSummaryContent';
-    summaryContent.className = 'motif-summary-content';
-    summaryBox.appendChild(summaryContent);
-
-    summaryColumn.appendChild(summaryBox);
   }
 
   if (!metaColumn.querySelector('#motifMetaPanel')) {
@@ -1022,6 +1083,10 @@ function ensureMotifTranscriptSection(songsHeading, motifName) {
     transcriptParent.appendChild(section);
   } else {
     songsHeading.parentNode.insertBefore(section, songsHeading);
+  }
+  const summaryBox = document.getElementById('motifSummaryBox');
+  if (summaryBox && summaryBox.parentNode === section.parentNode) {
+    summaryBox.parentNode.insertBefore(section, summaryBox.nextSibling);
   }
   return section;
 }
@@ -2199,10 +2264,10 @@ async function motifTranscriptSetInstrument(nextKey, options = {}) {
     instrumentSelect.value = state.instrumentKey;
   }
 
-  if (state.synth && state.synth.loaded && typeof state.synth.loaded.then === 'function') {
+  if (state.synth && typeof window.Tone.loaded === 'function') {
     setMotifTranscriptPlayerMessage('Loading ' + instrument.label + '...', 'muted');
     try {
-      await state.synth.loaded;
+      await window.Tone.loaded();
       setMotifTranscriptPlayerMessage('', 'muted');
     } catch (_error) {
       const fallback = getMotifTranscriptInstrumentOption(getMotifTranscriptDefaultInstrumentKey());
@@ -2615,8 +2680,12 @@ function buildVariationImagePanel(motif, extraClass = '', options = {}) {
 
   const art = document.createElement('img');
   art.className = 'motif-variation-art';
-  art.src = motifPageResolveAssetPath(motif.image) || motifPageResolveAssetPath('/public/images/cover-art/bs.png');
+  art.src = motifPageResolveAssetPath(motif.image) || motifPageResolveAssetPath('/public/images/placeholder.png');
   art.alt = motif.name + ' motif image';
+  art.onerror = function () {
+    const placeholder = motifPageResolveAssetPath('/public/images/placeholder.png');
+    if (art.src !== new URL(placeholder, window.location.href).href) art.src = placeholder;
+  };
   artWrap.appendChild(art);
 
   const side = document.createElement('div');
@@ -2702,39 +2771,18 @@ function getSongRefsForMotif(song, motif, variationId = '') {
 
 function buildMotifTranscriptSlugCandidates(motif, motifPageId, variationId = '') {
   const variationKey = normalizeVariationKey(variationId);
-  const baseCandidates = motifTranscriptUnique([
-    motif.pageSlug,
-    motif.id,
-    motifPageId
-  ]);
+  const motifSlug = String((motif && motif.id) || motifPageId || '').trim().toLowerCase();
+  const baseCandidates = motifTranscriptUnique([motifSlug]);
 
   if (!variationKey) {
     return baseCandidates;
   }
 
-  const variationSuffixCandidates = motifTranscriptUnique([
+  return motifTranscriptUnique([
     variationKey,
-    motif.pageSlug && variationKey.startsWith(motif.pageSlug + '-')
-      ? variationKey.slice(motif.pageSlug.length + 1)
-      : '',
-    motif.id && variationKey.startsWith(motif.id + '-')
-      ? variationKey.slice(motif.id.length + 1)
-      : '',
-    motifPageId && variationKey.startsWith(motifPageId + '-')
-      ? variationKey.slice(motifPageId.length + 1)
-      : ''
+    motifSlug && variationKey.startsWith(motifSlug + '-') ? variationKey : '',
+    motifSlug
   ]);
-
-  const variationCandidates = motifTranscriptUnique([
-    ...variationSuffixCandidates,
-    ...variationSuffixCandidates.flatMap((suffix) => [
-      motif.pageSlug ? motif.pageSlug + '-' + suffix : '',
-      motif.id ? motif.id + '-' + suffix : '',
-      motifPageId ? motifPageId + '-' + suffix : ''
-    ])
-  ]);
-
-  return variationCandidates.concat(baseCandidates);
 }
 
 const PlayerStore = {
@@ -3158,8 +3206,11 @@ async function renderMotifPage() {
     return;
   }
 
-  const motifId = getCurrentMotifId();
-  const motif = window.MotifData.getMotifById(motifId);
+  const pageSlug = getCurrentMotifId();
+  const hashToken = String(window.location.hash || '').replace(/^#/, '');
+  const motif = typeof window.MotifData.getMotifByPage === 'function'
+    ? window.MotifData.getMotifByPage(pageSlug, hashToken)
+    : window.MotifData.getMotifById(pageSlug);
 
   const motifName = document.getElementById('motifName');
   const motifImage = document.getElementById('motifImage');
@@ -3172,6 +3223,9 @@ async function renderMotifPage() {
   if (!motif || !motifName || !motifImage || !songList) {
     return;
   }
+
+  const motifId = motif.id;
+  renderMotifGroupTabs(pageSlug, motif);
 
   const summaryTask = renderMotifSummary(motifId);
 
@@ -3250,7 +3304,7 @@ async function renderMotifPage() {
       ? motif.variations.map((variation) => variation.label || variation.id).filter(Boolean)
       : [];
 
-    if (motif.image && badges.length > 0) {
+    if (badges.length > 0) {
       motifImage.style.display = 'none';
       const panel = buildVariationImagePanel(motif, 'motif-image', {
         activeVariationKey: activeVariation ? (activeVariation.id || activeVariation.label) : '',
@@ -3260,25 +3314,25 @@ async function renderMotifPage() {
       });
       panel.setAttribute('aria-label', motif.name + ' motif image with variation panels');
       motifImageWrap.appendChild(panel);
-    } else if (motif.image) {
-      motifImage.style.display = '';
-      motifImage.src = motifPageResolveAssetPath(motif.image);
-      motifImage.alt = motif.name + ' motif image';
     } else {
-      motifImage.style.display = 'none';
-      const icon = buildVariationIcon(motif, badges, 'motif-image');
-      icon.setAttribute('aria-label', motif.name + ' motif icon');
-      motifImageWrap.appendChild(icon);
+      motifImage.style.display = '';
+      motifImage.src = motifPageResolveAssetPath(motif.image) || motifPageResolveAssetPath('/public/images/placeholder.png');
+      motifImage.alt = motif.name + ' motif image';
     }
   } else {
     motifImage.style.display = '';
-    motifImage.src = motifPageResolveAssetPath(motif.image) || motifPageResolveAssetPath('/public/images/cover-art/bs.png');
+    motifImage.src = motifPageResolveAssetPath(motif.image) || motifPageResolveAssetPath('/public/images/placeholder.png');
     motifImage.alt = motif.name + ' motif image';
   }
 
   if (existingVolumeWrap) {
     existingVolumeWrap.remove();
   }
+
+  motifImage.onerror = function () {
+    const placeholder = motifPageResolveAssetPath('/public/images/placeholder.png');
+    if (motifImage.src !== new URL(placeholder, window.location.href).href) motifImage.src = placeholder;
+  };
 
   const nextVolumeControl = buildMotifVolumeControl();
   const metaPanel = document.getElementById('motifMetaPanel');
@@ -3306,18 +3360,7 @@ async function renderMotifPage() {
   const firstAppearsNode = document.getElementById('motifFirstAppearsValue');
   if (firstAppearsNode) {
     firstAppearsNode.innerHTML = '';
-    let firstSong = null;
-    let firstTime = Number.POSITIVE_INFINITY;
-
-    songs.forEach((song) => {
-      const refs = getSongRefsForMotif(song, motif);
-      refs.forEach((ref) => {
-        if (ref.startTime < firstTime) {
-          firstTime = ref.startTime;
-          firstSong = song;
-        }
-      });
-    });
+    const firstSong = songs[0] || null;
 
     if (firstSong) {
       if (firstSong.path) {
@@ -3433,3 +3476,5 @@ if (document.readyState === 'loading') {
 } else {
   renderMotifPage();
 }
+
+window.addEventListener('hashchange', renderMotifPage);

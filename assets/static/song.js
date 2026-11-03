@@ -1114,7 +1114,10 @@ function formatSongTitleHtml(value) {
 function buildCoverArtSrc(filename) {
   const trimmed = String(filename || '').trim();
   if (!trimmed) {
-    return '';
+    return (typeof basePath === 'string' ? basePath : '') + '/public/images/placeholder.png';
+  }
+  if (trimmed === 'placeholder.png') {
+    return (typeof basePath === 'string' ? basePath : '') + '/public/images/placeholder.png';
   }
   return (typeof basePath === 'string' ? basePath : '') + '/public/images/cover-art/' + trimmed;
 }
@@ -1137,12 +1140,7 @@ function extractCoverArtFilenameFromUrl(value) {
 }
 
 function getFallbackCoverArtFilename() {
-  const ogMeta = document.querySelector('meta[property="og:image"]');
-  const twitterMeta = document.querySelector('meta[property="twitter:image"], meta[name="twitter:image"]');
-  const ogValue = ogMeta ? ogMeta.getAttribute('content') : '';
-  const twitterValue = twitterMeta ? twitterMeta.getAttribute('content') : '';
-
-  return extractCoverArtFilenameFromUrl(ogValue) || extractCoverArtFilenameFromUrl(twitterValue);
+  return 'placeholder.png';
 }
 
 function ensureSongNavContainer(scope) {
@@ -1186,6 +1184,10 @@ function applyAlbumArtToScope(scope, filename, buttonElement) {
   if (src) {
     image.src = src;
   }
+  image.onerror = function () {
+    const placeholder = buildCoverArtSrc('placeholder.png');
+    if (image.src !== new URL(placeholder, window.location.href).href) image.src = placeholder;
+  };
 
   const titleText = splitSongDataValues((scope.querySelector('.song-title') || {}).textContent || '').join(' ') || 'Song';
   image.alt = titleText + ' Cover';

@@ -17,17 +17,7 @@
     ></script>
     <script src="assets/static/load.js"></script>
 
-    <link rel="stylesheet" href="/css/generated/motif-map-page.css" /><meta
-      name="robots"
-      content="index,follow" /><meta name="robots" content="index,follow" /><meta
-      name="robots"
-      content="index,follow" /><meta name="robots" content="index,follow" /><meta
-      name="robots"
-      content="index,follow" /><meta name="robots" content="index,follow" /><meta
-      name="robots"
-      content="index,follow" /><meta name="robots" content="index,follow" /><meta
-      property="og:type"
-      content="website" /><meta
+    <meta name="robots" content="index,follow" /><meta property="og:type" content="website" /><meta
       property="og:url"
       content="https://jamiepedia.page/motif-map/" /><meta
       property="og:title"
@@ -494,9 +484,11 @@
                     : motif.name || entry.motifId,
                   color: motif.color || "#ef8a85",
                   imageUrl: resolveMotifImageUrl(motif),
-                  pagePath: motif.pageSlug
-                    ? "motifs/" + motif.pageSlug
-                    : "motifs/" + (motif.id || entry.motifId),
+                  pagePath:
+                    "motifs/" +
+                    (motif.pageSlug || motif.id || entry.motifId) +
+                    (entry.variationId ? "?v=" + encodeURIComponent(entry.variationId) : "") +
+                    (motif.pageHashToken ? "#" + encodeURIComponent(motif.pageHashToken) : ""),
                   x: 0,
                   y: 0,
                   linkedSongIds: new Set(),
@@ -1211,22 +1203,5 @@
         })();
       })();
     </script>
-
-    <script src="/assets/static/csv-data.js"></script
-    ><script src="/assets/static/generated/motif-map-page.js"></script>
-    <script src="/assets/static/csv-data.js"></script
-    ><script src="/assets/static/generated/motif-map-page.js"></script>
-    <script src="/assets/static/csv-data.js"></script
-    ><script src="/assets/static/generated/motif-map-page.js"></script>
-    <script src="/assets/static/csv-data.js"></script
-    ><script src="/assets/static/generated/motif-map-page.js"></script>
-    <script src="/assets/static/csv-data.js"></script
-    ><script src="/assets/static/generated/motif-map-page.js"></script>
-    <script src="/assets/static/csv-data.js"></script
-    ><script src="/assets/static/generated/motif-map-page.js"></script>
-    <script src="/assets/static/csv-data.js"></script
-    ><script src="/assets/static/generated/motif-map-page.js"></script>
-    <script src="/assets/static/csv-data.js"></script
-    ><script src="/assets/static/generated/motif-map-page.js"></script
-  ></body>
+  </body>
 </html>

@@ -602,25 +602,32 @@
           var rows = parsed.rows;
           var knownRoutes = new Set();
           var motifIdIndex = headers.indexOf('motif id');
-          var categoryIdIndex = headers.indexOf('category id');
+          var groupIdIndex = headers.indexOf('group id');
           var hasPageIndex = headers.indexOf('has page');
 
           if (hasPageIndex === -1) {
             return knownRoutes;
           }
 
+          var groupByMotifId = Object.create(null);
+          rows.forEach(function (values) {
+            var motifId = String(values[motifIdIndex] || '').trim().toLowerCase();
+            var groupId = String(values[groupIdIndex] || '').trim();
+            if (motifId && groupId && !groupByMotifId[motifId]) {
+              groupByMotifId[motifId] = groupId;
+            }
+          });
+
           rows.forEach(function (values) {
             var motifId = String(values[motifIdIndex] || '').trim();
-            var categoryId = String(values[categoryIdIndex] || '').trim();
+            var groupId = String(values[groupIdIndex] || '').trim() || groupByMotifId[motifId.toLowerCase()] || '';
             var hasPage = String(values[hasPageIndex] || '').trim().toUpperCase();
 
             if (!motifId || ['TRUE', 'YES', '1'].indexOf(hasPage) === -1) {
               return;
             }
 
-            var pageSlug = categoryId === 'kalia-vibte'
-              ? 'kalia-vibte'
-              : (categoryId || motifId);
+            var pageSlug = groupId || motifId;
 
             var normalized = normalizeMotifRoutePath('/motifs/' + pageSlug);
             if (normalized) {
