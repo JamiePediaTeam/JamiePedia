@@ -510,7 +510,7 @@ function songLyricsResolveScopedSlug(baseSlug, variantSuffix) {
   const versionIndex = isOriginal ? 0 : (altMatch ? Number(altMatch[1]) : -1);
 
   if (versionIndex >= 0 && rows[versionIndex]) {
-    const pathIdSlug = songLyricsRowToPathIdSlug(rows[versionIndex]);
+    const pathIdSlug = songLyricsRowToPathIdSlug(rows[versionIndex], true);
     if (pathIdSlug) {
       return pathIdSlug;
     }
@@ -541,6 +541,17 @@ function songLyricsResolveActiveSlug(baseSlug) {
     const matchedSlug = songLyricsRowToPathIdSlug(matched, true);
     if (matchedSlug) {
       return matchedSlug;
+    }
+  }
+
+  if (typeof getActiveVersionName === 'function') {
+    const activeVersionName = songLyricsNormalizeHashToken(getActiveVersionName());
+    const activeRow = rows.find((row) => {
+      return songLyricsNormalizeHashToken((row || {}).tab_name || '') === activeVersionName;
+    });
+    const activeSlug = songLyricsRowToPathIdSlug(activeRow, true);
+    if (activeSlug) {
+      return activeSlug;
     }
   }
 
@@ -624,14 +635,7 @@ const SongLyrics = {
       return SongLyrics._cacheBySlug.get(slug);
     }
 
-    const slugCandidates = [slug];
-    if (slug.indexOf('#') !== -1) {
-      slugCandidates.push(slug.split('#')[0]);
-    }
-
-    const uniqueCandidates = slugCandidates
-      .map((candidate) => String(candidate || '').toLowerCase())
-      .filter((candidate, index, list) => candidate && list.indexOf(candidate) === index);
+    const uniqueCandidates = [slug];
 
     if (!uniqueCandidates.length) {
       return Promise.resolve(null);

@@ -1875,7 +1875,7 @@ function buildLyricsSlugForVariant(baseSlug, variantSuffix) {
     const rowPath = getSongRowPathValue(config.row || null);
     const normalized = normalizeSongRowPath(rowPath);
     if (normalized) {
-      const pathIdSlug = normalized.replace(/^\/music\//i, '').split('#')[0].trim();
+      const pathIdSlug = normalized.replace(/^\/music\//i, '').trim();
       if (pathIdSlug) {
         return pathIdSlug;
       }
@@ -2491,7 +2491,7 @@ function initializeSongConnectionsFeature() {
   window.__songConnectionsInitPromise = loadScriptOnce('https://www.youtube.com/iframe_api')
     .catch(() => null)
     .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/csv-data.js')))
-    .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/song-lyrics.js?v=20261105d')))
+    .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/song-lyrics.js?v=20261105e')))
     .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/song-motifs.js?v=20261105bs')));
 
   return window.__songConnectionsInitPromise;
