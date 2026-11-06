@@ -658,7 +658,6 @@ async function commitStagedPages(outputRoot, stagingRoot, generatedFiles) {
 
   const manifest = {
     version: 1,
-    generatedAt: new Date().toISOString(),
     files: Array.from(generatedFiles).sort()
   };
   await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');

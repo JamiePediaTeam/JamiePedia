@@ -34,17 +34,15 @@ function songMotifsNormalizeYouTubeId(value) {
 
   let candidate = raw;
   try {
-function songMotifsResolveSingerByToken(value) {
-      const parsed = new URL(raw);
-      if (parsed.hostname.includes('youtu.be')) {
-        candidate = parsed.pathname.replace(/^\//, '').split('/')[0] || '';
-      } else {
-        candidate = parsed.searchParams.get('v')
-          || parsed.pathname.split('/').filter(Boolean).pop()
-          || '';
-      }
+    const parsed = new URL(raw);
+    if (parsed.hostname.includes('youtu.be')) {
+      candidate = parsed.pathname.replace(/^\//, '').split('/')[0] || '';
+    } else {
+      candidate = parsed.searchParams.get('v')
+        || parsed.pathname.split('/').filter(Boolean).pop()
+        || '';
     }
-  } catch (error) {
+  } catch (_error) {
     // Keep raw candidate for non-URL-like input.
   }
 
@@ -272,6 +270,12 @@ function getSongMotifsState() {
   if (!window.__songMotifsState) {
     window.__songMotifsState = {
       player: null,
+      youtubePlayer: null,
+      simulatedPlayer: false,
+      playbackFallbackTimer: null,
+      youtubeReadyTimer: null,
+      playbackRequested: false,
+      pendingSeekTime: null,
       timer: null,
       duration: 0,
       refsByMotif: [],
@@ -289,6 +293,10 @@ function getSongMotifsState() {
       volume: readPersistedPlayerVolume(),
       volumeInput: null,
       karaokeEntries: [],
+      karaokeDuetEntries: [],
+      karaokeStandardBackingEntries: [],
+      karaokePresentationMode: 'standard',
+      karaokeDuetTransferAnimation: null,
       lyricalRefs: [],
       karaokeCurrentIndex: -2,
       karaokeWrap: null,
@@ -296,6 +304,7 @@ function getSongMotifsState() {
       karaokeLayerHost: null,
       karaokeActiveLayer: null,
       karaokeTransitionTimer: null,
+      karaokeMainExitTimer: null,
       karaokeMainReentryAnimationTimer: null,
       karaokeWrapResizeTimer: null,
       karaokeLayoutMode: 'hidden',
@@ -316,6 +325,14 @@ function getSongMotifsState() {
   }
   if (!Array.isArray(window.__songMotifsState.motifRenderCallbacks)) {
     window.__songMotifsState.motifRenderCallbacks = [];
+  }
+  if (!Object.prototype.hasOwnProperty.call(window.__songMotifsState, 'youtubePlayer')) {
+    window.__songMotifsState.youtubePlayer = null;
+    window.__songMotifsState.simulatedPlayer = false;
+    window.__songMotifsState.playbackFallbackTimer = null;
+    window.__songMotifsState.youtubeReadyTimer = null;
+    window.__songMotifsState.playbackRequested = false;
+    window.__songMotifsState.pendingSeekTime = null;
   }
   return window.__songMotifsState;
 }
@@ -809,18 +826,18 @@ function songMotifsBuildKaraokeLineHtml(entry) {
       const segmentColor = primarySinger
         ? (String(primarySinger.color || '').trim() || '#ef8a85')
         : 'transparent';
-      const isUnattributed = !!(segment && segment.explicitNone) || !primarySinger;
+      const isUnattributed = !!(segment && segment.explicitNone) || !segmentSingers.length;
 
       if (primarySinger && defaultColor === '#ef8a85') {
         defaultColor = segmentColor;
       }
 
-      if (primarySinger) {
-        const singerId = String(primarySinger.id || '').trim();
+      segmentSingers.forEach((singer) => {
+        const singerId = String(singer.id || '').trim();
         if (singerId && !uniqueSingerMap.has(singerId)) {
-          uniqueSingerMap.set(singerId, primarySinger);
+          uniqueSingerMap.set(singerId, singer);
         }
-      }
+      });
 
       const searchIndex = plainText.toLowerCase().indexOf(segmentText.toLowerCase(), textCursor);
       const startIndex = searchIndex >= 0 ? searchIndex : textCursor;
@@ -833,7 +850,7 @@ function songMotifsBuildKaraokeLineHtml(entry) {
           start: startPercent,
           end: endPercent,
           color: segmentColor,
-          singer: primarySinger,
+          singers: segmentSingers,
           unattributed: isUnattributed
         });
       }
@@ -847,22 +864,45 @@ function songMotifsBuildKaraokeLineHtml(entry) {
 
     segmentStops.sort((left, right) => left.start - right.start);
 
-    // Build a full stop list with explicit transparent gaps so singer boundaries at spaces
-    // appear as visual breaks instead of color interpolation.
+    // Keep whitespace and singer-group boundaries transparent instead of blending across them.
     const fullSegmentStops = [];
     let coverageCursor = 0;
+    let previousStop = null;
     segmentStops.forEach((stop) => {
-      const boundedStart = Math.max(0, Math.min(100, stop.start));
+      let boundedStart = Math.max(0, Math.min(100, stop.start));
       const boundedEnd = Math.max(boundedStart, Math.min(100, stop.end));
+      const previousSingerGroup = previousStop && !previousStop.unattributed
+        ? (previousStop.singers || []).map((singer) => String(singer.id || '')).join('|')
+        : '';
+      const singerGroup = !stop.unattributed
+        ? (stop.singers || []).map((singer) => String(singer.id || '')).join('|')
+        : '';
 
       if (boundedStart > coverageCursor + 0.01) {
         fullSegmentStops.push({
           start: coverageCursor,
           end: boundedStart,
           color: 'transparent',
-          singer: null,
+          singers: [],
           unattributed: true
         });
+      } else if (previousSingerGroup && singerGroup && previousSingerGroup !== singerGroup && fullSegmentStops.length) {
+        const previousRenderedStop = fullSegmentStops[fullSegmentStops.length - 1];
+        const groupGapWidth = Math.min(1.2, 100 / Math.max(plainText.length, 1));
+        const gapStart = Math.max(previousRenderedStop.start, boundedStart - (groupGapWidth / 2));
+        const gapEnd = Math.min(boundedEnd, boundedStart + (groupGapWidth / 2));
+        previousRenderedStop.end = gapStart;
+        if (gapEnd > gapStart) {
+          fullSegmentStops.push({
+            start: gapStart,
+            end: gapEnd,
+            color: 'transparent',
+            singers: [],
+            unattributed: true
+          });
+          coverageCursor = gapEnd;
+          boundedStart = gapEnd;
+        }
       }
 
       if (boundedEnd > boundedStart + 0.01) {
@@ -870,12 +910,13 @@ function songMotifsBuildKaraokeLineHtml(entry) {
           start: boundedStart,
           end: boundedEnd,
           color: stop.color,
-          singer: stop.singer,
+          singers: stop.singers,
           unattributed: stop.unattributed
         });
       }
 
       coverageCursor = Math.max(coverageCursor, boundedEnd);
+      previousStop = stop;
     });
 
     if (coverageCursor < 99.99) {
@@ -883,7 +924,7 @@ function songMotifsBuildKaraokeLineHtml(entry) {
         start: coverageCursor,
         end: 100,
         color: 'transparent',
-        singer: null,
+        singers: [],
         unattributed: true
       });
     }
@@ -892,28 +933,48 @@ function songMotifsBuildKaraokeLineHtml(entry) {
     fullSegmentStops.forEach((stop) => {
       const safeStart = Math.max(0, Math.min(100, stop.start));
       const safeEnd = Math.max(safeStart, Math.min(100, stop.end));
-      const color = stop.unattributed ? 'transparent' : stop.color;
-      gradientStops.push(color + ' ' + safeStart.toFixed(4) + '%');
-      gradientStops.push(color + ' ' + safeEnd.toFixed(4) + '%');
-
-      if (!stop.singer || stop.unattributed) {
+      const segmentSingers = stop.unattributed ? [] : (Array.isArray(stop.singers) ? stop.singers : []);
+      if (!segmentSingers.length) {
+        gradientStops.push('transparent ' + safeStart.toFixed(4) + '%');
+        gradientStops.push('transparent ' + safeEnd.toFixed(4) + '%');
         return;
       }
 
-      const singer = stop.singer;
-      const singerColor = String((singer || {}).color || '#ef8a85').trim() || '#ef8a85';
-      const singerId = String((singer || {}).id || '').trim();
-      const singerName = String((singer || {}).name || singerId || 'Singer').trim() || 'Singer';
-      const singerHref = String((singer || {}).href || '').trim()
-        || (singer && singer.pageSlug
-          ? (typeof window.toSiteHref === 'function' ? window.toSiteHref('/artists/' + singer.pageSlug) : ('/artists/' + singer.pageSlug))
-          : '');
-      const previewAttr = singerId ? ' data-artist-preview-id="' + songMotifsEscapeHtml(singerId) + '"' : '';
-      const ariaLabel = 'View singer: ' + singerName;
       const widthPercent = Math.max(0, safeEnd - safeStart);
-      segmentHitboxes.push(
-        '<a class="song-karaoke-singer-link song-karaoke-singer-hitbox" href="' + songMotifsEscapeHtml(singerHref || '#') + '" aria-label="' + songMotifsEscapeHtml(ariaLabel) + '" style="--karaoke-singer-color: ' + songMotifsEscapeHtml(singerColor) + '; flex-basis: ' + widthPercent.toFixed(4) + '%;"' + previewAttr + '></a>'
-      );
+      const singerWidthPercent = widthPercent / segmentSingers.length;
+      const singerSolidWidth = segmentSingers.length > 1
+        ? widthPercent * 0.5 / segmentSingers.length
+        : widthPercent;
+      const singerTransitionWidth = segmentSingers.length > 1
+        ? widthPercent * 0.5 / (segmentSingers.length - 1)
+        : 0;
+      let gradientCursor = safeStart;
+      segmentSingers.forEach((singer, singerIndex) => {
+        const singerColor = String((singer || {}).color || '#ef8a85').trim() || '#ef8a85';
+        const singerId = String((singer || {}).id || '').trim();
+        const singerName = String((singer || {}).name || singerId || 'Singer').trim() || 'Singer';
+        const singerHref = String((singer || {}).href || '').trim()
+          || (singer && singer.pageSlug
+            ? (typeof window.toSiteHref === 'function' ? window.toSiteHref('/artists/' + singer.pageSlug) : ('/artists/' + singer.pageSlug))
+            : '');
+        const previewAttr = singerId ? ' data-artist-preview-id="' + songMotifsEscapeHtml(singerId) + '"' : '';
+        const ariaLabel = 'View singer: ' + singerName;
+        const solidEnd = gradientCursor + singerSolidWidth;
+        gradientStops.push(singerColor + ' ' + gradientCursor.toFixed(4) + '%');
+        gradientStops.push(singerColor + ' ' + solidEnd.toFixed(4) + '%');
+        gradientCursor = solidEnd;
+
+        if (singerIndex < segmentSingers.length - 1) {
+          const nextSingerColor = String(segmentSingers[singerIndex + 1].color || '#ef8a85').trim() || '#ef8a85';
+          const transitionEnd = gradientCursor + singerTransitionWidth;
+          gradientStops.push(singerColor + ' ' + gradientCursor.toFixed(4) + '%');
+          gradientStops.push(nextSingerColor + ' ' + transitionEnd.toFixed(4) + '%');
+          gradientCursor = transitionEnd;
+        }
+        segmentHitboxes.push(
+          '<a class="song-karaoke-singer-link song-karaoke-singer-hitbox" href="' + songMotifsEscapeHtml(singerHref || '#') + '" aria-label="' + songMotifsEscapeHtml(ariaLabel) + '" style="--karaoke-singer-color: ' + songMotifsEscapeHtml(singerColor) + '; flex-basis: ' + singerWidthPercent.toFixed(4) + '%;"' + previewAttr + '></a>'
+        );
+      });
     });
 
     const singerCount = uniqueSingerMap.size || 1;
@@ -950,8 +1011,8 @@ function songMotifsBuildKaraokeLineHtml(entry) {
     '</span>';
 }
 
-function songMotifsFitBackingLaneText(lane) {
-  if (!lane || !lane.isBacking || !lane.layerHost) {
+function songMotifsFitKaraokeText(lane) {
+  if (!lane || !lane.layerHost) {
     return;
   }
 
@@ -962,17 +1023,23 @@ function songMotifsFitBackingLaneText(lane) {
       return;
     }
 
-    fitTarget.style.setProperty('--karaoke-fit-scale', '1');
-    const availableWidth = Math.max(0, lineNode.clientWidth - 16);
+    const availableWidth = Math.max(0, lineNode.clientWidth - 12);
+    const previousMaxWidth = fitTarget.style.maxWidth;
+    fitTarget.style.maxWidth = 'none';
     const contentWidth = Math.ceil(fitTarget.scrollWidth || 0);
+    fitTarget.style.maxWidth = previousMaxWidth;
 
-    if (availableWidth <= 0 || contentWidth <= 0) {
+    if (contentWidth <= 0) {
       return;
     }
 
-    const rawScale = availableWidth / contentWidth;
-    const scale = Math.max(0.22, Math.min(1, rawScale * 0.92));
-    fitTarget.style.setProperty('--karaoke-fit-scale', String(scale));
+    const scale = availableWidth > 0 && contentWidth > availableWidth
+      ? Math.max(0.1, Math.min(1, (availableWidth / contentWidth) * 0.98))
+      : 1;
+    const currentScale = Number.parseFloat(fitTarget.style.getPropertyValue('--karaoke-fit-scale')) || 1;
+    if (Math.abs(currentScale - scale) > 0.005) {
+      fitTarget.style.setProperty('--karaoke-fit-scale', String(scale));
+    }
   });
 }
 
@@ -1068,19 +1135,20 @@ function songMotifsUpdateKaraokeLane(lane, payload, currentIndex) {
     lane.layerHost.appendChild(initialLayer);
     lane.activeLayer = initialLayer;
     if (lane.isBacking) {
-      songMotifsFitBackingLaneText(lane);
+      songMotifsFitKaraokeText(lane);
     }
     return;
   }
 
-  const shouldAnimate = Math.abs(currentIndex - previousIndex) === 1;
+  const shouldAnimate = Math.abs(currentIndex - previousIndex) === 1
+    || (!!lane.animateSkippedTransitions && currentIndex !== previousIndex);
   if (!shouldAnimate) {
     const replacementLayer = songMotifsBuildKaraokeLayer(payload, 'song-karaoke-layer-active');
     lane.layerHost.innerHTML = '';
     lane.layerHost.appendChild(replacementLayer);
     lane.activeLayer = replacementLayer;
     if (lane.isBacking) {
-      songMotifsFitBackingLaneText(lane);
+      songMotifsFitKaraokeText(lane);
     }
     return;
   }
@@ -1093,7 +1161,7 @@ function songMotifsUpdateKaraokeLane(lane, payload, currentIndex) {
   lane.layerHost.appendChild(enteringLayer);
   lane.activeLayer = enteringLayer;
   if (lane.isBacking) {
-    songMotifsFitBackingLaneText(lane);
+    songMotifsFitKaraokeText(lane);
   }
   void enteringLayer.offsetWidth;
   enteringLayer.classList.add('song-karaoke-layer-entering-play');
@@ -1106,7 +1174,7 @@ function songMotifsUpdateKaraokeLane(lane, payload, currentIndex) {
     enteringLayer.classList.remove('song-karaoke-layer-entering-play');
     enteringLayer.classList.add('song-karaoke-layer-active');
     if (lane.isBacking) {
-      songMotifsFitBackingLaneText(lane);
+      songMotifsFitKaraokeText(lane);
     }
     lane.transitionTimer = null;
   }, 500);
@@ -1143,6 +1211,7 @@ function songMotifsApplyKaraokeLayoutState(state, options) {
   const shouldPreGrowMain = !!config.shouldPreGrowMain;
   const hasBackingLyricsOnScreen = !!config.hasBackingLyricsOnScreen;
   const showBackingOnlyLayout = !!config.showBackingOnlyLayout;
+  const duetLayout = !!config.duetLayout;
   const backingTrackCount = Math.max(0, Number(config.backingTrackCount) || 0);
   const nextLayoutMode = String(config.nextLayoutMode || 'hidden');
   const previousLayoutMode = String(state.karaokeLayoutMode || 'hidden');
@@ -1156,6 +1225,7 @@ function songMotifsApplyKaraokeLayoutState(state, options) {
     wrap.classList.toggle('song-karaoke-backing-count-2', backingTrackCount >= 2);
     wrap.classList.toggle('song-karaoke-layout-with-main', showMainViewport);
     wrap.classList.toggle('song-karaoke-layout-backing-only', showBackingOnlyLayout);
+    wrap.classList.toggle('song-karaoke-layout-duet', duetLayout);
     wrap.classList.toggle('song-karaoke-main-preopen', shouldPreGrowMain);
 
     if (state.karaokeViewport) {
@@ -1277,6 +1347,7 @@ function songMotifsSyncHiddenMainLane(state, currentIndex) {
   state.karaokeLayerHost.innerHTML = '';
   state.karaokeLayerHost.appendChild(hiddenLayer);
   state.karaokeActiveLayer = hiddenLayer;
+  songMotifsFitKaraokeText({ layerHost: state.karaokeLayerHost });
 }
 
 function songMotifsAnimateMainReentryBottomLine(state) {
@@ -1300,16 +1371,604 @@ function songMotifsAnimateMainReentryBottomLine(state) {
   }, 500);
 }
 
+function songMotifsCaptureDuetTransfer(sourceHost, preferredSourceLayer) {
+  if (!sourceHost) {
+    return null;
+  }
+
+  const sourceLayer = preferredSourceLayer && preferredSourceLayer.parentNode === sourceHost
+    ? preferredSourceLayer
+    : sourceHost.querySelector('.song-karaoke-layer-active')
+    || sourceHost.querySelector('.song-karaoke-layer');
+  if (!sourceLayer) {
+    return null;
+  }
+
+  const rect = sourceLayer.getBoundingClientRect();
+  const hostRect = sourceHost.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0 || hostRect.width <= 0) {
+    return null;
+  }
+
+  const nodes = [sourceLayer, ...sourceLayer.querySelectorAll('*')].map((node) => {
+    const computed = getComputedStyle(node);
+    const computedStyles = [];
+    for (let styleIndex = 0; styleIndex < computed.length; styleIndex += 1) {
+      const property = computed.item(styleIndex);
+      computedStyles.push([property, computed.getPropertyValue(property)]);
+    }
+    return {
+      node,
+      style: node.getAttribute('style'),
+      className: node.getAttribute('class'),
+      computedStyles
+    };
+  });
+
+  return {
+    sourceHost,
+    sourceLayer,
+    sourceParent: sourceLayer.parentNode,
+    sourceNextSibling: sourceLayer.nextSibling,
+    sourceNodes: nodes,
+    rect: {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    },
+    sourceVisibility: sourceHost.style.visibility
+  };
+}
+
+function songMotifsAnimateDuetTransfer(state, transfer, targetHost) {
+  if (!state || !transfer || !targetHost) {
+    return;
+  }
+
+  songMotifsClearDuetTransferAnimation(state);
+
+  const targetLane = (state.karaokeBackingTracks || []).find((track) => track.layerHost === targetHost);
+  const targetLayer = (targetLane && targetLane.activeLayer)
+    || (targetHost === state.karaokeLayerHost && state.karaokeActiveLayer)
+    || targetHost.querySelector('.song-karaoke-layer-active')
+    || targetHost.querySelector('.song-karaoke-layer-entering')
+    || targetHost.querySelector('.song-karaoke-layer');
+  const targetRect = targetLayer ? targetLayer.getBoundingClientRect() : targetHost.getBoundingClientRect();
+  if (targetRect.width <= 0) {
+    return;
+  }
+
+  const sourceLayer = transfer.sourceLayer;
+  const sourceLayerNodes = [sourceLayer, ...sourceLayer.querySelectorAll('*')];
+  const preservedVisualProperties = new Set([
+    'background-clip',
+    'background-color',
+    'background-image',
+    'color',
+    'font-family',
+    'font-size',
+    'font-style',
+    'font-variant',
+    'font-weight',
+    'letter-spacing',
+    'text-decoration',
+    'text-decoration-color',
+    'text-decoration-line',
+    'text-decoration-style',
+    'text-decoration-thickness',
+    'text-shadow',
+    'text-transform',
+    '-webkit-text-fill-color'
+  ]);
+  transfer.sourceNodes.forEach(({ computedStyles }, index) => {
+    const movingNode = sourceLayerNodes[index];
+    if (!movingNode) {
+      return;
+    }
+    computedStyles.forEach(([property, value]) => {
+      const preservesTextSizing = movingNode.matches(
+        '.song-karaoke-singer-line, .song-karaoke-singer-text, .song-karaoke-singer-underline'
+      );
+      const emDependentSizing = movingNode.matches('.song-karaoke-singer-underline')
+        ? ['width', 'height', 'bottom'].includes(property)
+        : ['width', 'height', 'min-width', 'min-height', 'max-width', 'max-height'].includes(property);
+      if (preservesTextSizing && emDependentSizing) {
+        return;
+      }
+      if (!property.startsWith('--') && !preservedVisualProperties.has(property)) {
+        return;
+      }
+      movingNode.style.setProperty(property, value);
+    });
+    movingNode.style.setProperty('animation', 'none', 'important');
+    movingNode.style.setProperty('transition', 'none', 'important');
+  });
+
+  const targetLayerClassName = targetLayer.className;
+  const targetViewport = targetHost === state.karaokeLayerHost
+    ? state.karaokeViewport
+    : targetHost.closest('.song-karaoke-viewport');
+  const targetRows = Array.from(targetLayer.querySelectorAll('.song-karaoke-line'));
+  const targetRowStates = targetRows.map((node) => ({
+    node,
+    className: node.className,
+    html: node.innerHTML
+  }));
+  const sourceRows = Array.from(sourceLayer.querySelectorAll('.song-karaoke-line'));
+  const rowRole = (row) => ['prev', 'current', 'next'].find((name) => {
+    return row.classList.contains('song-karaoke-line-' + name);
+  });
+  const normalizedRowText = (row) => String(row.textContent || '').replace(/\s+/g, ' ').trim();
+  sourceRows.forEach((sourceRow) => {
+    const targetRow = targetRows.find((candidate) => rowRole(candidate) === rowRole(sourceRow));
+    if (targetRow && normalizedRowText(sourceRow) !== normalizedRowText(targetRow)) {
+      sourceRow.innerHTML = targetRow.innerHTML;
+    }
+  });
+  const sourceRect = transfer.rect;
+  sourceLayer.style.setProperty('position', 'fixed', 'important');
+  sourceLayer.style.setProperty('inset', 'auto', 'important');
+  sourceLayer.style.setProperty('left', sourceRect.left + 'px', 'important');
+  sourceLayer.style.setProperty('top', sourceRect.top + 'px', 'important');
+  sourceLayer.style.setProperty('right', 'auto', 'important');
+  sourceLayer.style.setProperty('bottom', 'auto', 'important');
+  sourceLayer.style.setProperty('width', sourceRect.width + 'px', 'important');
+  sourceLayer.style.setProperty('height', sourceRect.height + 'px', 'important');
+  sourceLayer.style.setProperty('margin', '0', 'important');
+  sourceLayer.style.setProperty('z-index', '99999', 'important');
+  sourceLayer.style.setProperty('pointer-events', 'none', 'important');
+  sourceLayer.style.setProperty('visibility', 'visible', 'important');
+  sourceLayer.style.setProperty('opacity', '1', 'important');
+  sourceLayer.style.setProperty('transform', 'none');
+  sourceLayer.style.setProperty('transform-origin', 'top left', 'important');
+
+  transfer.sourceHost.style.visibility = 'hidden';
+  document.body.appendChild(sourceLayer);
+  const detachedRect = sourceLayer.getBoundingClientRect();
+  if (Number.isFinite(detachedRect.left) && Number.isFinite(detachedRect.top)) {
+    const currentLeft = Number.parseFloat(sourceLayer.style.left) || 0;
+    const currentTop = Number.parseFloat(sourceLayer.style.top) || 0;
+    sourceLayer.style.setProperty('left', (currentLeft + sourceRect.left - detachedRect.left) + 'px', 'important');
+    sourceLayer.style.setProperty('top', (currentTop + sourceRect.top - detachedRect.top) + 'px', 'important');
+  }
+  const targetLayerVisibility = targetLayer.style.visibility;
+  targetLayer.style.visibility = 'hidden';
+
+  const duration = 500;
+  const easing = 'cubic-bezier(0.42, 0, 0.58, 1)';
+  const animations = [];
+  const claimedTargetRows = new Set();
+  const rowTargets = new Map();
+  const rowSizeTracks = [];
+  sourceRows.forEach((sourceRow) => {
+    const sourceText = normalizedRowText(sourceRow);
+    if (!sourceText) {
+      return;
+    }
+    const sourceRowClass = rowRole(sourceRow);
+    const exactMatch = targetRows.find((candidate) => !claimedTargetRows.has(candidate)
+      && rowRole(candidate) === sourceRowClass
+      && normalizedRowText(candidate) === sourceText)
+      || targetRows.find((candidate) => !claimedTargetRows.has(candidate)
+        && rowRole(candidate) === sourceRowClass)
+      || targetRows.find((candidate) => !claimedTargetRows.has(candidate)
+        && normalizedRowText(candidate) === sourceText);
+    if (exactMatch) {
+      rowTargets.set(sourceRow, exactMatch);
+      claimedTargetRows.add(exactMatch);
+    }
+  });
+
+  sourceRows.forEach((sourceRow) => {
+    if (rowTargets.has(sourceRow)) {
+      return;
+    }
+    const sourceRowClass = rowRole(sourceRow);
+    const fallbackMatch = targetRows.find((candidate) => !claimedTargetRows.has(candidate)
+      && rowRole(candidate) === sourceRowClass)
+      || targetRows.find((candidate) => !claimedTargetRows.has(candidate));
+    if (fallbackMatch) {
+      rowTargets.set(sourceRow, fallbackMatch);
+      claimedTargetRows.add(fallbackMatch);
+    }
+  });
+  const rowMappings = sourceRows.map((sourceRow) => {
+    const targetRow = rowTargets.get(sourceRow);
+    const targetRowState = targetRowStates.find((rowState) => rowState.node === targetRow);
+    return targetRowState ? {
+      sourceRow,
+      className: targetRowState.className,
+      html: sourceRow.innerHTML
+    } : null;
+  }).filter(Boolean);
+
+  sourceRows.forEach((sourceRow) => {
+    const sourceText = normalizedRowText(sourceRow);
+    const sourceStyle = getComputedStyle(sourceRow);
+    const targetRow = rowTargets.get(sourceRow);
+
+    if (!sourceText || !targetRow) {
+      const fadeOut = sourceRow.animate([
+        { opacity: sourceStyle.opacity },
+        { opacity: 0 }
+      ], { duration, easing, fill: 'forwards' });
+      animations.push(fadeOut);
+      return;
+    }
+
+    claimedTargetRows.add(targetRow);
+    const targetStyle = getComputedStyle(targetRow);
+    const targetFontSize = Number.parseFloat(targetStyle.fontSize);
+    const targetLineHeight = Number.parseFloat(targetStyle.lineHeight);
+    const sourceFontSize = Number.parseFloat(sourceStyle.fontSize);
+    const sourceLineHeight = Number.parseFloat(sourceStyle.lineHeight);
+    if (Number.isFinite(sourceFontSize) && Number.isFinite(targetFontSize)) {
+      const sourceFontNodes = [sourceRow, ...sourceRow.querySelectorAll('*')];
+      const targetFontNodes = [targetRow, ...targetRow.querySelectorAll('*')];
+      const fontSizeTracks = sourceFontNodes.slice(1).map((node, index) => {
+        const targetNode = targetFontNodes[index + 1];
+        if (!targetNode || node.tagName !== targetNode.tagName) {
+          return null;
+        }
+        const sourceNodeFontSize = Number.parseFloat(getComputedStyle(node).fontSize);
+        const targetNodeFontSize = Number.parseFloat(getComputedStyle(targetNode).fontSize);
+        return Number.isFinite(sourceNodeFontSize) && Number.isFinite(targetNodeFontSize)
+          ? { node, sourceFontSize: sourceNodeFontSize, targetFontSize: targetNodeFontSize }
+          : null;
+      }).filter(Boolean);
+      rowSizeTracks.push({
+        row: sourceRow,
+        sourceFontSize,
+        targetFontSize,
+        sourceLineHeight,
+        targetLineHeight,
+        fontSizeTracks
+      });
+    }
+    const targetRowClass = ['prev', 'current', 'next'].find((name) => targetRow.classList.contains('song-karaoke-line-' + name));
+    if (targetRowClass) {
+      sourceRow.className = 'song-karaoke-line song-karaoke-line-' + targetRowClass;
+    }
+
+    const rowEndStyles = {
+      fontWeight: targetStyle.fontWeight,
+      color: targetStyle.color,
+      textShadow: targetStyle.textShadow,
+      opacity: targetStyle.opacity
+    };
+    const targetMatrix = targetStyle.transform === 'none'
+      ? { a: 1, d: 1, m41: 0, m42: 0 }
+      : new DOMMatrixReadOnly(targetStyle.transform);
+    rowEndStyles.transform = 'translate(' + targetMatrix.m41 + 'px, '
+      + targetMatrix.m42 + 'px) scale(' + targetMatrix.a + ', ' + targetMatrix.d + ')';
+
+    const rowAnimation = sourceRow.animate([
+      {
+        fontWeight: sourceStyle.fontWeight,
+        color: sourceStyle.color,
+        textShadow: sourceStyle.textShadow,
+        opacity: sourceStyle.opacity,
+        transform: sourceStyle.transform
+      },
+      rowEndStyles
+    ], { duration, easing, fill: 'forwards' });
+    animations.push(rowAnimation);
+
+    const cloneFitTarget = sourceRow.querySelector('.song-karaoke-line-fit-target');
+    const targetFitTarget = targetRow.querySelector('.song-karaoke-line-fit-target');
+    if (cloneFitTarget && targetFitTarget) {
+      const cloneFitStyle = getComputedStyle(cloneFitTarget);
+      const targetFitStyle = getComputedStyle(targetFitTarget);
+      const targetFitScale = Number.parseFloat(targetFitStyle.getPropertyValue('--karaoke-fit-scale'));
+      const fitEndScale = Number.isFinite(targetFitScale) ? targetFitScale : 1;
+      const fitAnimation = cloneFitTarget.animate([
+        { transform: cloneFitStyle.transform },
+        { transform: 'scale(' + fitEndScale + ')' }
+      ], { duration, easing: 'linear', fill: 'forwards' });
+      animations.push(fitAnimation);
+    }
+
+    const cloneNodes = Array.from(sourceRow.querySelectorAll('*'));
+    const targetNodes = Array.from(targetRow.querySelectorAll('*'));
+    cloneNodes.forEach((cloneNode, index) => {
+      const targetNode = targetNodes[index];
+      if (!targetNode || cloneNode.tagName !== targetNode.tagName) {
+        return;
+      }
+
+      const fromStyle = getComputedStyle(cloneNode);
+      const toStyle = getComputedStyle(targetNode);
+      const styleKeys = ['color', 'fontWeight', 'textShadow', 'opacity'];
+      const fromStyles = {};
+      const toStyles = {};
+      styleKeys.forEach((key) => {
+        if (fromStyle[key] !== toStyle[key]) {
+          fromStyles[key] = fromStyle[key];
+          toStyles[key] = toStyle[key];
+        }
+      });
+      if (Object.keys(toStyles).length) {
+        animations.push(cloneNode.animate([fromStyles, toStyles], { duration, easing, fill: 'forwards' }));
+      }
+    });
+  });
+
+  state.karaokeDuetTransferAnimation = {
+    animations,
+    frame: null,
+    startTime: performance.now(),
+    duration,
+    sourceRect,
+    sourceLayer,
+    sourceRows,
+    rowMappings,
+    sourceNodes: transfer.sourceNodes,
+    sourceParent: transfer.sourceParent,
+    sourceNextSibling: transfer.sourceNextSibling,
+    source: transfer.sourceHost,
+    sourceVisibility: transfer.sourceVisibility,
+    target: targetHost,
+    targetLayer,
+    targetViewport,
+    targetLayerVisibility,
+    targetLayerClassName,
+    targetRowStates,
+    targetHostVisibility: targetHost.style.visibility,
+    targetLane
+  };
+
+  const animateToLiveTarget = (timestamp) => {
+    const activeTransfer = state.karaokeDuetTransferAnimation;
+    if (!activeTransfer || activeTransfer.sourceLayer !== sourceLayer) {
+      return;
+    }
+
+    const rawProgress = Math.min(1, Math.max(0, (timestamp - activeTransfer.startTime) / duration));
+    const progress = 1 - Math.pow(1 - rawProgress, 3);
+    const sizeProgress = rawProgress;
+    const liveTargetRect = targetLayer.getBoundingClientRect();
+    const width = sourceRect.width + ((liveTargetRect.width - sourceRect.width) * progress);
+    const height = sourceRect.height + ((liveTargetRect.height - sourceRect.height) * progress);
+    const sourceCenter = sourceRect.left + (sourceRect.width / 2);
+    const targetCenter = liveTargetRect.left + (liveTargetRect.width / 2);
+    const center = sourceCenter + ((targetCenter - sourceCenter) * progress);
+    const left = center - (width / 2);
+    const top = sourceRect.top + ((liveTargetRect.top - sourceRect.top) * progress);
+
+    sourceLayer.style.setProperty('left', left + 'px', 'important');
+    sourceLayer.style.setProperty('top', top + 'px', 'important');
+    sourceLayer.style.setProperty('width', width + 'px', 'important');
+    sourceLayer.style.setProperty('height', height + 'px', 'important');
+    rowSizeTracks.forEach((track) => {
+      const desiredFontSize = track.sourceFontSize
+        + ((track.targetFontSize - track.sourceFontSize) * sizeProgress);
+      track.row.style.fontSize = desiredFontSize + 'px';
+      track.fontSizeTracks.forEach((fontTrack) => {
+        const desiredNodeFontSize = fontTrack.sourceFontSize
+          + ((fontTrack.targetFontSize - fontTrack.sourceFontSize) * sizeProgress);
+        fontTrack.node.style.fontSize = desiredNodeFontSize + 'px';
+      });
+      if (Number.isFinite(track.sourceLineHeight) && Number.isFinite(track.targetLineHeight)) {
+        const desiredLineHeight = track.sourceLineHeight
+          + ((track.targetLineHeight - track.sourceLineHeight) * sizeProgress);
+        track.row.style.lineHeight = desiredLineHeight + 'px';
+      }
+    });
+
+    if (rawProgress >= 1) {
+      const viewportStyle = targetViewport ? getComputedStyle(targetViewport) : null;
+      const viewportRect = targetViewport ? targetViewport.getBoundingClientRect() : null;
+      const targetViewportReady = !targetViewport
+        || (viewportStyle.visibility !== 'hidden'
+          && Number.parseFloat(viewportStyle.opacity) >= 0.99
+          && viewportRect.height > 0);
+      const waitElapsed = timestamp - (activeTransfer.commitWaitStartTime || timestamp);
+      if (!targetViewportReady && waitElapsed < 1000) {
+        activeTransfer.commitWaitStartTime = activeTransfer.commitWaitStartTime || timestamp;
+        activeTransfer.frame = requestAnimationFrame(animateToLiveTarget);
+        return;
+      }
+      songMotifsCommitDuetTransferAnimation(state);
+      return;
+    }
+
+    activeTransfer.frame = requestAnimationFrame(animateToLiveTarget);
+  };
+  state.karaokeDuetTransferAnimation.frame = requestAnimationFrame(animateToLiveTarget);
+}
+
+function songMotifsRestoreDuetTransferNodes(transfer, preserveTargetClasses) {
+  (transfer.sourceNodes || []).forEach(({ node, style, className }) => {
+    if (!node) {
+      return;
+    }
+    if (style === null) {
+      node.removeAttribute('style');
+    } else {
+      node.setAttribute('style', style);
+    }
+    if (!preserveTargetClasses) {
+      if (className === null) {
+        node.removeAttribute('class');
+      } else {
+        node.setAttribute('class', className);
+      }
+    }
+  });
+
+  if (preserveTargetClasses) {
+    transfer.sourceLayer.className = 'song-karaoke-layer song-karaoke-layer-active';
+    (transfer.rowMappings || []).forEach((mapping) => {
+      mapping.sourceRow.className = mapping.className;
+      if (mapping.sourceRow.innerHTML !== mapping.html) {
+        mapping.sourceRow.innerHTML = mapping.html;
+      }
+      [mapping.sourceRow, ...mapping.sourceRow.querySelectorAll('*')].forEach((node) => {
+        const style = node.style;
+        for (let styleIndex = style.length - 1; styleIndex >= 0; styleIndex -= 1) {
+          const property = style.item(styleIndex);
+          if (!property.startsWith('--')) {
+            style.removeProperty(property);
+          }
+        }
+        if (style.length === 0) {
+          node.removeAttribute('style');
+        }
+      });
+    });
+  }
+}
+
+function songMotifsCommitDuetTransferAnimation(state) {
+  const transfer = state && state.karaokeDuetTransferAnimation;
+  if (!transfer) {
+    return;
+  }
+
+  if (transfer.frame) {
+    cancelAnimationFrame(transfer.frame);
+    transfer.frame = null;
+  }
+  (transfer.animations || [transfer.animation]).forEach((animation) => {
+    if (animation) {
+      animation.cancel();
+    }
+  });
+
+  const targetLayer = transfer.targetLayer;
+  const targetLayerParent = targetLayer && targetLayer.parentNode;
+  if (transfer.targetLane && transfer.targetLane.transitionTimer) {
+    clearTimeout(transfer.targetLane.transitionTimer);
+    transfer.targetLane.transitionTimer = null;
+  }
+  if (transfer.target === state.karaokeLayerHost && state.karaokeTransitionTimer) {
+    clearTimeout(state.karaokeTransitionTimer);
+    state.karaokeTransitionTimer = null;
+  }
+  if (targetLayerParent) {
+    Array.from(targetLayerParent.children).forEach((child) => {
+      if (child !== targetLayer) {
+        child.remove();
+      }
+    });
+  }
+
+  songMotifsRestoreDuetTransferNodes(transfer, true);
+  transfer.sourceLayer.className = targetLayer ? targetLayer.className : transfer.targetLayerClassName;
+  transfer.sourceLayer.classList.remove('song-karaoke-layer-entering', 'song-karaoke-layer-entering-play', 'song-karaoke-layer-leaving');
+  transfer.sourceLayer.classList.add('song-karaoke-layer-active');
+  if (targetLayer && targetLayer.parentNode) {
+    targetLayer.remove();
+  }
+  transfer.target.appendChild(transfer.sourceLayer);
+
+  if (transfer.targetLane) {
+    transfer.targetLane.activeLayer = transfer.sourceLayer;
+    songMotifsFitKaraokeText(transfer.targetLane);
+  } else if (transfer.target === state.karaokeLayerHost) {
+    state.karaokeActiveLayer = transfer.sourceLayer;
+  }
+
+  if (transfer.source && transfer.source.isConnected) {
+    transfer.source.style.visibility = transfer.sourceVisibility;
+  }
+  if (transfer.targetLayer && transfer.targetLayer.isConnected) {
+    transfer.targetLayer.style.visibility = transfer.targetLayerVisibility;
+  }
+  state.karaokeDuetTransferAnimation = null;
+}
+
+function songMotifsClearDuetTransferAnimation(state) {
+  const transfer = state && state.karaokeDuetTransferAnimation;
+  if (!transfer) {
+    return;
+  }
+
+  if (transfer.frame) {
+    cancelAnimationFrame(transfer.frame);
+    transfer.frame = null;
+  }
+  (transfer.animations || [transfer.animation]).forEach((animation) => {
+    if (animation) {
+      animation.cancel();
+    }
+  });
+  if (transfer.sourceLayer && transfer.sourceLayer.parentNode) {
+    transfer.sourceLayer.remove();
+  }
+  songMotifsRestoreDuetTransferNodes(transfer, false);
+  if (transfer.sourceParent && transfer.sourceParent.isConnected
+    && transfer.sourceLayer.parentNode !== transfer.sourceParent) {
+    Array.from(transfer.sourceParent.children).forEach((child) => {
+      if (child !== transfer.sourceLayer && child.classList.contains('song-karaoke-layer')) {
+        child.remove();
+      }
+    });
+    const nextSibling = transfer.sourceNextSibling
+      && transfer.sourceNextSibling.parentNode === transfer.sourceParent
+      ? transfer.sourceNextSibling
+      : null;
+    transfer.sourceParent.insertBefore(transfer.sourceLayer, nextSibling);
+  }
+  if (transfer.targetLayer && transfer.targetLayer.isConnected) {
+    transfer.targetLayer.style.visibility = transfer.targetLayerVisibility;
+  }
+  if (transfer.source && transfer.source.isConnected) {
+    transfer.source.style.visibility = transfer.sourceVisibility;
+  }
+  state.karaokeDuetTransferAnimation = null;
+}
+
 function songMotifsUpdateKaraoke(currentTime) {
   const state = getSongMotifsState();
   if (!state.karaokeWrap || !state.karaokeLayerHost) {
     return;
   }
 
-  const wasMainViewportVisible = state.karaokeLayoutMode === 'with-main';
+  const wasMainViewportVisible = state.karaokeLayoutMode === 'with-main'
+    || Boolean(state.karaokeViewport && state.karaokeViewport.classList.contains('is-open'));
   const syncedTime = currentTime + SONG_MOTIFS_KARAOKE_SYNC_LEAD_SECONDS;
   const hasMainEntries = Array.isArray(state.karaokeEntries) && state.karaokeEntries.length > 0;
+  const currentIndex = hasMainEntries
+    ? songMotifsFindCurrentEntryIndex(state.karaokeEntries, syncedTime)
+    : -1;
   const backingTracks = Array.isArray(state.karaokeBackingTracks) ? state.karaokeBackingTracks : [];
+  const duetEntries = Array.isArray(state.karaokeDuetEntries) ? state.karaokeDuetEntries : [];
+  const duetIndex = duetEntries.length ? songMotifsFindCurrentEntryIndex(duetEntries, syncedTime) : -1;
+  const duetPayload = songMotifsBuildKaraokePayloadForEntries(duetEntries, duetIndex);
+  const hasDuetLyricsOnScreen = songMotifsLaneHasRenderableLyrics(duetPayload);
+  const duetLane = backingTracks[1];
+  const duetWillAnimateOutgoing = state.karaokePresentationMode === 'duet'
+    && duetLane
+    && duetLane.activeLayer
+    && duetIndex !== duetLane.currentIndex
+    && (Math.abs(duetIndex - duetLane.currentIndex) === 1 || duetLane.animateSkippedTransitions)
+    && Boolean(duetLane.activeLayer.textContent.trim());
+  const useDuetLayout = duetEntries.length > 0
+    && (hasDuetLyricsOnScreen
+      || (state.karaokePresentationMode === 'duet' && (duetLane?.transitionTimer || duetWillAnimateOutgoing)));
+
+  let duetTransfer = null;
+  if (state.karaokePresentationMode !== (useDuetLayout ? 'duet' : 'standard')) {
+    songMotifsClearDuetTransferAnimation(state);
+    const sourceLane = useDuetLayout ? null : backingTracks[0];
+    const sourceHost = useDuetLayout ? state.karaokeLayerHost : (sourceLane && sourceLane.layerHost);
+    const sourceLayer = useDuetLayout ? state.karaokeActiveLayer : (sourceLane && sourceLane.activeLayer);
+    duetTransfer = songMotifsCaptureDuetTransfer(sourceHost, sourceLayer);
+    if (!useDuetLayout) {
+      songMotifsSyncHiddenMainLane(state, currentIndex);
+    }
+    backingTracks.forEach((track, index) => {
+      songMotifsResetKaraokeLane(track);
+      track.entries = useDuetLayout
+        ? (index === 0 ? state.karaokeEntries
+          : (index === 1 ? duetEntries : (state.karaokeStandardBackingEntries[index - 2] || [])))
+        : (index < 2 ? (state.karaokeStandardBackingEntries[index] || []) : []);
+      track.animateSkippedTransitions = useDuetLayout && index === 1;
+    });
+    state.karaokePresentationMode = useDuetLayout ? 'duet' : 'standard';
+  }
   const hasBackingEntries = backingTracks.some((track) => Array.isArray(track.entries) && track.entries.length > 0);
 
   if (!hasMainEntries && !hasBackingEntries) {
@@ -1320,18 +1979,24 @@ function songMotifsUpdateKaraoke(currentTime) {
     return;
   }
 
-  const currentIndex = hasMainEntries
-    ? songMotifsFindCurrentEntryIndex(state.karaokeEntries, syncedTime)
-    : -1;
   const currentMainEntry = currentIndex >= 0 ? state.karaokeEntries[currentIndex] : null;
   const hasMainLine = songMotifsEntryHasRenderableText(currentMainEntry);
-  let hasActiveBackingLine = false;
+  const hasMainLyricsOnScreen = songMotifsLaneHasRenderableLyrics(
+    songMotifsBuildKaraokePayload(currentIndex)
+  );
   let hasBackingLyricsOnScreen = false;
+  const pendingBackingLaneUpdates = [];
   const configuredBackingTrackCount = backingTracks.reduce((count, track) => {
     return count + ((track && Array.isArray(track.entries) && track.entries.length > 0) ? 1 : 0);
   }, 0);
+  const actualBackingTrackStartIndex = useDuetLayout ? 2 : 0;
+  const actualBackingTracks = backingTracks.slice(actualBackingTrackStartIndex, actualBackingTrackStartIndex + 2);
+  const configuredActualBackingTrackCount = (state.karaokeStandardBackingEntries || [])
+    .filter((entries) => Array.isArray(entries) && entries.length > 0).length;
+  const activeActualBackingTracks = [];
+  const activeActualBackingEntries = new Map();
 
-  backingTracks.forEach((track) => {
+  backingTracks.forEach((track, laneIndex) => {
     if (!track || !Array.isArray(track.entries)) {
       return;
     }
@@ -1349,36 +2014,97 @@ function songMotifsUpdateKaraoke(currentTime) {
     const trackIndex = songMotifsFindCurrentEntryIndex(track.entries, syncedTime);
     const trackEntry = trackIndex >= 0 ? track.entries[trackIndex] : null;
     const hasTrackLine = songMotifsEntryHasRenderableText(trackEntry);
-    if (hasTrackLine) {
-      hasActiveBackingLine = true;
-    }
 
     const payload = songMotifsBuildKaraokePayloadForEntries(track.entries, trackIndex);
-    if (songMotifsLaneHasRenderableLyrics(payload)) {
+    const hasTrackLyricsOnScreen = songMotifsLaneHasRenderableLyrics(payload);
+    const hasOutgoingLayerText = Boolean(track.activeLayer && track.activeLayer.textContent.trim());
+    const willAnimateOutgoingLayer = track.activeLayer
+      && trackIndex !== track.currentIndex
+      && Math.abs(trackIndex - track.currentIndex) === 1
+      && hasOutgoingLayerText;
+    pendingBackingLaneUpdates.push({ track, payload, trackIndex });
+    if (hasTrackLyricsOnScreen || track.transitionTimer || willAnimateOutgoingLayer) {
       hasBackingLyricsOnScreen = true;
     }
-    songMotifsUpdateKaraokeLane(track, payload, trackIndex);
-    songMotifsFitBackingLaneText(track);
+    if (laneIndex >= actualBackingTrackStartIndex
+      && laneIndex < actualBackingTrackStartIndex + 2
+      && (hasTrackLyricsOnScreen || track.transitionTimer || willAnimateOutgoingLayer)) {
+      activeActualBackingTracks.push(track);
+      if (hasTrackLine) {
+        activeActualBackingEntries.set(track, trackEntry);
+      }
+    }
 
     if (track.trackNode) {
       track.trackNode.classList.toggle('is-empty', !hasTrackLine);
     }
   });
 
-  if (!hasMainLine && !hasActiveBackingLine && !hasMainEntries) {
-    songMotifsClearKaraokeWrapResizeAnimation(state);
-    state.karaokeLayoutMode = 'hidden';
-    state.karaokeBackingVisible = false;
-    state.karaokeWrap.style.display = 'none';
-    return;
+  let hasSynchronizedUpcomingBackingTrack = false;
+  if (configuredActualBackingTrackCount === 2 && activeActualBackingTracks.length === 1) {
+    const activeTrack = activeActualBackingTracks[0];
+    const activeEntry = activeActualBackingEntries.get(activeTrack);
+    const otherTrack = actualBackingTracks.find((track) => track && track !== activeTrack);
+    if (activeEntry && otherTrack && Array.isArray(otherTrack.entries)) {
+      const nextOtherTrackEntry = otherTrack.entries.find((entry) => {
+        return Number(entry.time) >= Number(activeEntry.time)
+          && songMotifsEntryHasRenderableText(entry);
+      });
+      hasSynchronizedUpcomingBackingTrack = Boolean(nextOtherTrackEntry
+        && Number(nextOtherTrackEntry.time) - Number(activeEntry.time) <= 1.2);
+    }
   }
+  const shouldCenterSingleBackingTrack = configuredActualBackingTrackCount === 2
+    && activeActualBackingTracks.length === 1
+    && !hasSynchronizedUpcomingBackingTrack;
+  backingTracks.forEach((track, laneIndex) => {
+    if (!track || !track.trackNode
+      || (laneIndex >= actualBackingTrackStartIndex && laneIndex < actualBackingTrackStartIndex + 2)) {
+      return;
+    }
+    track.trackNode.classList.remove('is-centered-backing', 'is-hidden-backing');
+  });
+  actualBackingTracks.forEach((track) => {
+    if (!track || !track.trackNode) {
+      return;
+    }
+    const isOnlyActiveBackingTrack = shouldCenterSingleBackingTrack && activeActualBackingTracks[0] === track;
+    const wasCentered = track.trackNode.classList.contains('is-centered-backing');
+    const previousRect = wasCentered !== isOnlyActiveBackingTrack
+      ? track.trackNode.getBoundingClientRect()
+      : null;
+    track.trackNode.classList.toggle('is-centered-backing', isOnlyActiveBackingTrack);
+    track.trackNode.classList.toggle('is-hidden-backing', shouldCenterSingleBackingTrack && !isOnlyActiveBackingTrack);
+
+    if (previousRect && !track.trackNode.classList.contains('is-hidden-backing')) {
+      const nextRect = track.trackNode.getBoundingClientRect();
+      const horizontalDelta = previousRect.left - nextRect.left;
+      if (Math.abs(horizontalDelta) > 1) {
+        if (track.centerAnimation) {
+          track.centerAnimation.cancel();
+        }
+        track.centerAnimation = track.trackNode.animate([
+          { translate: horizontalDelta + 'px 0' },
+          { translate: '0px 0' }
+        ], {
+          duration: 420,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          fill: 'none'
+        });
+        track.centerAnimation.onfinish = () => {
+          track.centerAnimation = null;
+        };
+      }
+    }
+  });
 
   const computeMainViewportVisibility = (sampleSyncedTime) => {
     const sampleMainIndex = hasMainEntries
       ? songMotifsFindCurrentEntryIndex(state.karaokeEntries, sampleSyncedTime)
       : -1;
-    const sampleMainEntry = sampleMainIndex >= 0 ? state.karaokeEntries[sampleMainIndex] : null;
-    const sampleHasMainLine = songMotifsEntryHasRenderableText(sampleMainEntry);
+    const sampleHasMainLyricsOnScreen = songMotifsLaneHasRenderableLyrics(
+      songMotifsBuildKaraokePayload(sampleMainIndex)
+    );
     let sampleHasBackingLyricsOnScreen = false;
 
     backingTracks.forEach((track) => {
@@ -1391,21 +2117,39 @@ function songMotifsUpdateKaraoke(currentTime) {
         sampleHasBackingLyricsOnScreen = true;
       }
     });
-
-    return hasMainEntries && (sampleHasMainLine || !sampleHasBackingLyricsOnScreen);
+    return !useDuetLayout && hasMainEntries && (sampleHasMainLyricsOnScreen || !sampleHasBackingLyricsOnScreen);
   };
 
   const reentryCue = hasMainEntries
     ? songMotifsFindUpcomingMainReentryCue(state.karaokeEntries, currentIndex)
     : null;
+  const previousMainPayloadHasText = songMotifsLaneHasRenderableLyrics(
+    songMotifsBuildKaraokePayload(state.karaokeCurrentIndex)
+  );
+  const shouldStartMainExit = wasMainViewportVisible
+    && !hasMainLyricsOnScreen
+    && hasBackingLyricsOnScreen
+    && currentIndex !== state.karaokeCurrentIndex
+    && previousMainPayloadHasText;
+  if (hasMainLyricsOnScreen && state.karaokeMainExitTimer) {
+    clearTimeout(state.karaokeMainExitTimer);
+    state.karaokeMainExitTimer = null;
+  } else if (shouldStartMainExit && !state.karaokeMainExitTimer) {
+    state.karaokeMainExitTimer = setTimeout(() => {
+      state.karaokeMainExitTimer = null;
+    }, 500);
+  }
+  const isMainExitAnimating = !hasMainLyricsOnScreen && !!state.karaokeMainExitTimer;
   const showMainDuringCueWindow = !hasMainLine
+    && !useDuetLayout
     && hasBackingLyricsOnScreen
     && reentryCue
     && syncedTime >= reentryCue.cueTime
     && syncedTime < reentryCue.nextTextTime;
 
   const showMainViewport = hasMainEntries
-    && (hasMainLine || !hasBackingLyricsOnScreen || showMainDuringCueWindow);
+    && !useDuetLayout
+    && (hasMainLyricsOnScreen || !hasBackingLyricsOnScreen || showMainDuringCueWindow || isMainExitAnimating);
   let shouldPreGrowMain = !showMainViewport
     && computeMainViewportVisibility(syncedTime + SONG_MOTIFS_KARAOKE_PRE_GROW_LEAD_SECONDS);
   const showBackingOnlyLayout = !showMainViewport && hasBackingLyricsOnScreen;
@@ -1415,16 +2159,33 @@ function songMotifsUpdateKaraoke(currentTime) {
   }
   const nextLayoutMode = showMainViewport
     ? 'with-main'
-    : (showBackingOnlyLayout ? 'backing-only' : 'idle');
+    : (useDuetLayout ? 'duet' : (showBackingOnlyLayout ? 'backing-only' : 'idle'));
 
   songMotifsApplyKaraokeLayoutState(state, {
     showMainViewport,
     shouldPreGrowMain,
     hasBackingLyricsOnScreen,
     showBackingOnlyLayout,
+    duetLayout: useDuetLayout,
     backingTrackCount: configuredBackingTrackCount,
     nextLayoutMode
   });
+  requestAnimationFrame(() => {
+    songMotifsFitKaraokeText({ layerHost: state.karaokeLayerHost });
+    state.karaokeBackingTracks.forEach((track) => songMotifsFitKaraokeText(track));
+  });
+
+  pendingBackingLaneUpdates.forEach(({ track, payload, trackIndex }) => {
+    songMotifsUpdateKaraokeLane(track, payload, trackIndex);
+    songMotifsFitKaraokeText(track);
+  });
+
+  if (duetTransfer) {
+    const targetHost = useDuetLayout
+      ? (backingTracks[0] && backingTracks[0].layerHost)
+      : state.karaokeLayerHost;
+    songMotifsAnimateDuetTransfer(state, duetTransfer, targetHost);
+  }
 
   if (showMainViewport && !wasMainViewportVisible && showMainDuringCueWindow) {
     songMotifsAnimateMainReentryBottomLine(state);
@@ -1466,6 +2227,7 @@ function songMotifsUpdateKaraoke(currentTime) {
     state.karaokeLayerHost.innerHTML = '';
     state.karaokeLayerHost.appendChild(initialLayer);
     state.karaokeActiveLayer = initialLayer;
+    songMotifsFitKaraokeText({ layerHost: state.karaokeLayerHost });
     return;
   }
 
@@ -1475,6 +2237,7 @@ function songMotifsUpdateKaraoke(currentTime) {
     state.karaokeLayerHost.innerHTML = '';
     state.karaokeLayerHost.appendChild(replacementLayer);
     state.karaokeActiveLayer = replacementLayer;
+    songMotifsFitKaraokeText({ layerHost: state.karaokeLayerHost });
     return;
   }
 
@@ -1485,6 +2248,7 @@ function songMotifsUpdateKaraoke(currentTime) {
   const enteringLayer = songMotifsBuildKaraokeLayer(payload, 'song-karaoke-layer-entering');
   state.karaokeLayerHost.appendChild(enteringLayer);
   state.karaokeActiveLayer = enteringLayer;
+  songMotifsFitKaraokeText({ layerHost: state.karaokeLayerHost });
   void enteringLayer.offsetWidth;
   enteringLayer.classList.add('song-karaoke-layer-entering-play');
 
@@ -1501,6 +2265,9 @@ function songMotifsUpdateKaraoke(currentTime) {
 
 function songMotifsHasMeasuredPlaybackDuration() {
   const state = getSongMotifsState();
+  if (state.player && state.player.isSimulated) {
+    return Number(state.player.getDuration()) > 0;
+  }
   const measured = Number(state.youtubeDuration) || 0;
   if (!Number.isFinite(measured) || measured <= 0) {
     return false;
@@ -1670,10 +2437,11 @@ function songMotifsApplyKaraokeBundle(bundle) {
 
   songMotifsRefreshPrimarySingerContext();
   state.karaokeEntries = mainEntries;
+  state.karaokeDuetEntries = songMotifsNormalizeKaraokeEntries(payload.duetEntries);
 
   const existingTracks = Array.isArray(state.karaokeBackingTracks) ? state.karaokeBackingTracks : [];
-  state.karaokeBackingTracks = backingTracksPayload.map((track, index) => {
-    const existing = existingTracks[index] || {};
+  state.karaokeBackingTracks = existingTracks.map((existing, index) => {
+    const track = backingTracksPayload[index] || {};
     return {
       id: String((track || {}).id || ('backing' + String(index + 1))).trim(),
       entries: songMotifsNormalizeKaraokeEntries((track || {}).entries),
@@ -1684,10 +2452,17 @@ function songMotifsApplyKaraokeBundle(bundle) {
       currentIndex: -2
     };
   });
+  state.karaokeStandardBackingEntries = backingTracksPayload.map((track) => {
+    return songMotifsNormalizeKaraokeEntries((track || {}).entries);
+  });
+  state.karaokePresentationMode = 'standard';
 
   state.karaokeDuration = Math.max(
     state.karaokeEntries.length > 0
       ? Math.max(...state.karaokeEntries.map((entry) => Number(entry.time) || 0))
+      : 0,
+    state.karaokeDuetEntries.length > 0
+      ? Math.max(...state.karaokeDuetEntries.map((entry) => Number(entry.time) || 0))
       : 0,
     state.karaokeBackingTracks.reduce((max, track) => {
       const entries = Array.isArray((track || {}).entries) ? track.entries : [];
@@ -1953,7 +2728,14 @@ function songMotifsParseLrcTimedEntries(text) {
 
       if (token.type === 'tag') {
         const normalizedTag = String(token.value || '').trim().toLowerCase();
-        pendingSingerTags = normalizedTag ? [normalizedTag] : [];
+        if (pendingSingerTags === null) {
+          pendingSingerTags = [];
+        }
+        if (!normalizedTag) {
+          pendingSingerTags = [];
+        } else if (!pendingSingerTags.includes(normalizedTag)) {
+          pendingSingerTags.push(normalizedTag);
+        }
         return;
       }
 
@@ -1962,6 +2744,12 @@ function songMotifsParseLrcTimedEntries(text) {
       }
 
       if (pendingSingerTags !== null) {
+        if (hasInnerTag && lineSegments.length > 0) {
+          const previousSegment = lineSegments[lineSegments.length - 1];
+          previousSegment.singerTags = pendingSingerTags.slice();
+          previousSegment.singerTag = previousSegment.singerTags[0] || '';
+          previousSegment.explicitNone = previousSegment.singerTags.length === 0;
+        }
         activeSingerTags = pendingSingerTags.slice();
         pendingSingerTags = null;
       }
@@ -2000,6 +2788,13 @@ function songMotifsParseLrcTimedEntries(text) {
       pushLineSegment(lineText);
     }
 
+    if (hasInnerTag && pendingSingerTags !== null && lineSegments.length > 0) {
+      const finalSegment = lineSegments[lineSegments.length - 1];
+      finalSegment.singerTags = pendingSingerTags.slice();
+      finalSegment.singerTag = finalSegment.singerTags[0] || '';
+      finalSegment.explicitNone = finalSegment.singerTags.length === 0;
+    }
+
     if (pendingSingerTags !== null) {
       currentSingerTags = pendingSingerTags.slice();
     } else if (hasTagToken) {
@@ -2008,7 +2803,10 @@ function songMotifsParseLrcTimedEntries(text) {
       currentSingerTags = lineSegments[0].singerTags.slice();
     }
 
-    const collapsedLineText = lineSegments.map((segment) => String(segment.text || '')).join(' ').replace(/\s+/g, ' ').trim();
+    const collapsedLineText = lineSegments.map((segment) => String(segment.text || '')).join(' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+([,.;!?])/g, '$1')
+      .trim();
     const entrySingerTags = hasInnerTag
       ? []
       : ((lineSegments[0] && Array.isArray(lineSegments[0].singerTags)) ? lineSegments[0].singerTags.slice() : []);
@@ -2145,7 +2943,8 @@ function songMotifsLoadKaraokeEntries() {
         .then((data) => data || (primarySlug ? window.SongLyrics.loadCurrentSongLyrics(primarySlug) : null))
         .catch(() => null),
       loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing1')),
-      loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing2'))
+      loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing2')),
+      loadTimedEntriesBySlugCandidates(buildBackingCandidates('_duet'))
     ]).then((results) => {
       const mainData = results[0];
       const mainEntries = mainData && Array.isArray(mainData.timedEntries) ? mainData.timedEntries : [];
@@ -2154,7 +2953,8 @@ function songMotifsLoadKaraokeEntries() {
         backingTracks: [
           { id: 'backing1', entries: Array.isArray(results[1]) ? results[1] : [] },
           { id: 'backing2', entries: Array.isArray(results[2]) ? results[2] : [] }
-        ]
+        ],
+        duetEntries: Array.isArray(results[3]) ? results[3] : []
       };
     });
   }
@@ -2175,14 +2975,16 @@ function songMotifsLoadKaraokeEntries() {
       .then((text) => songMotifsParseLrcTimedEntries(text))
       .catch(() => []),
     loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing1')),
-    loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing2'))
+    loadTimedEntriesBySlugCandidates(buildBackingCandidates('_backing2')),
+    loadTimedEntriesBySlugCandidates(buildBackingCandidates('_duet'))
   ]).then((results) => {
     return {
       mainEntries: Array.isArray(results[0]) ? results[0] : [],
       backingTracks: [
         { id: 'backing1', entries: Array.isArray(results[1]) ? results[1] : [] },
         { id: 'backing2', entries: Array.isArray(results[2]) ? results[2] : [] }
-      ]
+      ],
+      duetEntries: Array.isArray(results[3]) ? results[3] : []
     };
   });
 }
@@ -2216,6 +3018,162 @@ function ensureSongMotifsSidebarControls() {
   state.playButton = wrap.querySelector('.song-motif-play-button');
 }
 
+function songMotifsCreateSimulatedPlayer(state, startTime) {
+  const duration = Math.max(0, Number(state.duration) || Number(state.karaokeDuration) || 0);
+  let currentTime = Math.min(duration, Math.max(0, Number(startTime) || 0));
+  let playerState = 2;
+  let lastStartedAt = 0;
+  let destroyed = false;
+
+  const updateClock = () => {
+    if (playerState !== 1 || destroyed) {
+      return currentTime;
+    }
+    const now = performance.now();
+    currentTime = Math.min(duration, currentTime + Math.max(0, now - lastStartedAt) / 1000);
+    lastStartedAt = now;
+    if (duration > 0 && currentTime >= duration) {
+      playerState = 0;
+      state.playbackRequested = false;
+      if (state.playButton) {
+        state.playButton.textContent = '▶';
+      }
+      if (state.timer) {
+        cancelAnimationFrame(state.timer);
+        state.timer = null;
+      }
+    }
+    return currentTime;
+  };
+
+  return {
+    isSimulated: true,
+    getCurrentTime: updateClock,
+    getDuration: () => duration,
+    getPlayerState: () => playerState,
+    playVideo: () => {
+      if (destroyed) {
+        return;
+      }
+      if (duration > 0 && currentTime >= duration) {
+        currentTime = 0;
+      }
+      playerState = 1;
+      lastStartedAt = performance.now();
+      state.playbackRequested = true;
+      if (state.playButton) {
+        state.playButton.textContent = '||';
+      }
+      songMotifsStartProgressTicker();
+      songMotifsUpdateProgress();
+    },
+    pauseVideo: () => {
+      updateClock();
+      playerState = 2;
+      state.playbackRequested = false;
+      if (state.playButton) {
+        state.playButton.textContent = '▶';
+      }
+      if (state.timer) {
+        cancelAnimationFrame(state.timer);
+        state.timer = null;
+      }
+      songMotifsUpdateProgress();
+    },
+    seekTo: (seconds) => {
+      const wasPlaying = playerState === 1;
+      currentTime = Math.min(duration || Number.POSITIVE_INFINITY, Math.max(0, Number(seconds) || 0));
+      lastStartedAt = performance.now();
+      if (!wasPlaying) {
+        playerState = 2;
+      }
+      songMotifsUpdateProgress();
+    },
+    setVolume: () => {},
+    destroy: () => {
+      updateClock();
+      destroyed = true;
+      playerState = 0;
+    }
+  };
+}
+
+function songMotifsEnableSimulatedPlayer(state, options) {
+  if (!state || state.simulatedPlayer) {
+    return;
+  }
+
+  const config = options || {};
+  [state.playbackFallbackTimer, state.youtubeReadyTimer].forEach((timer) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  });
+  state.playbackFallbackTimer = null;
+  state.youtubeReadyTimer = null;
+
+  const failedPlayer = state.player;
+  const liveTime = failedPlayer && typeof failedPlayer.getCurrentTime === 'function'
+    ? Number(failedPlayer.getCurrentTime()) || 0
+    : 0;
+  const resumeTime = Number.isFinite(Number(state.pendingSeekTime))
+    ? Number(state.pendingSeekTime)
+    : liveTime;
+  state.pendingSeekTime = null;
+  state.player = null;
+  state.youtubePlayer = null;
+  if (failedPlayer && typeof failedPlayer.destroy === 'function') {
+    try {
+      failedPlayer.destroy();
+    } catch (_err) {
+      // Ignore teardown errors from a failed YouTube player.
+    }
+  }
+
+  state.player = songMotifsCreateSimulatedPlayer(state, resumeTime);
+  state.simulatedPlayer = true;
+  state.youtubeDuration = Number(state.player.getDuration()) || state.youtubeDuration;
+  if (state.volumeInput) {
+    state.volumeInput.disabled = true;
+    state.volumeInput.setAttribute('aria-label', 'Volume unavailable during simulated playback');
+  }
+  if (state.durationLabel && state.duration > 0) {
+    state.durationLabel.textContent = songMotifFormatTime(state.duration);
+  }
+  songMotifsUpdateProgress();
+
+  if (config.autoPlay) {
+    state.player.playVideo();
+  }
+}
+
+function songMotifsWatchYoutubePlayback(state) {
+  if (!state || state.simulatedPlayer || !state.player) {
+    return;
+  }
+  if (state.playbackFallbackTimer) {
+    clearTimeout(state.playbackFallbackTimer);
+  }
+
+  const requestedPlayer = state.player;
+  const startTime = typeof requestedPlayer.getCurrentTime === 'function'
+    ? Number(requestedPlayer.getCurrentTime()) || 0
+    : 0;
+  state.playbackFallbackTimer = setTimeout(() => {
+    state.playbackFallbackTimer = null;
+    if (state.player !== requestedPlayer || state.simulatedPlayer) {
+      return;
+    }
+    const currentTime = typeof requestedPlayer.getCurrentTime === 'function'
+      ? Number(requestedPlayer.getCurrentTime()) || 0
+      : startTime;
+    const isAdvancing = requestedPlayer.getPlayerState() === 1 && currentTime - startTime >= 0.25;
+    if (!isAdvancing) {
+      songMotifsEnableSimulatedPlayer(state, { autoPlay: true });
+    }
+  }, 6000);
+}
+
 function buildSongMotifsVolumeControl() {
   const state = getSongMotifsState();
   const wrap = document.createElement('div');
@@ -2241,9 +3199,17 @@ function buildSongMotifsVolumeControl() {
       return;
     }
 
-    if (state.player.getPlayerState() === 1) {
+    if (state.player.getPlayerState() === 1 || state.playbackRequested) {
+      state.playbackRequested = false;
+      state.pendingSeekTime = null;
+      if (state.playbackFallbackTimer) {
+        clearTimeout(state.playbackFallbackTimer);
+        state.playbackFallbackTimer = null;
+      }
       state.player.pauseVideo();
     } else {
+      state.playbackRequested = true;
+      songMotifsWatchYoutubePlayback(state);
       state.player.playVideo();
     }
   });
@@ -2427,6 +3393,14 @@ function songMotifsFindSong() {
 function songMotifsDisposeRuntimeState() {
   const state = getSongMotifsState();
 
+  [state.playbackFallbackTimer, state.youtubeReadyTimer].forEach((timer) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  });
+  state.playbackFallbackTimer = null;
+  state.youtubeReadyTimer = null;
+
   if (state.timer) {
     if (typeof cancelAnimationFrame === 'function') {
       cancelAnimationFrame(state.timer);
@@ -2446,6 +3420,13 @@ function songMotifsDisposeRuntimeState() {
     state.karaokeMainReentryAnimationTimer = null;
   }
 
+  if (state.karaokeMainExitTimer) {
+    clearTimeout(state.karaokeMainExitTimer);
+    state.karaokeMainExitTimer = null;
+  }
+
+  songMotifsClearDuetTransferAnimation(state);
+
   songMotifsClearKaraokeWrapResizeAnimation(state);
   state.karaokeLayoutMode = 'hidden';
 
@@ -2458,6 +3439,10 @@ function songMotifsDisposeRuntimeState() {
   }
 
   state.player = null;
+  state.youtubePlayer = null;
+  state.simulatedPlayer = false;
+  state.playbackRequested = false;
+  state.pendingSeekTime = null;
   state.volumeInput = null;
 }
 
@@ -2613,6 +3598,16 @@ function songMotifsUpdateProgress() {
   const liveDuration = Number(state.player.getDuration()) || 0;
   const currentRaw = state.player.getCurrentTime() || 0;
   const playerState = typeof state.player.getPlayerState === 'function' ? state.player.getPlayerState() : -1;
+  let displayTimeRaw = currentRaw;
+  if (!state.simulatedPlayer && state.pendingSeekTime !== null) {
+    // YouTube can report its pre-seek time (or zero) for several progress ticks.
+    // Keep lyrics anchored to the requested position until the player catches up.
+    if (Math.abs(currentRaw - state.pendingSeekTime) < 0.5) {
+      state.pendingSeekTime = null;
+    } else {
+      displayTimeRaw = Number(state.pendingSeekTime);
+    }
+  }
   const hasMeasuredRuntime = Number.isFinite(liveDuration) && liveDuration > 0
     && (!Number.isInteger(liveDuration) || currentRaw > 0 || playerState === 1)
     && songMotifsHasMeasuredPlaybackDuration();
@@ -2645,9 +3640,9 @@ function songMotifsUpdateProgress() {
   }
 
   const duration = state.duration > 0 ? state.duration : 1;
-  const current = Math.min(duration, Math.max(0, currentRaw));
+  const current = Math.min(duration, Math.max(0, displayTimeRaw));
 
-  if (currentRaw <= 0 && playerState !== 1) {
+  if (displayTimeRaw <= 0 && playerState !== 1) {
     state.currentLabel.textContent = '';
     state.progressNode.style.width = '0%';
     state.motifProgressNodes.forEach((node) => {
@@ -2703,7 +3698,10 @@ function songMotifsSeekTo(seconds) {
   }
 
   const target = Math.min(state.duration, Math.max(0, seconds));
+  state.playbackRequested = true;
+  state.pendingSeekTime = target;
   state.player.seekTo(target, true);
+  songMotifsWatchYoutubePlayback(state);
   state.player.playVideo();
   state.currentLabel.textContent = songMotifFormatTime(target);
   const progressWidth = ((target / (state.duration || 1)) * 100) + '%';
@@ -2791,7 +3789,12 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
   karaokeBackingWrap.style.display = 'none';
   karaokeWrap.appendChild(karaokeBackingWrap);
 
-  const backingTrackNodes = [songMotifsCreateBackingTrack(0), songMotifsCreateBackingTrack(1)];
+  const backingTrackNodes = [
+    songMotifsCreateBackingTrack(0),
+    songMotifsCreateBackingTrack(1),
+    songMotifsCreateBackingTrack(2),
+    songMotifsCreateBackingTrack(3)
+  ];
   backingTrackNodes.forEach((entry) => {
     karaokeBackingWrap.appendChild(entry.track);
   });
@@ -3102,8 +4105,7 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
 
         const stripeIndex = Math.floor((localX + localY) / stripeWidth);
         const visibleRange = activeRanges[((stripeIndex % activeRanges.length) + activeRanges.length) % activeRanges.length];
-        const midpoint = visibleRange.start + (visibleRange.end - visibleRange.start) / 2;
-        songMotifsSeekTo(clickTime >= midpoint ? visibleRange.end : visibleRange.start);
+        songMotifsSeekTo(visibleRange.start);
       });
   }
 
@@ -3234,66 +4236,106 @@ function songMotifsAttachPlayer(song, youtubeId) {
     }
   };
 
-  state.player = new YT.Player('songMotifPlayerHost', {
-    height: '220',
-    width: '100%',
-    videoId: youtubeId,
-    playerVars: {
-      playsinline: 1,
-      controls: 0,
-      autoplay: 0,
-      disablekb: 1,
-      fs: 0,
-      modestbranding: 1,
-      rel: 0,
-      iv_load_policy: 3,
-      cc_load_policy: 0
-    },
-    events: {
-      onReady: (event) => {
-        const iframe = event.target.getIframe && event.target.getIframe();
-        if (iframe) {
-          iframe.style.pointerEvents = 'none';
-          iframe.setAttribute('tabindex', '-1');
-          iframe.setAttribute('aria-hidden', 'true');
-        }
-
-        if (typeof event.target.setVolume === 'function') {
-          event.target.setVolume(state.volume);
-        }
-
-        syncPlayerDuration(event.target);
-
-        // Keep the page summary rounded to the nearest whole second, but always
-        // use the live fractional player duration for the progress bar.
-        if (state.youtubeDuration > 0 && typeof window.updateSongLengthFromYoutube === 'function') {
-          window.updateSongLengthFromYoutube(state.youtubeDuration);
-        }
-
-        songMotifsRefreshTimelineGeometry();
+  let youtubePlayer;
+  try {
+    youtubePlayer = new YT.Player('songMotifPlayerHost', {
+      height: '220',
+      width: '100%',
+      videoId: youtubeId,
+      playerVars: {
+        playsinline: 1,
+        controls: 0,
+        autoplay: 0,
+        disablekb: 1,
+        fs: 0,
+        modestbranding: 1,
+        rel: 0,
+        iv_load_policy: 3,
+        cc_load_policy: 0
       },
-      onStateChange: (event) => {
-        syncPlayerDuration(event.target);
-
-        const playing = event.data === 1;
-        state.playButton.textContent = playing ? '||' : '▶';
-
-        if (playing) {
-          songMotifsStartProgressTicker();
-        } else {
-          if (state.timer) {
-            if (typeof cancelAnimationFrame === 'function') {
-              cancelAnimationFrame(state.timer);
-            } else {
-              clearInterval(state.timer);
-            }
-            state.timer = null;
+      events: {
+        onReady: (event) => {
+          if (state.player !== event.target) {
+            return;
           }
-          songMotifsUpdateProgress();
+          if (state.youtubeReadyTimer) {
+            clearTimeout(state.youtubeReadyTimer);
+            state.youtubeReadyTimer = null;
+          }
+
+          const iframe = event.target.getIframe && event.target.getIframe();
+          if (iframe) {
+            iframe.style.pointerEvents = 'none';
+            iframe.setAttribute('tabindex', '-1');
+            iframe.setAttribute('aria-hidden', 'true');
+          }
+
+          if (typeof event.target.setVolume === 'function') {
+            event.target.setVolume(state.volume);
+          }
+
+          syncPlayerDuration(event.target);
+
+          // Keep the page summary rounded to the nearest whole second, but always
+          // use the live fractional player duration for the progress bar.
+          if (state.youtubeDuration > 0 && typeof window.updateSongLengthFromYoutube === 'function') {
+            window.updateSongLengthFromYoutube(state.youtubeDuration);
+          }
+
+          songMotifsRefreshTimelineGeometry();
+        },
+        onStateChange: (event) => {
+          if (state.player !== event.target) {
+            return;
+          }
+          syncPlayerDuration(event.target);
+
+          const playing = event.data === 1;
+          state.playButton.textContent = playing ? '||' : '▶';
+
+          if (playing) {
+            state.playbackRequested = true;
+            songMotifsWatchYoutubePlayback(state);
+            songMotifsStartProgressTicker();
+          } else {
+            if (event.data === 2 || event.data === 0) {
+              state.playbackRequested = false;
+              if (event.data === 0 || state.pendingSeekTime === null) {
+                state.pendingSeekTime = null;
+              }
+              if (state.playbackFallbackTimer) {
+                clearTimeout(state.playbackFallbackTimer);
+                state.playbackFallbackTimer = null;
+              }
+            }
+            if (state.timer) {
+              cancelAnimationFrame(state.timer);
+              state.timer = null;
+            }
+            songMotifsUpdateProgress();
+          }
+        },
+        onError: (event) => {
+          if (state.player === event.target) {
+            songMotifsEnableSimulatedPlayer(state, { autoPlay: state.playbackRequested });
+          }
         }
       }
+    });
+  } catch (_err) {
+    songMotifsEnableSimulatedPlayer(state, { autoPlay: state.playbackRequested });
+    return;
+  }
+
+  state.player = youtubePlayer;
+  state.youtubePlayer = youtubePlayer;
+  state.simulatedPlayer = false;
+  state.youtubeReadyTimer = setTimeout(() => {
+    state.youtubeReadyTimer = null;
+    if (state.player === youtubePlayer) {
+      songMotifsEnableSimulatedPlayer(state, { autoPlay: state.playbackRequested });
     }
-  });
+  }, 10000);
 }
 
 function renderSongMotifsSection(options) {
@@ -3339,6 +4381,8 @@ function renderSongMotifsSection(options) {
 
   if (youtubeId && window.YT && window.YT.Player) {
     songMotifsAttachPlayer(song, youtubeId);
+  } else if (youtubeId) {
+    songMotifsEnableSimulatedPlayer(state);
   }
 
   const previousYouTubeReady = window.onYouTubeIframeAPIReady;

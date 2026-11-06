@@ -578,6 +578,9 @@ html {
   --karaoke-prev-y: 0rem;
   --karaoke-current-y: var(--karaoke-lane-step);
   --karaoke-next-y: calc(var(--karaoke-lane-step) * 2);
+  --karaoke-main-lane-height: calc(var(--karaoke-next-y) + var(--karaoke-line-height));
+  --karaoke-base-height: calc(var(--karaoke-main-lane-height) + 20px);
+  min-height: var(--karaoke-base-height);
 }
 
 .song-karaoke-wrap.song-karaoke-layout-with-main {
@@ -585,10 +588,10 @@ html {
 }
 
 .song-karaoke-wrap.song-karaoke-layout-backing-only {
-  padding-top: 3px;
-  padding-bottom: 3px;
-  padding-left: 7px;
-  padding-right: 7px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 8px 10px 10px;
 }
 
 .song-karaoke-viewport {
@@ -631,21 +634,57 @@ html {
   margin-top: 0;
 }
 
+.song-karaoke-wrap.song-karaoke-layout-duet {
+  padding: 8px 10px 10px;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-duet .song-karaoke-backing-wrap {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 0;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-duet .song-karaoke-backing-track {
+  --karaoke-backing-line-height: 0.86rem;
+  --karaoke-backing-lane-step: 0.74rem;
+  min-height: 2.1rem;
+  animation: karaokeDuetLaneEnter 0.42s ease both;
+}
+
+.song-karaoke-wrap.song-karaoke-layout-duet .song-karaoke-backing-track:nth-child(2) {
+  animation-delay: 0.04s;
+}
+
+@keyframes karaokeDuetLaneEnter {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .song-karaoke-wrap.song-karaoke-backing-count-1 .song-karaoke-backing-wrap {
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
+}
+
+.song-karaoke-backing-wrap .song-karaoke-backing-track.is-centered-backing {
+  grid-column: 1 / -1;
+  width: 50%;
+  justify-self: center;
+}
+
+.song-karaoke-backing-wrap .song-karaoke-backing-track.is-hidden-backing {
+  display: none;
 }
 
 .song-karaoke-wrap.song-karaoke-layout-with-main.song-karaoke-backing-count-1 .song-karaoke-backing-track {
   --karaoke-backing-line-height: 0.86rem;
   --karaoke-backing-lane-step: 0.74rem;
   min-height: 2.1rem;
-}
-
-.song-karaoke-wrap.song-karaoke-layout-backing-only.song-karaoke-backing-count-1 .song-karaoke-backing-track {
-  --karaoke-backing-line-height: 0.9rem;
-  --karaoke-backing-lane-step: 0.79rem;
-  min-height: 2.2rem;
 }
 
 .song-karaoke-backing-track {
@@ -666,6 +705,7 @@ html {
   padding: 0;
   display: block;
   box-sizing: border-box;
+  transition: min-height 0.5s ease;
 }
 
 .song-karaoke-backing-viewport {
@@ -679,6 +719,7 @@ html {
   overflow: visible;
   text-overflow: clip;
   line-height: calc(var(--karaoke-line-height) * 0.82);
+  transition: transform 0.5s ease, font-size 0.5s ease, line-height 0.5s ease, color 0.5s ease;
 }
 
 .song-karaoke-backing-track .song-karaoke-line-prev {
@@ -815,10 +856,11 @@ html {
   white-space: nowrap;
   transform-origin: center center;
   transform: scale(var(--karaoke-fit-scale, 1));
+  transition: none;
 }
 
 .song-karaoke-backing-track.is-empty {
-  opacity: 0.5;
+  opacity: 1;
 }
 
 .song-karaoke-layer {
@@ -855,31 +897,31 @@ html {
 
 .song-karaoke-singer-line {
   position: relative;
-  display: inline-grid;
-  grid-template-areas: 'stack';
-  align-items: end;
+  display: inline-block;
   color: inherit;
   overflow: visible;
+  line-height: 1;
+  vertical-align: top;
 }
 
 .song-karaoke-singer-text {
-  grid-area: stack;
+  display: block;
   position: relative;
   z-index: 2;
   line-height: 1;
 }
 
 .song-karaoke-singer-underline {
-  grid-area: stack;
-  position: relative;
-  align-self: end;
-  margin-top: 0.02em;
-  margin-bottom: 0.03em;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.03em;
   height: 0.11em;
   border-radius: 999px;
   background: var(--singer-gradient, var(--karaoke-singer-color, var(--theme-color-border_pill)));
   z-index: 1;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.25s ease;
 }
 
@@ -900,12 +942,8 @@ html {
 }
 
 .song-karaoke-singer-hitboxes {
-  grid-area: stack;
-  position: relative;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   display: flex;
   z-index: 3;
 }
@@ -1077,11 +1115,20 @@ html {
 }
 
 .song-karaoke-layer-leaving .song-karaoke-line-current {
-  opacity: 0;
+  animation: karaokeLineCrossfadeOut 0.16s ease both;
 }
 
 .song-karaoke-layer-leaving .song-karaoke-line-next {
   opacity: 0;
+}
+
+@keyframes karaokeLineCrossfadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 .song-motif-controls {

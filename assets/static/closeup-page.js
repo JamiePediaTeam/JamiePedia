@@ -1088,6 +1088,9 @@
 
     const container = document.getElementById('closeupContent');
     if (!container) {
+      if (typeof window.__jamiepediaMarkPageReady === 'function') {
+        window.__jamiepediaMarkPageReady('close-up');
+      }
       return;
     }
     container.classList.add('closeup-page-host');
@@ -1101,6 +1104,9 @@
       showNotFound: true,
       pageHref: withBasePath('/music/' + slug + '/connections')
     });
+    if (typeof window.__jamiepediaMarkPageReady === 'function') {
+      window.__jamiepediaMarkPageReady('close-up');
+    }
   }
 
   if (document.readyState === 'loading') {

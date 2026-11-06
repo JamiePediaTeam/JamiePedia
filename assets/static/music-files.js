@@ -229,21 +229,17 @@ function parseMotifEntriesFromCsv(text) {
   const entries = [];
   const seenMotifPages = new Set();
   const groupNames = new Map();
-  const groupByMotifId = new Map();
   for (let index = 1; index < lines.length; index += 1) {
     const values = splitCsvLine(lines[index]);
     const groupId = String(values[groupMetadataIdIndex] || '').trim().toLowerCase();
     const groupName = String(values[groupNameIndex] || '').trim();
-    const motifId = String(values[motifIdIndex] || '').trim().toLowerCase();
     if (groupId && groupName) groupNames.set(groupId, groupName);
-    if (groupId && motifId && !groupByMotifId.has(motifId)) groupByMotifId.set(motifId, groupId);
   }
 
   for (let index = 1; index < lines.length; index += 1) {
     const values = splitCsvLine(lines[index]);
     const motifId = String(values[motifIdIndex] || '').trim();
-    const explicitGroupId = String(groupIdIndex >= 0 ? (values[groupIdIndex] || '') : '').trim().toLowerCase();
-    const groupId = explicitGroupId || groupByMotifId.get(motifId.toLowerCase()) || '';
+    const groupId = String(groupIdIndex >= 0 ? (values[groupIdIndex] || '') : '').trim().toLowerCase();
     const motifName = String(motifNameIndex >= 0 ? (values[motifNameIndex] || '') : '').trim();
     const hasPage = isTruthyFlag(values[hasPageIndex]);
     const pageSlug = groupId || motifId.toLowerCase();

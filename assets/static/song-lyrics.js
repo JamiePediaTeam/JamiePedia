@@ -229,7 +229,14 @@ function songLyricsParseLrc(text) {
 
       if (token.type === 'tag') {
         const normalizedTag = String(token.value || '').trim().toLowerCase();
-        pendingSingerTags = normalizedTag ? [normalizedTag] : [];
+        if (pendingSingerTags === null) {
+          pendingSingerTags = [];
+        }
+        if (!normalizedTag) {
+          pendingSingerTags = [];
+        } else if (!pendingSingerTags.includes(normalizedTag)) {
+          pendingSingerTags.push(normalizedTag);
+        }
         return;
       }
 
@@ -238,6 +245,12 @@ function songLyricsParseLrc(text) {
       }
 
       if (pendingSingerTags !== null) {
+        if (hasInnerTag && lineSegments.length > 0) {
+          const previousSegment = lineSegments[lineSegments.length - 1];
+          previousSegment.singerTags = pendingSingerTags.slice();
+          previousSegment.singerTag = previousSegment.singerTags[0] || '';
+          previousSegment.explicitNone = previousSegment.singerTags.length === 0;
+        }
         activeSingerTags = pendingSingerTags.slice();
         pendingSingerTags = null;
       }
@@ -276,6 +289,13 @@ function songLyricsParseLrc(text) {
       pushLineSegment(lineText);
     }
 
+    if (hasInnerTag && pendingSingerTags !== null && lineSegments.length > 0) {
+      const finalSegment = lineSegments[lineSegments.length - 1];
+      finalSegment.singerTags = pendingSingerTags.slice();
+      finalSegment.singerTag = finalSegment.singerTags[0] || '';
+      finalSegment.explicitNone = finalSegment.singerTags.length === 0;
+    }
+
     if (pendingSingerTags !== null) {
       currentSingerTags = pendingSingerTags.slice();
     } else if (hasTagToken) {
@@ -284,7 +304,10 @@ function songLyricsParseLrc(text) {
       currentSingerTags = lineSegments[0].singerTags.slice();
     }
 
-    const collapsedLineText = lineSegments.map((segment) => String(segment.text || '')).join(' ').replace(/\s+/g, ' ').trim();
+    const collapsedLineText = lineSegments.map((segment) => String(segment.text || '')).join(' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+([,.;!?])/g, '$1')
+      .trim();
     const entrySingerTags = hasInnerTag
       ? []
       : ((lineSegments[0] && Array.isArray(lineSegments[0].singerTags)) ? lineSegments[0].singerTags.slice() : []);

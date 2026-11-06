@@ -10,6 +10,7 @@ let searchSongRowsPromise = null;
 let searchContentIndexPromise = null;
 let searchMotifIndexPromise = null;
 let searchMotifNamesBySongId = Object.create(null);
+let searchMotifNamesById = Object.create(null);
 let searchMotifIdsByCategory = Object.create(null);
 let searchSongIdsByMotifId = Object.create(null);
 let searchReferencedSongIdsBySongId = Object.create(null);
@@ -43,6 +44,13 @@ function searchEscapeHtml(value) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function stripSearchLyricSingerTags(value) {
+  return String(value || '')
+    .replace(/\{[^{}]*\}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function parseSearchLrcRawLines(text) {
@@ -377,18 +385,10 @@ function ensureSearchMotifIndexLoaded(basePath) {
     const motifAltIndex = motifHeaders.indexOf('alt-id');
     const motifNameIndex = motifHeaders.indexOf('motif name');
 
-    const groupByMotifId = Object.create(null);
     motifLines.slice(1).forEach((line) => {
       const values = splitSearchCsvLine(line);
       const id = String(values[motifIdIndex] || '').trim().toLowerCase();
       const groupId = String(values[motifGroupIndex] || '').trim().toLowerCase();
-      if (id && groupId && !groupByMotifId[id]) groupByMotifId[id] = groupId;
-    });
-
-    motifLines.slice(1).forEach((line) => {
-      const values = splitSearchCsvLine(line);
-      const id = String(values[motifIdIndex] || '').trim().toLowerCase();
-      const groupId = String(values[motifGroupIndex] || '').trim().toLowerCase() || groupByMotifId[id] || '';
       const altId = String(values[motifAltIndex] || '').trim().toLowerCase();
       const name = String(values[motifNameIndex] || '').trim();
       if (id && name) {
@@ -447,12 +447,14 @@ function ensureSearchMotifIndexLoaded(basePath) {
     });
 
     searchMotifNamesBySongId = namesBySongId;
+    searchMotifNamesById = motifNames;
     searchMotifIdsByCategory = motifIdsByCategory;
     searchSongIdsByMotifId = songsByMotifId;
     searchReferencedSongIdsBySongId = referencedSongsBySongId;
     return namesBySongId;
   }).catch(() => {
     searchMotifNamesBySongId = Object.create(null);
+    searchMotifNamesById = Object.create(null);
     searchMotifIdsByCategory = Object.create(null);
     searchSongIdsByMotifId = Object.create(null);
     searchReferencedSongIdsBySongId = Object.create(null);
@@ -764,7 +766,6 @@ function buildSearchImageMapFromMotifCsv(csvText) {
   const imageByCategorySlug = Object.create(null);
   const groupNameById = Object.create(null);
   const groupImageById = Object.create(null);
-  const groupByMotifId = Object.create(null);
   let firstMotifImagePath = '';
 
   for (let index = 1; index < lines.length; index += 1) {
@@ -774,7 +775,6 @@ function buildSearchImageMapFromMotifCsv(csvText) {
     const metadataGroupId = String(groupMetadataIdIndex >= 0 ? (values[groupMetadataIdIndex] || '') : '').trim().toLowerCase();
     const groupName = String(values[groupNameIndex] || '').trim();
     const groupImage = normalizeSearchImagePath(values[groupImageIndex] || '');
-    if (motifId && groupId && !groupByMotifId[motifId]) groupByMotifId[motifId] = groupId;
     if (metadataGroupId && groupName) groupNameById[metadataGroupId] = groupName;
     if (metadataGroupId && groupImage) groupImageById[metadataGroupId] = groupImage;
   }
@@ -782,7 +782,7 @@ function buildSearchImageMapFromMotifCsv(csvText) {
   for (let index = 1; index < lines.length; index += 1) {
     const values = splitSearchCsvLine(lines[index]);
     const motifId = String(values[motifIdIndex] || '').trim();
-    const groupId = String(groupIdIndex >= 0 ? (values[groupIdIndex] || '') : '').trim() || groupByMotifId[motifId.toLowerCase()] || '';
+    const groupId = String(groupIdIndex >= 0 ? (values[groupIdIndex] || '') : '').trim();
     const altId = String(altIdIndex >= 0 ? (values[altIdIndex] || '') : '').trim();
     const motifName = String(motifNameIndex >= 0 ? (values[motifNameIndex] || '') : '').trim();
     if (!motifId || !isSearchTruthyFlag(values[hasPageIndex])) {
@@ -1260,6 +1260,7 @@ function buildSearchSnippet(text, query) {
 
 const searchFieldWeights = {
   title: 9,
+  motif: 8,
   lyrics: 6,
   summary: 3.5,
   tracklist: 3,
@@ -1365,7 +1366,7 @@ function rankSearchResults(results, query) {
     fuzzyTermsByQueryTerm.set(term, matches);
   });
 
-  const queryPhrase = String(query || '').trim().toLowerCase();
+  const queryPhrase = String(query || '').trim().toLowerCase().replace(/\s+/g, ' ');
   documents.forEach((document) => {
     let score = 0;
     let matchedTerms = 0;
@@ -1431,7 +1432,9 @@ function rankSearchResults(results, query) {
     });
 
     const lowerTitle = String(document.fields.title || '').toLowerCase();
-    const phraseMatch = queryPhrase && Object.values(document.fields).some((value) => String(value || '').toLowerCase().includes(queryPhrase));
+    const phraseMatch = queryPhrase && Object.values(document.fields).some((value) => (
+      String(value || '').toLowerCase().replace(/\s+/g, ' ').includes(queryPhrase)
+    ));
     if (lowerTitle === queryPhrase) {
       score += 40;
     } else if (lowerTitle.startsWith(queryPhrase)) {
@@ -1446,12 +1449,15 @@ function rankSearchResults(results, query) {
     }
 
     document.matchedTerms = matchedTerms;
+    document.hasExactPhrase = Boolean(phraseMatch);
     document.result.relevanceScore = score * (1 + matchedTerms / terms.length);
   });
 
   return documents
     .filter((document) => document.result.relevanceScore > 0 && document.matchedTerms === terms.length)
-    .sort((left, right) => right.result.relevanceScore - left.result.relevanceScore || left.index - right.index)
+    .sort((left, right) => Number(right.hasExactPhrase) - Number(left.hasExactPhrase)
+      || right.result.relevanceScore - left.result.relevanceScore
+      || left.index - right.index)
     .map((document) => document.result);
 }
 
@@ -1481,7 +1487,7 @@ function getSearchSongExternalContent(routePath, songRows) {
 
     const summaryText = String(entry.summary || '').trim();
     const annotationsText = String(entry.annotations || '').trim();
-    const lyricsText = annotationsText || String(entry.lyrics || '').trim();
+    const lyricsText = stripSearchLyricSingerTags(annotationsText || String(entry.lyrics || '').trim());
     const extendedText = String(entry.extended || '').trim();
     const mainSummaryText = String((mainEntry || {}).summary || '').trim();
 
@@ -1628,12 +1634,16 @@ function searchFile(fileEntry, query, searchContext) {
     const motifRelatedSongs = isMotifPage ? getSearchSongsForMotifKeys(motifSummaryKeys, songRows) : [];
     const motifRelatedText = motifRelatedSongs.length ? 'Songs with this motif: ' + motifRelatedSongs.join(' | ') : '';
     const motifNames = isSongPage ? getSearchMotifNamesForSongRows(matchingSongRows) : [];
+    const motifPageName = isMotifPage
+      ? String(searchMotifNamesById[motifIdFromEntry.toLowerCase()] || '').trim()
+      : '';
     const referencedSongs = isSongPage ? getSearchReferencedSongsForSongRows(matchingSongRows, songRows) : [];
     const motifsText = motifNames.length ? 'Motifs: ' + motifNames.join(' | ') : '';
     const songReferencesText = referencedSongs.length ? 'Referenced songs: ' + referencedSongs.join(' | ') : '';
     const connectionsText = [motifRelatedText, motifsText, songReferencesText].filter(Boolean).join(' ');
     const searchFields = {
       title,
+      motif: motifPageName,
       summary: externalContent.summary || '',
       lyrics: externalContent.lyrics || '',
       extended: externalContent.extended || '',
@@ -1644,6 +1654,7 @@ function searchFile(fileEntry, query, searchContext) {
     };
     const orderedDisplayText = [
       title,
+      motifPageName ? 'Motif: ' + motifPageName : '',
       externalContent.lyrics ? 'Lyrics: ' + externalContent.lyrics : '',
       externalContent.summary,
       externalContent.credits,

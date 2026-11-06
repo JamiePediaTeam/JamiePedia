@@ -37,6 +37,13 @@ function normalizeSearchContentLineBreaks(source) {
     .join(' ');
 }
 
+function stripLyricSingerTags(source) {
+  return String(source || '')
+    .replace(/\{[^{}]*\}/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
 function parseLrcToSearchText(source) {
   const lines = String(source || '').split(/\r?\n/u);
   const collected = [];
@@ -51,7 +58,7 @@ function parseLrcToSearchText(source) {
       continue;
     }
 
-    const lyric = line.replace(/\[[^\]]+\]/gu, '').replace(/\s+/gu, ' ').trim();
+    const lyric = stripLyricSingerTags(line.replace(/\[[^\]]+\]/gu, ''));
     if (lyric) {
       collected.push(lyric);
     }
@@ -122,6 +129,8 @@ async function buildSongContentIndex() {
 
       if (folderName === 'lyrics') {
         bySlug[slugKey][targetKey] = parseLrcToSearchText(source);
+      } else if (folderName === 'annotations') {
+        bySlug[slugKey][targetKey] = normalizeSearchContentLineBreaks(stripLyricSingerTags(source));
       } else {
         bySlug[slugKey][targetKey] = normalizeSearchContentLineBreaks(source);
       }
@@ -244,7 +253,6 @@ async function generateSearchContentIndex() {
 
   const output = {
     version: 1,
-    generatedAt: new Date().toISOString(),
     songs,
     albums,
     motifs,

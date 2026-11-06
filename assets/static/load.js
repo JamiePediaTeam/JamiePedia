@@ -6,7 +6,9 @@ window.__jamiepediaPageReady = false;
 window.__jamiepediaMarkPageReady = function (pageType) {
   window.__jamiepediaPageType = String(pageType || 'page');
   window.__jamiepediaPageReady = true;
+  themeGatePageReady = true;
   window.dispatchEvent(new Event('jamiepedia:page-ready'));
+  maybeRevealThemeGate();
 };
 
 const themeGateRoot = document.documentElement;
@@ -14,24 +16,43 @@ const themeGatePath = String(window.location.pathname || '');
 const themeGateRoute = basePath && themeGatePath.startsWith(basePath)
   ? themeGatePath.slice(basePath.length) || '/'
   : themeGatePath;
-const themeGateNeedsExplicitReady = /^\/music\/[^/]+(?:\/close-up)?$/i.test(themeGateRoute)
-  || /^\/artists\/[^/]+$/i.test(themeGateRoute)
-  || /^\/motifs\/[^/]+$/i.test(themeGateRoute);
+const themeGateNeedsExplicitReady = /^\/(?:music|artists|motifs)(?:\/|$)/i.test(themeGateRoute);
+const themeGateSupportsNavigationTransition = ('onpageswap' in window)
+  && ('onpagereveal' in window)
+  && typeof CSS !== 'undefined'
+  && CSS.supports('selector(::view-transition-old(root))');
 let themeGateThemeLoaded = false;
 let themeGatePageReady = !themeGateNeedsExplicitReady;
+let themeGateSharedReady = false;
+let themeGateWindowLoaded = document.readyState === 'complete';
 let themeGateReleased = false;
 
 if (!document.getElementById('themeGateStyle')) {
   const themeGateStyle = document.createElement('style');
   themeGateStyle.id = 'themeGateStyle';
-  themeGateStyle.textContent = 'html[data-theme-pending="true"] body{visibility:hidden !important;}';
+  themeGateStyle.textContent = [
+    '@view-transition{navigation:auto;}',
+    '::view-transition-group(root){animation-duration:180ms;}',
+    'html[data-theme-pending="true"]::view-transition-old(root){animation:jamiepedia-hold-old 60s linear both;animation-play-state:paused;}',
+    'html[data-theme-pending="true"]::view-transition-new(root){animation:jamiepedia-hold-new 60s linear both;animation-play-state:paused;}',
+    'html[data-theme-ready="true"]::view-transition-old(root){animation:jamiepedia-fade-out 180ms ease both;}',
+    'html[data-theme-ready="true"]::view-transition-new(root){animation:jamiepedia-fade-in 180ms ease both;}',
+    '@keyframes jamiepedia-hold-old{from{opacity:1}to{opacity:1}}',
+    '@keyframes jamiepedia-hold-new{from{opacity:0}to{opacity:0}}',
+    '@keyframes jamiepedia-fade-out{from{opacity:1}to{opacity:0}}',
+    '@keyframes jamiepedia-fade-in{from{opacity:0}to{opacity:1}}',
+    'html[data-jamiepedia-navigation-transition="true"][data-theme-pending="true"] body{visibility:hidden !important;}'
+  ].join('');
   document.head.appendChild(themeGateStyle);
 }
 
+if (themeGateSupportsNavigationTransition) {
+  themeGateRoot.setAttribute('data-jamiepedia-navigation-transition', 'true');
+}
 themeGateRoot.setAttribute('data-theme-pending', 'true');
 
 function maybeRevealThemeGate() {
-  if (themeGateReleased || !themeGateThemeLoaded || !themeGatePageReady) {
+  if (themeGateReleased || !themeGateThemeLoaded || !themeGatePageReady || !themeGateSharedReady || !themeGateWindowLoaded) {
     return;
   }
 
@@ -41,15 +62,29 @@ function maybeRevealThemeGate() {
 }
 
 window.releaseThemeGate = function () {
-  themeGatePageReady = true;
+  if (!themeGateNeedsExplicitReady) {
+    themeGatePageReady = true;
+  }
   maybeRevealThemeGate();
 };
+
+window.addEventListener('load', function () {
+  const fontsReady = document.fonts && document.fonts.ready;
+  Promise.resolve(fontsReady)
+    .catch(function () { return null; })
+    .finally(function () {
+      themeGateWindowLoaded = true;
+      maybeRevealThemeGate();
+    });
+}, { once: true });
 
 window.setTimeout(function () {
   themeGateThemeLoaded = true;
   themeGatePageReady = true;
+  themeGateSharedReady = true;
+  themeGateWindowLoaded = true;
   maybeRevealThemeGate();
-}, 5000);
+}, 15000);
 
 function stripBasePath(path) {
   let normalized = String(path || '/');
@@ -868,11 +903,12 @@ musicFilesScript.onload = function() {
       };
 
       const runSharedLoads = function () {
+        const sharedFragmentTasks = [
         loadFragment('navi', basePath + '/assets/static/navibar.html', function () {
           if (typeof initializeSearch === 'function') {
             initializeSearch();
           }
-        });
+        }),
 
         loadFragment('sidebar', basePath + '/assets/static/sidebar.html', function () {
           const sidebarRoot = document.getElementById('sidebar');
@@ -908,12 +944,18 @@ musicFilesScript.onload = function() {
           if (typeof addSocialMediaIcons === 'function') {
             addSocialMediaIcons();
           }
-        });
+        }),
 
         loadFragment('linkbox', basePath + '/assets/static/linkbox.html', function () {
           if (typeof addSocialMediaIcons === 'function') {
             addSocialMediaIcons();
           }
+        })
+        ];
+
+        Promise.all(sharedFragmentTasks).finally(function () {
+          themeGateSharedReady = true;
+          maybeRevealThemeGate();
         });
       };
 
