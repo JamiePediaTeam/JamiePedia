@@ -85,8 +85,8 @@ function normalizeJamiePediaBool(value) {
 
 function normalizeJamiePediaMotifType(value) {
   const text = normalizeJamiePediaText(value).toLowerCase();
-  if (text === 'rhythmic' || text === 'rhythm') {
-    return 'rhythmic';
+  if (text === 'melodic' || text === 'melody') {
+    return 'melodic';
   }
   if (text === 'lyrical') {
     return 'lyrical';
@@ -492,20 +492,20 @@ function createJamiePediaData() {
     type: getReferenceColumnIndex('Type'),
     variation: getReferenceColumnIndex('Variation'),
     variationLetter: getReferenceColumnIndex('Variation Letter'),
-    rhythmic: getReferenceColumnIndex('Rhythmic'),
+    melodic: getReferenceColumnIndex('Melodic'),
     lyrical: getReferenceColumnIndex('Lyrical'),
     sample: getReferenceColumnIndex('Sample'),
     lyrics: getReferenceColumnIndex('Lyrics')
   };
 
   const legacyReferenceColumns = {
-    rhythmicSongId: getReferenceColumnIndex('Song ID', 0),
-    rhythmicMotifId: getReferenceColumnIndex('Motif ID', 0),
-    rhythmicStart: getReferenceColumnIndex('Start Time', 0),
-    rhythmicEnd: getReferenceColumnIndex('End Time', 0),
-    rhythmicDefinition: getReferenceColumnIndex('Definition', 0),
-    rhythmicVariation: getReferenceColumnIndex('Variation', 0),
-    rhythmicVariationLetter: getReferenceColumnIndex('Variation Letter', 0),
+    melodicSongId: getReferenceColumnIndex('Song ID', 0),
+    melodicMotifId: getReferenceColumnIndex('Motif ID', 0),
+    melodicStart: getReferenceColumnIndex('Start Time', 0),
+    melodicEnd: getReferenceColumnIndex('End Time', 0),
+    melodicDefinition: getReferenceColumnIndex('Definition', 0),
+    melodicVariation: getReferenceColumnIndex('Variation', 0),
+    melodicVariationLetter: getReferenceColumnIndex('Variation Letter', 0),
 
     lyricalSongId: getReferenceColumnIndex('Song ID', 1),
     lyricalMotifId: getReferenceColumnIndex('Motif/Song ID', 0),
@@ -742,7 +742,7 @@ function createJamiePediaData() {
     return normalizedSongId;
   }
 
-  function pushRhythmicReference(songId, targetId, startTime, endTime, isDefinition, variationId = '') {
+  function pushMelodicReference(songId, targetId, startTime, endTime, isDefinition, variationId = '') {
     if (!songId || !targetId || !startTime || !endTime) {
       return;
     }
@@ -816,8 +816,8 @@ function createJamiePediaData() {
       return '';
     }
 
-    if (raw === 'rhythmic' || raw === 'rhythm' || raw === 'rhymic') {
-      return 'rhythmic';
+    if (raw === 'melodic' || raw === 'melody' || raw === 'me') {
+      return 'melodic';
     }
     if (raw === 'lyrical' || raw === 'lyrics' || raw === 'lyric') {
       return 'lyrical';
@@ -830,7 +830,7 @@ function createJamiePediaData() {
   }
 
   const hasUnifiedReferenceTypeColumn = referenceColumns.type >= 0;
-  const hasUnifiedReferenceToggles = referenceColumns.rhythmic >= 0
+  const hasUnifiedReferenceToggles = referenceColumns.melodic >= 0
     || referenceColumns.lyrical >= 0
     || referenceColumns.sample >= 0;
 
@@ -854,9 +854,9 @@ function createJamiePediaData() {
       const targetVariationId = resolveMotifVariationId(rawTargetId, isVariation, variationLetter);
 
       const normalizedType = normalizeReferenceType(readJamiePediaRowValue(row, referenceColumns.type));
-      const isRhythmic = referenceColumns.rhythmic >= 0
-        ? normalizeJamiePediaBool(readJamiePediaRowValue(row, referenceColumns.rhythmic))
-        : (normalizedType ? normalizedType === 'rhythmic' : true);
+      const isMelodic = referenceColumns.melodic >= 0
+        ? normalizeJamiePediaBool(readJamiePediaRowValue(row, referenceColumns.melodic))
+        : (normalizedType ? normalizedType === 'melodic' : true);
       const isLyrical = referenceColumns.lyrical >= 0
         ? normalizeJamiePediaBool(readJamiePediaRowValue(row, referenceColumns.lyrical))
         : normalizedType === 'lyrical';
@@ -866,8 +866,8 @@ function createJamiePediaData() {
       const isDefinition = normalizeJamiePediaBool(readJamiePediaRowValue(row, referenceColumns.definition));
       const lyricText = normalizeJamiePediaText(readJamiePediaRowValue(row, referenceColumns.lyrics));
 
-      if (isRhythmic || (!isLyrical && !isSample)) {
-        pushRhythmicReference(songId, targetId, startTime, endTime, isDefinition, targetVariationId);
+      if (isMelodic || (!isLyrical && !isSample)) {
+        pushMelodicReference(songId, targetId, startTime, endTime, isDefinition, targetVariationId);
       }
       if (isLyrical) {
         pushLyricalReference(songId, targetId, startTime, endTime, lyricText, targetVariationId);
@@ -878,16 +878,16 @@ function createJamiePediaData() {
       return;
     }
 
-    const rhythmicSongId = ensureSongRef(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicSongId));
-    const rhythmicTargetRaw = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicMotifId));
-    const rhythmicStart = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicStart));
-    const rhythmicEnd = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicEnd));
-    const rhythmicIsDefinition = normalizeJamiePediaBool(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicDefinition));
-    const rhythmicIsVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicVariation));
-    const rhythmicVariationLetter = readJamiePediaRowValue(row, legacyReferenceColumns.rhythmicVariationLetter);
-    const rhythmicTarget = resolveVariationMotifId(rhythmicTargetRaw, rhythmicIsVariation, rhythmicVariationLetter);
-    const rhythmicVariationId = resolveMotifVariationId(rhythmicTargetRaw, rhythmicIsVariation, rhythmicVariationLetter);
-    pushRhythmicReference(rhythmicSongId, rhythmicTarget, rhythmicStart, rhythmicEnd, rhythmicIsDefinition, rhythmicVariationId);
+    const melodicSongId = ensureSongRef(readJamiePediaRowValue(row, legacyReferenceColumns.melodicSongId));
+    const melodicTargetRaw = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.melodicMotifId));
+    const melodicStart = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.melodicStart));
+    const melodicEnd = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.melodicEnd));
+    const melodicIsDefinition = normalizeJamiePediaBool(readJamiePediaRowValue(row, legacyReferenceColumns.melodicDefinition));
+    const melodicIsVariation = normalizeJamiePediaBool(readJamiePediaRowValue(row, legacyReferenceColumns.melodicVariation));
+    const melodicVariationLetter = readJamiePediaRowValue(row, legacyReferenceColumns.melodicVariationLetter);
+    const melodicTarget = resolveVariationMotifId(melodicTargetRaw, melodicIsVariation, melodicVariationLetter);
+    const melodicVariationId = resolveMotifVariationId(melodicTargetRaw, melodicIsVariation, melodicVariationLetter);
+    pushMelodicReference(melodicSongId, melodicTarget, melodicStart, melodicEnd, melodicIsDefinition, melodicVariationId);
 
     const lyricalSongId = ensureSongRef(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalSongId));
     const lyricalTargetRaw = normalizeJamiePediaText(readJamiePediaRowValue(row, legacyReferenceColumns.lyricalMotifId));

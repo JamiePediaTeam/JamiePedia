@@ -4159,7 +4159,7 @@ function songMotifsRender(song, groupedRefs, groupedSampleRefs, youtubeId) {
     shell.appendChild(listTitle);
 
     shell.appendChild(rows);
-    appendTypeRow(rows, 'Rhythmic Motifs', groupedMotifRefs, '#ef8a85');
+    appendTypeRow(rows, 'Melodic Motifs', groupedMotifRefs, '#ef8a85');
     appendTypeRow(rows, 'Lyrical Motifs', allLyricalEntries, '#777777');
     appendTypeRow(rows, 'Samples', allSampleEntries, '#6d63b5');
   }

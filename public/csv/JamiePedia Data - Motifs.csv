@@ -1,42 +1,42 @@
 Group ID,Motif ID,Motif Name,Alt-ID,motif color,Motif Image (Page and Map),Type?,Has Page,reference link,,Group ID,Group Name,Group Image,Group Type?
-,want-to-do,All I Want To Do,,FFFFFF,,Lyrical,TRUE,,,anew-again,Anew Again,../public/images/cover-art/aa.png,Rhythmic
-,little-nothings,All the Little Nothings,,FFFFFF,,Lyrical,TRUE,,,autumn-every-day,Autumn Every Day,../public/images/cover-art/aed.png,Rhythmic
-anew-again,anew-again,Anew Again,,9EC7CD,../public/images/cover-art/aa.png,Lyrical,TRUE,,,bittersweet,Bittersweet,../public/images/cover-art/bs.png,Rhythmic
-,aurogerbeep,AURogerBeep,,FFFFFF,,Sample,TRUE,,,constant-companions,Constant Companions,../public/images/cover-art/cc.png,Rhythmic
-autumn-every-day,autumn-every-day,Autumn Every Day,,F2C587,../public/images/cover-art/aed.png,Rhythmic,TRUE,,,pp-alliteration,PP Aliteration,../public/images/cover-art/pjscpfp.jpg,Lyrical
+,want-to-do,All I Want To Do,,FFFFFF,,Lyrical,TRUE,,,anew-again,Anew Again,../public/images/cover-art/aa.png,Melodic
+,little-nothings,All the Little Nothings,,FFFFFF,,Lyrical,TRUE,,,autumn-every-day,Autumn Every Day,../public/images/cover-art/aed.png,Melodic
+anew-again,anew-again,Anew Again,,9EC7CD,../public/images/cover-art/aa.png,Lyrical,TRUE,,,bittersweet,Bittersweet,../public/images/cover-art/bs.png,Melodic
+,aurogerbeep,AURogerBeep,,FFFFFF,,Sample,TRUE,,,constant-companions,Constant Companions,../public/images/cover-art/cc.png,Melodic
+autumn-every-day,autumn-every-day,Autumn Every Day,,F2C587,../public/images/cover-art/aed.png,Melodic,TRUE,,,pp-alliteration,PP Aliteration,../public/images/cover-art/pjscpfp.jpg,Lyrical
 ,beck-and-call,Beck and Call,,6ab5ae,,Lyrical,TRUE,,,spectrasonics,Spectrasonics Vocal Planet CD4 ‘3 ER HIP-HOP,../public/images/motif-art/VocalPlanet.jpg,Sample
 ,bolt-of-blue,Bolt of Blue,,87cefa,,Lyrical,TRUE,,,,,,
-constant-companions,constant-companions,Constant Companions,,FA0B06,../public/images/cover-art/cc.png,Rhythmic,TRUE,,,,,,
-anew-again,decree,Decree,,FFFFFF,,Rhythmic,TRUE,,,,,,
-,destiny,Destiny,,EB9139,../public/images/cover-art/destiny.jpg,Rhythmic,TRUE,,,,,,
-,erri-nollau,Errianna Nollau,,FFFFFF,../public/images/motif-art/errianna-nollau.png,Rhythmic,TRUE,,,,,,
-constant-companions,fantasize,Fantasize,,FA4333,,Rhythmic,TRUE,,,,,,
-bittersweet,gummyworm,Gummyworm,gummyworm-a,4BE22A,../public/images/motif-art/gummyworm.png,Rhythmic,TRUE,,,,,,
-,gummyworm,Gummyworm,gummyworm-b,F7EC6F,../public/images/motif-art/gummyworm.png,Rhythmic,TRUE,,,,,,
-,honor-majesty,Honor Majesty,,E31C2C,,Rhythmic,TRUE,,,,,,
+constant-companions,constant-companions,Constant Companions,,FA0B06,../public/images/cover-art/cc.png,Melodic,TRUE,,,,,,
+anew-again,decree,Decree,,FFFFFF,,Melodic,TRUE,,,,,,
+,destiny,Destiny,,EB9139,../public/images/cover-art/destiny.jpg,Melodic,TRUE,,,,,,
+,erri-nollau,Errianna Nollau,,FFFFFF,../public/images/motif-art/errianna-nollau.png,Melodic,TRUE,,,,,,
+constant-companions,fantasize,Fantasize,,FA4333,,Melodic,TRUE,,,,,,
+bittersweet,gummyworm,Gummyworm,gummyworm-a,4BE22A,../public/images/motif-art/gummyworm.png,Melodic,TRUE,,,,,,
+,gummyworm,Gummyworm,gummyworm-b,F7EC6F,../public/images/motif-art/gummyworm.png,Melodic,TRUE,,,,,,
+autumn-every-day,honor-majesty,Honor Majesty,,E31C2C,,Melodic,TRUE,,,,,,
 ,jerma-woo,jermawoo.wav,,FFFFFF,../public/images/motif-art/jerma.png,Sample,TRUE,,,,,,
-,jijo,Jijo,,FFFFFF,,Rhythmic,TRUE,,,,,,
+,jijo,Jijo,,FFFFFF,,Melodic,TRUE,,,,,,
 ,jya,Jya~,,FCE73E,../public/images/motif-art/jya.png,Sample,TRUE,,,,,,
-,kalia-vibte,Kalia Vibte,,B1785B,../public/images/motif-art/kalia-vibte.png,Rhythmic,TRUE,,,,,,
+,kalia-vibte,Kalia Vibte,,B1785B,../public/images/motif-art/kalia-vibte.png,Melodic,TRUE,,,,,,
 ,keep-a-bullet,Keep a Bullet,,71dab1,,Lyrical,TRUE,,,,,,
 spectrasonics,let-the-bass-go,Let The Bass Go,,1F1F1F,../public/images/motif-art/letthebassgo.png,Sample,TRUE,,,,,,
-constant-companions,my-darling-my-companion,"My Darling, My Companion",,FFFFFF,,Rhythmic,TRUE,,,,,,
+constant-companions,my-darling-my-companion,"My Darling, My Companion",,FFFFFF,,Melodic,TRUE,,,,,,
 ,never-meant-to-know,Never Meant to Know,,FFFFFF,../public/images/motif-art/good-evil.jpg,Lyrical,FALSE,https://www.youtube.com/watch?v=IawfoCuBV3c,,,,,
-,on-fire,On Fire,,FF7500,,Rhythmic,TRUE,,,,,,
-,paisley-pudge,Paisley Pudge,paisley-pudge-a,F391CC,../public/images/motif-art/paisley-pudge.png,Rhythmic,TRUE,,,,,,
-,paisley-pudge,Paisley Pudge,paisley-pudge-b,734590,,Rhythmic,TRUE,,,,,,
+,on-fire,On Fire,,FF7500,,Melodic,TRUE,,,,,,
+,paisley-pudge,Paisley Pudge,paisley-pudge-a,F391CC,../public/images/motif-art/paisley-pudge.png,Melodic,TRUE,,,,,,
+,paisley-pudge,Paisley Pudge,paisley-pudge-b,734590,,Melodic,TRUE,,,,,,
 pp-alliteration,pp-alliteration,PP Aliteration,,F391CC,../public/images/cover-art/pjscpfp.jpg,Lyrical,TRUE,,,,,,
 ,rainy-day,Rainy Day,,778899,,Lyrical,TRUE,,,,,,
 ,say-it-aint-so,Say it Ain't So,,00ACE6,../public/images/motif-art/weezer-blue.png,Lyrical,FALSE,https://www.youtube.com/watch?v=OoPHItnUFkw,,,,,
 ,in-a-dream,She came to me in a dream,,A7E6D1,,Lyrical,TRUE,,,,,,
 ,eared-robot,Song of the Eared Robot,,566baa,,Lyrical,TRUE,,,,,,
-anew-again,space-center,Space Center,space-center-a,9EC7CD,../public/images/cover-art/aa.png,Rhythmic,TRUE,,,,,,
-anew-again,space-center,Space Center,space-center-b,9EC7CD,,Rhythmic,TRUE,,,,,,
-,when-spring-comes,When Spring Comes,,FFFFFF,../public/images/cover-art/wscrr.png,Rhythmic,TRUE,,,,,,
-,where-hearts-thaw,Where Hearts Thaw,,615858,,Rhythmic,TRUE,,,,,,
+anew-again,space-center,Space Center,space-center-a,9EC7CD,../public/images/cover-art/aa.png,Melodic,TRUE,,,,,,
+anew-again,space-center,Space Center,space-center-b,9EC7CD,,Melodic,TRUE,,,,,,
+,when-spring-comes,When Spring Comes,,FFFFFF,../public/images/cover-art/wscrr.png,Melodic,TRUE,,,,,,
+,where-hearts-thaw,Where Hearts Thaw,,615858,,Melodic,TRUE,,,,,,
 ,im-crazy,I'm crazaeiaieae,,FFFFFF,,Sample,FALSE,https://www.youtube.com/watch?v=fiCbaR0xXyc,,,,,
 pp-alliteration,play-pretend,Play Pretend,,9D4D88,../public/images/cover-art/pppp.png,Lyrical,TRUE,,,,,,
-,all-for-a-show,All For a Show,,ff1470,,Rhythmic,TRUE,,,,,,
+,all-for-a-show,All For a Show,,ff1470,,Melodic,TRUE,,,,,,
 ,black-night,Black Night,,000000,,Lyrical,TRUE,,,,,,
 ,bell,Bell,,F1E36E,,Sample,TRUE,,,,,,
 ,,,,FFFFFF,,,,,,,,,
