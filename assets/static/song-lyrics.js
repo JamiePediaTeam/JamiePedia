@@ -270,7 +270,7 @@ function songLyricsParseLrc(text) {
         activeSingerTags = [];
       } else if (explicitSingerTags.length > 0) {
         activeSingerTags = explicitSingerTags.slice();
-      } else if (lineLyricKey && Array.isArray(singerTagsByLyricKey[lineLyricKey]) && singerTagsByLyricKey[lineLyricKey].length > 0) {
+      } else if (activeSingerTags.length === 0 && lineLyricKey && Array.isArray(singerTagsByLyricKey[lineLyricKey]) && singerTagsByLyricKey[lineLyricKey].length > 0) {
         activeSingerTags = singerTagsByLyricKey[lineLyricKey].slice();
       }
 

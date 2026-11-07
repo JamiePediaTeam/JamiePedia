@@ -2769,7 +2769,7 @@ function songMotifsParseLrcTimedEntries(text) {
         activeSingerTags = [];
       } else if (explicitSingerTags.length > 0) {
         activeSingerTags = explicitSingerTags.slice();
-      } else if (lineLyricKey && Array.isArray(singerTagsByLyricKey[lineLyricKey]) && singerTagsByLyricKey[lineLyricKey].length > 0) {
+      } else if (activeSingerTags.length === 0 && lineLyricKey && Array.isArray(singerTagsByLyricKey[lineLyricKey]) && singerTagsByLyricKey[lineLyricKey].length > 0) {
         activeSingerTags = singerTagsByLyricKey[lineLyricKey].slice();
       }
 
@@ -2867,17 +2867,17 @@ function songMotifsLoadKaraokeEntries() {
       return '';
     }
 
-    const hashIndex = slug.indexOf('#');
-    const slugBase = hashIndex === -1 ? slug : slug.slice(0, hashIndex);
-    const slugHash = hashIndex === -1 ? '' : slug.slice(hashIndex);
-    return slugBase + backingSuffix + slugHash;
+    return slug + backingSuffix;
   }
 
   function buildBackingCandidates(backingSuffix) {
     const slugs = [];
     const seen = new Set();
     const baseSlug = songMotifsGetBaseSongSlug();
-    const sources = candidateSlugs.concat([primarySlug, baseSlug]);
+    const activeVariantSuffix = songMotifsGetActiveVariantSuffix();
+    const sources = activeVariantSuffix
+      ? candidateSlugs
+      : candidateSlugs.concat([primarySlug, baseSlug]);
 
     sources.forEach((source) => {
       const candidate = buildBackingSlug(source, backingSuffix);
