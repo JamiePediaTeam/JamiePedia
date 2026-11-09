@@ -2491,8 +2491,8 @@ function initializeSongConnectionsFeature() {
   window.__songConnectionsInitPromise = loadScriptOnce('https://www.youtube.com/iframe_api')
     .catch(() => null)
     .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/csv-data.js')))
-    .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/song-lyrics.js?v=20261105e')))
-    .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/song-motifs.js?v=20261105bs')));
+    .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/song-lyrics.js?v=20261106a')))
+    .then(() => loadScriptOnce(resolveSiteAsset('/assets/static/song-motifs.js?v=20261106b')));
 
   return window.__songConnectionsInitPromise;
 }
